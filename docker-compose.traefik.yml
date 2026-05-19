@@ -1,0 +1,27 @@
+services:
+  traefik:
+    image: traefik:v3.7
+    container_name: oneuptime-traefik
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik.yml:/traefik.yml:ro
+      - traefik-letsencrypt:/letsencrypt
+    networks:
+      - oneuptime_oneuptime
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.dashboard.rule=Host(`oneuptime.cw2tecnologia.com.br`) && PathPrefix(`/traefik`)"
+      - "traefik.http.routers.dashboard.service=dashboard@internal"
+      - "traefik.http.routers.dashboard.tls=true"
+      - "traefik.http.routers.dashboard.tls.certresolver=letsencrypt"
+
+volumes:
+  traefik-letsencrypt:
+
+networks:
+  oneuptime_oneuptime:
+    external: true
