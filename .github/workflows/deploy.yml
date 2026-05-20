@@ -1,0 +1,89 @@
+name: Build and Deploy to Production
+
+on:
+  push:
+    branches:
+      - "release"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  OWNER: wlfonseca
+
+jobs:
+  build-and-push:
+    strategy:
+      matrix:
+        service:
+          - name: app
+            dockerfile: ./App/Dockerfile
+          - name: probe
+            dockerfile: ./Probe/Dockerfile
+          - name: home
+            dockerfile: ./Home/Dockerfile
+          - name: ai-agent
+            dockerfile: ./AIAgent/Dockerfile
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Generate Dockerfile from Dockerfile.tpl
+        run: npm run prerun
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GitHub Container Registry
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ${{ env.REGISTRY }} \
+            --username "${{ github.repository_owner }}" --password-stdin
+
+      - name: Read version
+        id: version
+        run: |
+          VERSION=$(tr -d ' \n' < VERSION)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Build and push ${{ matrix.service.name }}
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.service.dockerfile }}
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.OWNER }}/oneuptime-${{ matrix.service.name }}:${{ steps.version.outputs.version }}
+            ${{ env.REGISTRY }}/${{ env.OWNER }}/oneuptime-${{ matrix.service.name }}:release
+          build-args: |
+            GIT_SHA=${{ github.sha }}
+            APP_VERSION=${{ steps.version.outputs.version }}
+            IS_ENTERPRISE_EDITION=false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            set -e
+            cd ${{ secrets.VPS_PROJECT_DIR }}
+            docker compose pull
+            docker compose up -d
+            docker system prune -af --volumes
