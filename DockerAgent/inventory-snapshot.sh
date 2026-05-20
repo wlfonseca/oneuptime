@@ -26,7 +26,9 @@ INTERVAL="${DOCKER_INVENTORY_INTERVAL_SECONDS:-300}"
 
 # Pin to a modern API version that matches the docker_stats receiver
 # pin so we don't get rejected on newer daemons.
-DOCKER_API="http://localhost/v1.44"
+# Override at runtime with DOCKER_API_VERSION env var.
+API_VERSION="${DOCKER_API_VERSION:-1.44}"
+DOCKER_API="http://localhost/v${API_VERSION}"
 
 emit_array_endpoint() {
     kind="$1"

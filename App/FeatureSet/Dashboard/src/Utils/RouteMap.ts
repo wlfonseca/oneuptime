@@ -111,6 +111,10 @@ export const KubernetesRoutePath: Dictionary<string> = {
   [PageMap.KUBERNETES_SETTINGS_LABEL_RULES]: `settings/label-rules`,
 };
 
+export const CronJobHeartbeatRoutePath: Dictionary<string> = {
+  [PageMap.CRON_JOB_HEARTBEAT]: "",
+};
+
 export const DockerRoutePath: Dictionary<string> = {
   [PageMap.DOCKER_HOST_VIEW]: `${RouteParams.ModelID}`,
   [PageMap.DOCKER_HOST_VIEW_CONTAINERS]: `${RouteParams.ModelID}/containers`,
@@ -3524,6 +3528,13 @@ const RouteMap: Dictionary<Route> = {
   [PageMap.EXCEPTIONS_DOCUMENTATION]: new Route(
     `/dashboard/${RouteParams.ProjectID}/exceptions/${
       ExceptionsRoutePath[PageMap.EXCEPTIONS_DOCUMENTATION]
+    }`,
+  ),
+
+  // Cron Job Heartbeat Setup
+  [PageMap.CRON_JOB_HEARTBEAT]: new Route(
+    `/dashboard/${RouteParams.ProjectID}/cron-job-heartbeat/${
+      CronJobHeartbeatRoutePath[PageMap.CRON_JOB_HEARTBEAT]
     }`,
   ),
 };

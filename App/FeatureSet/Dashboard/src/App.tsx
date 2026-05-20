@@ -260,6 +260,15 @@ const UserSettingsRoutes: React.LazyExoticComponent<
     };
   });
 });
+const CronJobHeartbeatRoutes: React.LazyExoticComponent<
+  AllRoutesModule["CronJobHeartbeatRoutes"]
+> = lazy(() => {
+  return import("./Routes/AllRoutes").then((m: AllRoutesModule) => {
+    return {
+      default: m.CronJobHeartbeatRoutes,
+    };
+  });
+});
 
 const App: () => JSX.Element = () => {
   Navigation.setNavigateHook(useNavigate());
@@ -658,6 +667,12 @@ const App: () => JSX.Element = () => {
           <PageRoute
             path={RouteMap[PageMap.ON_CALL_DUTY_ROOT]?.toString() || ""}
             element={<OnCallDutyRoutes {...commonPageProps} />}
+          />
+
+          {/* Cron Job Heartbeat Setup */}
+          <PageRoute
+            path={RouteMap[PageMap.CRON_JOB_HEARTBEAT]?.toString() || ""}
+            element={<CronJobHeartbeatRoutes {...commonPageProps} />}
           />
 
           {/* Misc Routes */}

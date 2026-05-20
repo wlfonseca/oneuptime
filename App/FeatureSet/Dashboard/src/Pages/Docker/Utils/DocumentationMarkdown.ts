@@ -67,6 +67,7 @@ docker compose up -d
 | \`ONEUPTIME_URL\` | Yes | Your OneUptime instance URL (e.g. \`${data.oneuptimeUrl}\`) |
 | \`ONEUPTIME_SERVICE_TOKEN\` | Yes | Telemetry ingestion service token |
 | \`DOCKER_HOST_NAME\` | No | Friendly name for this host. Defaults to \`docker-host\` |
+| \`DOCKER_API_VERSION\` | No | Docker Engine API version. Defaults to \`1.44\`. Set to \`1.43\` if your daemon reports \`"client version is too new"\`. |
 
 ## Verify the Installation
 
@@ -138,5 +139,9 @@ The agent container must run as root (\`--user 0:0\`) to access \`/var/run/docke
 ### Host Name Shows as a Container ID
 
 Set the \`DOCKER_HOST_NAME\` environment variable to a friendly name and recreate the container.
+
+### Docker API Version Mismatch
+
+If the agent logs show \`"client version * is too new. Maximum supported API version is *"\`, your Docker daemon does not support API version \`1.44\`. Re-run the container with \`-e DOCKER_API_VERSION=1.43\` (or lower if needed). Run \`docker version\` on the host to check the maximum API version your daemon supports.
 `;
 }

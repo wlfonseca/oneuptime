@@ -1,5 +1,6 @@
 import DisabledWarning from "../../../Components/Monitor/DisabledWarning";
 import IncomingMonitorLink from "../../../Components/Monitor/IncomingRequestMonitor/IncomingMonitorLink";
+import CronJobHeartbeatScript from "../../../Components/Monitor/IncomingRequestMonitor/CronJobHeartbeatScript";
 import IncomingEmailMonitorLink from "../../../Components/Monitor/IncomingEmailMonitor/IncomingEmailMonitorLink";
 import ServerMonitorDocumentation from "../../../Components/Monitor/ServerMonitor/Documentation";
 import PageComponentProps from "../../PageComponentProps";
@@ -86,7 +87,12 @@ const MonitorDocumentation: FunctionComponent<
       {/* Heartbeat URL */}
       {monitorType === MonitorType.IncomingRequest &&
       monitor?.incomingRequestSecretKey ? (
-        <IncomingMonitorLink secretKey={monitor?.incomingRequestSecretKey} />
+        <>
+          <IncomingMonitorLink secretKey={monitor?.incomingRequestSecretKey} />
+          <CronJobHeartbeatScript
+            secretKey={monitor?.incomingRequestSecretKey}
+          />
+        </>
       ) : (
         <></>
       )}

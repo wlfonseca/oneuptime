@@ -3,7 +3,9 @@ receivers:
     endpoint: unix:///var/run/docker.sock
     # Pin to a modern Docker Engine API version. The receiver default is
     # "1.25" which modern Docker daemons reject ("client version too old").
-    api_version: "1.44"
+    # Override at runtime with -e DOCKER_API_VERSION=1.43 if your daemon
+    # does not support 1.44 (error: "client version * is too new").
+    api_version: "${env:DOCKER_API_VERSION}"
     collection_interval: 30s
     # Enable optional metrics that the OneUptime Docker monitor alert
     # templates depend on (container restarts, uptime, pid count,
@@ -171,7 +173,13 @@ service:
     logs:
       receivers: [filelog]
       processors:
-        [memory_limiter, filter/drop_self_logs, resourcedetection, resource, batch]
+        [
+          memory_limiter,
+          filter/drop_self_logs,
+          resourcedetection,
+          resource,
+          batch,
+        ]
       exporters: [otlphttp]
     # Inventory snapshots travel on a separate logs pipeline so the
     # drop-self-logs filter (which is body-match against runtime

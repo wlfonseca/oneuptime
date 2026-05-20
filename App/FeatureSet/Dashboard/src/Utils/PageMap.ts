@@ -627,6 +627,9 @@ enum PageMap {
   EXCEPTIONS_DOCUMENTATION = "EXCEPTIONS_DOCUMENTATION",
 
   // Push Logs in resource views
+
+  // Cron Job Heartbeat Setup
+  CRON_JOB_HEARTBEAT = "CRON_JOB_HEARTBEAT",
 }
 
 export default PageMap;

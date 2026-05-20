@@ -27,6 +27,9 @@ export { default as DockerRoutes } from "./DockerRoutes";
 export { default as HostRoutes } from "./HostRoutes";
 export { default as AIAgentTasksRoutes } from "./AIAgentTasksRoutes";
 
+// Tools
+export { default as CronJobHeartbeatRoutes } from "./CronJobHeartbeatRoutes";
+
 // Settings
 export { default as SettingsRoutes } from "./SettingsRoutes";
 export { default as UserSettingsRoutes } from "./UserSettingsRoutes";

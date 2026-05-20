@@ -55,6 +55,17 @@ const DashboardNavbar: FunctionComponent<ComponentProps> = (
       category: essentialsCategory,
     },
     {
+      title: "Cron Job Heartbeat",
+      description: "Monitor cron jobs with automatic heartbeat detection",
+      route: RouteUtil.populateRouteParams(
+        RouteMap[PageMap.CRON_JOB_HEARTBEAT] as Route,
+      ),
+      activeRoute: RouteMap[PageMap.CRON_JOB_HEARTBEAT],
+      icon: IconProp.Heartbeat,
+      iconColor: "pink",
+      category: essentialsCategory,
+    },
+    {
       title: t("navbar.items.statusPagesTitle"),
       description: t("navbar.items.statusPagesDescription"),
       route: RouteUtil.populateRouteParams(
