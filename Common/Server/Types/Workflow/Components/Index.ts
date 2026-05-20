@@ -17,6 +17,7 @@ import OnUpdateBaseModel from "./BaseModel/OnUpdateBaseModel";
 import UpdateManyBaseModel from "./BaseModel/UpdateManyBaseModel";
 import UpdateOneBaseModel from "./BaseModel/UpdateOneBaseModel";
 import IfElse from "./Conditions/IfElse";
+import ClickUpCreateTask from "./ClickUp/CreateTask";
 import DiscordSendMessageToChannel from "./Discord/SendMessageToChannel";
 import Email from "./Email";
 import JsonToText from "./JSON/JsonToText";
@@ -39,6 +40,7 @@ import ApiPatch from "./API/Patch";
 
 const Components: Dictionary<ComponentCode> = {
   [ComponentID.Webhook]: new WebhookTrigger(),
+  [ComponentID.ClickUpCreateTask]: new ClickUpCreateTask(),
   [ComponentID.SlackSendMessageToChannel]: new SlackSendMessageToChannel(),
   [ComponentID.DiscordSendMessageToChannel]: new DiscordSendMessageToChannel(),
   [ComponentID.MicrosoftTeamsSendMessageToChannel]:
