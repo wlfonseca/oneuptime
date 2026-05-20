@@ -1,0 +1,6 @@
+<clickhouse>
+    <listen_host>0.0.0.0</listen_host>
+    <backups>
+        <allowed_path>/Backups/</allowed_path>
+    </backups>
+</clickhouse>
