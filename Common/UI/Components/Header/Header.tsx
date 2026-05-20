@@ -15,7 +15,7 @@ const Header: FunctionComponent<ComponentProps> = (
       <div
         className={
           props.className ||
-          "relative flex h-16 justify-between bg-white shadow-sm px-4"
+          "relative flex h-16 justify-between bg-white dark:bg-slate-900 shadow-sm dark:border-b dark:border-slate-700 px-4"
         }
       >
         <div className="relative z-20 flex items-center">
