@@ -1,4 +1,4 @@
-name: Build and Deploy to Production
+name: Build and Push Images to GHCR
 
 on:
   push:
@@ -21,15 +21,7 @@ jobs:
         service:
           - name: app
             dockerfile: ./App/Dockerfile
-          - name: probe
-            dockerfile: ./Probe/Dockerfile
-          - name: home
-            dockerfile: ./Home/Dockerfile
-          - name: ai-agent
-            dockerfile: ./AIAgent/Dockerfile
     runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.version.outputs.version }}
     steps:
       - uses: actions/checkout@v4
 
@@ -70,20 +62,3 @@ jobs:
             IS_ENTERPRISE_EDITION=false
           cache-from: type=gha
           cache-to: type=gha,mode=max
-
-  deploy:
-    needs: build-and-push
-    runs-on: ubuntu-latest
-    steps:
-      - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          script: |
-            set -e
-            cd ${{ secrets.VPS_PROJECT_DIR }}
-            docker compose pull
-            docker compose up -d
-            docker system prune -af --volumes
