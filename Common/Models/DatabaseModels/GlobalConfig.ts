@@ -504,7 +504,7 @@ export default class GlobalConfig extends GlobalConfigModel {
     update: [],
   })
   @TableColumn({
-    type: TableColumnType.Text,
+    type: TableColumnType.ShortText,
     title: "FreeSwitch TTS Engine",
     description:
       "Text-to-speech engine. Options: flite, pico, say. Default: flite",
