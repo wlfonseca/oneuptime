@@ -45,6 +45,12 @@ export default class UpdateTask extends ComponentCode {
       throw options.onError(new BadDataException("Success port not found"));
     }
 
+    const notFoundPort: Port | undefined = this.getMetadata().outPorts.find(
+      (p: Port) => {
+        return p.id === "not-found";
+      },
+    );
+
     const errorPort: Port | undefined = this.getMetadata().outPorts.find(
       (p: Port) => {
         return p.id === "error";
@@ -61,10 +67,6 @@ export default class UpdateTask extends ComponentCode {
       );
     }
 
-    if (!args["task-url"]) {
-      throw options.onError(new BadDataException("ClickUp Task URL not found"));
-    }
-
     if (!args["status"]) {
       throw options.onError(
         new BadDataException("ClickUp task status not found"),
@@ -72,45 +74,79 @@ export default class UpdateTask extends ComponentCode {
     }
 
     const apiToken: string = args["api-token"]?.toString() as string;
-    const taskUrl: string = args["task-url"]?.toString() as string;
+    const statusInput: string = args["status"]?.toString() as string;
+    const commentInput: string | undefined = args["comment"]?.toString();
+    const taskUrl: string | undefined = args["task-url"]?.toString();
+    const dedupKey: string | undefined = args["dedup-key"]?.toString();
+    const dedupFieldId: string | undefined = args["dedup-field-id"]?.toString();
+    const listUrl: string | undefined = args["list-url"]?.toString();
 
-    const taskUrlParts: string[] = taskUrl.split("/");
-    const tIndex: number = taskUrlParts.indexOf("t");
     let taskId: string = "";
 
-    if (tIndex !== -1 && tIndex + 1 < taskUrlParts.length) {
-      taskId = taskUrlParts[tIndex + 1]?.split("?")[0]?.split("#")[0] || "";
+    if (taskUrl) {
+      const taskUrlParts: string[] = taskUrl.split("/");
+      const tIndex: number = taskUrlParts.indexOf("t");
+      if (tIndex !== -1 && tIndex + 1 < taskUrlParts.length) {
+        taskId = taskUrlParts[tIndex + 1]?.split("?")[0]?.split("#")[0] || "";
+      }
+    } else if (dedupKey && dedupFieldId && listUrl) {
+      const listUrlParts: string[] = listUrl.split("/");
+      const liIndex: number = listUrlParts.indexOf("li");
+      let listId: string = "";
+      if (liIndex !== -1 && liIndex + 1 < listUrlParts.length) {
+        listId = listUrlParts[liIndex + 1]?.split("?")[0]?.split("#")[0] || "";
+      }
+
+      if (!listId) {
+        throw options.onError(
+          new BadDataException(
+            "Could not extract List ID from the provided URL.",
+          ),
+        );
+      }
+
+      const foundId: string | null = await this.findTaskByDedupKey(
+        apiToken,
+        listId,
+        dedupFieldId,
+        dedupKey,
+      );
+
+      if (!foundId) {
+        return Promise.resolve({
+          returnValues: {
+            "not-found": true,
+          },
+          executePort: notFoundPort || successPort,
+        });
+      }
+
+      taskId = foundId;
     }
 
     if (!taskId) {
       throw options.onError(
         new BadDataException(
-          "Could not extract Task ID from the provided URL. Make sure it's a valid ClickUp task URL like https://app.clickup.com/t/86ahk2zrg",
+          "Could not determine Task ID. Provide a Task URL or a Deduplication Key + List URL.",
         ),
       );
     }
 
-    const statusInput: string = args["status"]?.toString() as string;
-    const commentInput: string | undefined = args["comment"]?.toString();
+    const apiHeaders: JSONObject = {
+      Authorization: apiToken,
+    };
 
     const clickupApiUrl: URL = URL.fromString(
       `https://api.clickup.com/api/v2/task/${taskId}`,
     );
 
-    const requestBody: JSONObject = {
-      status: statusInput,
-    };
-
-    let apiResult: HTTPResponse<JSONObject> | HTTPErrorResponse | null = null;
-
     try {
-      apiResult = await API.put({
-        url: clickupApiUrl,
-        data: requestBody,
-        headers: {
-          Authorization: apiToken,
-        },
-      });
+      const apiResult: HTTPResponse<JSONObject> | HTTPErrorResponse | null =
+        await API.put({
+          url: clickupApiUrl,
+          data: { status: statusInput },
+          headers: apiHeaders,
+        });
 
       if (apiResult instanceof HTTPErrorResponse) {
         const clickupError: string =
@@ -134,18 +170,20 @@ export default class UpdateTask extends ComponentCode {
           await API.post({
             url: commentUrl,
             data: { comment_text: commentInput },
-            headers: {
-              Authorization: apiToken,
-            },
+            headers: apiHeaders,
           });
         } catch (_commentErr) {
           // comment is optional, ignore errors
         }
       }
 
+      const resultTaskUrl: string = `https://app.clickup.com/t/${taskId}`;
+
       return Promise.resolve({
         returnValues: {
           "task-id": taskId,
+          "task-url": resultTaskUrl,
+          "not-found": false,
         },
         executePort: successPort,
       });
@@ -163,5 +201,35 @@ export default class UpdateTask extends ComponentCode {
 
       throw options.onError(new APIException("Something wrong happened."));
     }
+  }
+
+  private async findTaskByDedupKey(
+    apiToken: string,
+    listId: string,
+    fieldId: string,
+    value: string,
+  ): Promise<string | null> {
+    const searchUrl: URL = URL.fromString(
+      `https://api.clickup.com/api/v2/list/${listId}/task?custom_fields=[{"field_id":"${fieldId}","operator":"=","value":"${value}"}]`,
+    );
+
+    const result: HTTPResponse<JSONObject> | HTTPErrorResponse | null =
+      await API.get({
+        url: searchUrl,
+        headers: { Authorization: apiToken },
+      });
+
+    if (result instanceof HTTPErrorResponse) {
+      return null;
+    }
+
+    const tasks: Array<JSONObject> =
+      (result.data?.["tasks"] as Array<JSONObject>) || [];
+
+    if (tasks.length > 0) {
+      return tasks[0]?.["id"] as string;
+    }
+
+    return null;
   }
 }
