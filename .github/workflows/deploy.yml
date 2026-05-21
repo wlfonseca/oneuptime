@@ -37,7 +37,7 @@ jobs:
 
       - name: Login to GitHub Container Registry
         run: |
-          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ${{ env.REGISTRY }} \
+          echo "${{ secrets.GHCR_PAT }}" | docker login ${{ env.REGISTRY }} \
             --username "${{ github.repository_owner }}" --password-stdin
 
       - name: Read version
