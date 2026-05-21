@@ -1,4 +1,5 @@
 import TwilioConfig from "Common/Types/CallAndSMS/TwilioConfig";
+import FreeSwitchConfig from "Common/Types/CallAndSMS/FreeSwitchConfig";
 import URL from "Common/Types/API/URL";
 import Email from "Common/Types/Email";
 import EmailServer from "Common/Types/Email/EmailServer";
@@ -390,3 +391,46 @@ export const CallDefaultCostInCentsPerMinute: number = process.env[
 
 // Call provider type
 export const CallProvider: string = process.env["CALL_PROVIDER"] || "twilio";
+
+type GetFreeSwitchConfigFunction = () => Promise<FreeSwitchConfig | null>;
+
+export const getFreeSwitchConfig: GetFreeSwitchConfigFunction =
+  async (): Promise<FreeSwitchConfig | null> => {
+    const globalConfig: GlobalConfig | null =
+      await GlobalConfigService.findOneBy({
+        query: {
+          _id: ObjectID.getZeroObjectID().toString(),
+        },
+        props: {
+          isRoot: true,
+        },
+        select: {
+          freeSwitchEventSocketHost: true,
+          freeSwitchEventSocketPort: true,
+          freeSwitchEventSocketPassword: true,
+          freeSwitchGatewayName: true,
+          freeSwitchDefaultCallerId: true,
+          freeSwitchTtsEngine: true,
+          freeSwitchTtsVoice: true,
+        },
+      });
+
+    if (!globalConfig) {
+      throw new BadDataException("Global Config not found");
+    }
+
+    if (!globalConfig.freeSwitchEventSocketHost) {
+      return null;
+    }
+
+    return {
+      eventSocketHost: globalConfig.freeSwitchEventSocketHost,
+      eventSocketPort: globalConfig.freeSwitchEventSocketPort || 8021,
+      eventSocketPassword:
+        globalConfig.freeSwitchEventSocketPassword || "ClueCon",
+      gatewayName: globalConfig.freeSwitchGatewayName || undefined,
+      defaultCallerId: globalConfig.freeSwitchDefaultCallerId || undefined,
+      ttsEngine: globalConfig.freeSwitchTtsEngine || "flite",
+      ttsVoice: globalConfig.freeSwitchTtsVoice || "slt",
+    };
+  };
