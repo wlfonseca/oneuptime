@@ -95,13 +95,13 @@ const CustomCallSMSTable: FunctionComponent = (): ReactElement => {
           },
         ]}
         isDeleteable={true}
-        createVerb="Create Twilio Config"
+        createVerb="Create Call/SMS Config"
         isEditable={true}
         isCreateable={true}
         cardProps={{
-          title: "Twilio Config",
+          title: "Call/SMS Config",
           description:
-            "Configure your Twilio account to send SMS and make calls.",
+            "Configure your call and SMS providers (Twilio or FreeSwitch/SIP).",
         }}
         formSteps={[
           {
@@ -112,9 +112,13 @@ const CustomCallSMSTable: FunctionComponent = (): ReactElement => {
             title: "Twilio Config",
             id: "twilio-info",
           },
+          {
+            title: "FreeSwitch (SIP)",
+            id: "freeswitch-info",
+          },
         ]}
         name="Settings > Custom CallSMS Config"
-        noItemsMessage={"No Twilio config found."}
+        noItemsMessage={"No Call/SMS config found."}
         formFields={[
           {
             field: {
@@ -145,17 +149,28 @@ const CustomCallSMSTable: FunctionComponent = (): ReactElement => {
           },
           {
             field: {
+              callProviderType: true,
+            },
+            title: "Call Provider",
+            stepId: "basic-info",
+            fieldType: FormFieldSchemaType.Dropdown,
+            required: false,
+            description: "Select your call provider: twilio or freeswitch",
+            dropdownOptions: [
+              { label: "Twilio", value: "twilio" },
+              { label: "FreeSwitch (SIP)", value: "freeswitch" },
+            ],
+          },
+          {
+            field: {
               twilioAccountSID: true,
             },
             title: "Twilio Account SID",
             fieldType: FormFieldSchemaType.Text,
             stepId: "twilio-info",
-            required: true,
+            required: false,
             description: "You can find this in your Twilio console.",
             placeholder: "",
-            validation: {
-              minLength: 2,
-            },
           },
           {
             field: {
@@ -164,12 +179,9 @@ const CustomCallSMSTable: FunctionComponent = (): ReactElement => {
             title: "Twilio Auth Token",
             stepId: "twilio-info",
             fieldType: FormFieldSchemaType.Text,
-            required: true,
+            required: false,
             description: "You can find this in your Twilio console.",
             placeholder: "",
-            validation: {
-              minLength: 2,
-            },
           },
           {
             field: {
@@ -178,15 +190,10 @@ const CustomCallSMSTable: FunctionComponent = (): ReactElement => {
             title: "Twilio Primary Phone Number",
             stepId: "twilio-info",
             fieldType: FormFieldSchemaType.Phone,
-            required: true,
+            required: false,
             description: "You can find this in your Twilio console.",
             placeholder: "",
-            validation: {
-              minLength: 2,
-            },
           },
-
-          // add twilioSecondaryPhoneNumbers
           {
             field: {
               twilioSecondaryPhoneNumbers: true,
@@ -195,12 +202,8 @@ const CustomCallSMSTable: FunctionComponent = (): ReactElement => {
             stepId: "twilio-info",
             fieldType: FormFieldSchemaType.LongText,
             required: false,
-            description:
-              "If you have multiple phone numbers, add them here. These numbers will be used to send SMS and make calls if the country code matches instead of primary phone number. If the country code does not match, then primary phone number will be used.",
+            description: "If you have multiple phone numbers, add them here.",
             placeholder: "+441234567890, +461234567890",
-            validation: {
-              minLength: 2,
-            },
           },
           {
             field: {
@@ -211,7 +214,90 @@ const CustomCallSMSTable: FunctionComponent = (): ReactElement => {
             fieldType: FormFieldSchemaType.Toggle,
             required: false,
             description:
-              "When enabled, all SMS and Calls sent to project team members (on-call notifications, alerts, phone verification, etc.) will use this Twilio config instead of the global config. Only one Twilio config per project can be the project default. Status pages are unaffected — they continue to use the config explicitly assigned to each status page.",
+              "When enabled, all SMS and Calls sent to project team members will use this config instead of the global config.",
+          },
+          {
+            field: {
+              freeSwitchEventSocketHost: true,
+            },
+            title: "FreeSwitch ESL Host",
+            stepId: "freeswitch-info",
+            fieldType: FormFieldSchemaType.Text,
+            required: false,
+            description: "FreeSwitch Event Socket host. Default: freeswitch",
+            placeholder: "freeswitch",
+          },
+          {
+            field: {
+              freeSwitchEventSocketPort: true,
+            },
+            title: "FreeSwitch ESL Port",
+            stepId: "freeswitch-info",
+            fieldType: FormFieldSchemaType.Number,
+            required: false,
+            description: "FreeSwitch ESL port. Default: 8021",
+            placeholder: "8021",
+          },
+          {
+            field: {
+              freeSwitchEventSocketPassword: true,
+            },
+            title: "FreeSwitch ESL Password",
+            stepId: "freeswitch-info",
+            fieldType: FormFieldSchemaType.Text,
+            required: false,
+            description: "FreeSwitch ESL password. Default: ClueCon",
+            placeholder: "ClueCon",
+          },
+          {
+            field: {
+              freeSwitchGatewayName: true,
+            },
+            title: "FreeSwitch Gateway Name",
+            stepId: "freeswitch-info",
+            fieldType: FormFieldSchemaType.Text,
+            required: false,
+            description: "SIP gateway name configured in FreeSwitch.",
+            placeholder: "trunk-provider",
+          },
+          {
+            field: {
+              freeSwitchDefaultCallerId: true,
+            },
+            title: "FreeSwitch Default Caller ID",
+            stepId: "freeswitch-info",
+            fieldType: FormFieldSchemaType.Text,
+            required: false,
+            description: "Default caller ID for outbound calls.",
+            placeholder: "+5511999999999",
+          },
+          {
+            field: {
+              freeSwitchTtsEngine: true,
+            },
+            title: "FreeSwitch TTS Engine",
+            stepId: "freeswitch-info",
+            fieldType: FormFieldSchemaType.Dropdown,
+            required: false,
+            description:
+              "TTS engine. Options: flite, pico, say. Default: flite",
+            dropdownOptions: [
+              { label: "Flite (padrao)", value: "flite" },
+              { label: "Pico", value: "pico" },
+              { label: "Say", value: "say" },
+            ],
+          },
+          {
+            field: {
+              freeSwitchTtsVoice: true,
+            },
+            title: "FreeSwitch TTS Voice",
+            stepId: "freeswitch-info",
+            fieldType: FormFieldSchemaType.Text,
+            required: false,
+            description:
+              "TTS voice. For flite: slt (female), rms (male), kal (male). Default: slt",
+            placeholder: "slt",
           },
         ]}
         showRefreshButton={true}
@@ -278,6 +364,13 @@ const CustomCallSMSTable: FunctionComponent = (): ReactElement => {
           },
           {
             field: {
+              callProviderType: true,
+            },
+            title: "Provider",
+            type: FieldType.Text,
+          },
+          {
+            field: {
               twilioAccountSID: true,
             },
             title: "Twilio Account SID",
@@ -287,15 +380,15 @@ const CustomCallSMSTable: FunctionComponent = (): ReactElement => {
             field: {
               twilioPrimaryPhoneNumber: true,
             },
-            title: "Primary Twilio Phone Number",
+            title: "Primary Phone Number",
             type: FieldType.Phone,
           },
           {
             field: {
-              twilioSecondaryPhoneNumbers: true,
+              freeSwitchEventSocketHost: true,
             },
-            title: "Secondary Twilio Phone Number",
-            type: FieldType.LongText,
+            title: "FreeSwitch ESL Host",
+            type: FieldType.Text,
           },
           {
             field: {
