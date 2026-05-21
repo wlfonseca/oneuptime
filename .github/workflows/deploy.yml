@@ -59,6 +59,6 @@ jobs:
           build-args: |
             GIT_SHA=${{ github.sha }}
             APP_VERSION=${{ steps.version.outputs.version }}
-            IS_ENTERPRISE_EDITION=false
+            IS_ENTERPRISE_EDITION=true
           cache-from: type=gha
           cache-to: type=gha,mode=max
