@@ -7,7 +7,6 @@ import ProjectCallSMSConfigService from "./ProjectCallSMSConfigService";
 import ProjectCallSMSConfig from "../../Models/DatabaseModels/ProjectCallSMSConfig";
 import LlmProvider from "../../Models/DatabaseModels/LlmProvider";
 import { LLMMessage } from "../Utils/LLM/LLMService";
-import BadDataException from "../../Types/Exception/BadDataException";
 import CaptureSpan from "../Utils/Telemetry/CaptureSpan";
 
 export default class AIVoiceService {
@@ -57,7 +56,7 @@ export default class AIVoiceService {
       const response = await AIService.executeWithLogging({
         projectId: projectId,
         feature: "IncidentVoice",
-        incidentId: incident.id,
+        incidentId: incident.id as ObjectID,
         messages,
         maxTokens: 100,
         temperature: 0.7,
@@ -115,7 +114,7 @@ export default class AIVoiceService {
       const response = await AIService.executeWithLogging({
         projectId: projectId,
         feature: "AlertVoice",
-        alertId: alertEpisode.id,
+        alertId: alertEpisode.id as ObjectID,
         messages,
         maxTokens: 100,
         temperature: 0.7,

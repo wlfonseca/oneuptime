@@ -10,6 +10,7 @@ import LessThan from "../../../Types/BaseDatabase/LessThan";
 import LessThanOrEqual from "../../../Types/BaseDatabase/LessThanOrEqual";
 import LessThanOrNull from "../../../Types/BaseDatabase/LessThanOrNull";
 import NotEqual from "../../../Types/BaseDatabase/NotEqual";
+import RegexMatch from "../../../Types/BaseDatabase/RegexMatch";
 import Search from "../../../Types/BaseDatabase/Search";
 import { CompareType } from "../../../Types/Database/CompareBase";
 import OneUptimeDate from "../../../Types/Date";
@@ -25,6 +26,7 @@ export type RecordValue =
   | boolean
   | Date
   | Search<string>
+  | RegexMatch
   | NotEqual<CompareType>
   | GreaterThan<CompareType>
   | InBetween<CompareType>

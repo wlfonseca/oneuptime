@@ -437,10 +437,8 @@ export const getFreeSwitchConfig: GetFreeSwitchConfigFunction =
     }
 
     if (globalConfig.freeSwitchDefaultCallerId) {
-      freeSwitchConfig.defaultCallerId =
-        globalConfig.freeSwitchDefaultCallerId;
+      freeSwitchConfig.defaultCallerId = globalConfig.freeSwitchDefaultCallerId;
     }
 
     return freeSwitchConfig as FreeSwitchConfig;
-    };
   };
