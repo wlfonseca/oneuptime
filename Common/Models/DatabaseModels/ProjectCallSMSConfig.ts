@@ -553,6 +553,285 @@ export default class ProjectCallSMSConfig extends BaseModel {
     ],
   })
   @TableColumn({
+    type: TableColumnType.ShortText,
+    title: "Call Provider Type",
+    description: "Select which call provider to use: twilio or freeswitch",
+    isDefaultValueColumn: true,
+  })
+  @Column({
+    type: ColumnType.ShortText,
+    length: ColumnLength.ShortText,
+    nullable: true,
+    unique: false,
+  })
+  public callProviderType?: string = undefined;
+
+  @ColumnAccessControl({
+    create: [
+      Permission.ProjectOwner,
+      Permission.ProjectAdmin,
+      Permission.CreateProjectCallSMSConfig,
+    ],
+    read: [
+      Permission.ProjectOwner,
+      Permission.ProjectAdmin,
+      Permission.ProjectMember,
+      Permission.Viewer,
+      Permission.SettingsAdmin,
+      Permission.SettingsMember,
+      Permission.SettingsViewer,
+      Permission.ReadProjectCallSMSConfig,
+    ],
+    update: [
+      Permission.ProjectOwner,
+      Permission.ProjectAdmin,
+      Permission.EditProjectCallSMSConfig,
+    ],
+  })
+  @TableColumn({
+    type: TableColumnType.VeryLongText,
+    title: "FreeSwitch Event Socket Host",
+    description: "FreeSwitch ESL host address. Default: freeswitch",
+  })
+  @Column({
+    type: ColumnType.VeryLongText,
+    nullable: true,
+    unique: false,
+  })
+  public freeSwitchEventSocketHost?: string = undefined;
+
+  @ColumnAccessControl({
+    create: [
+      Permission.ProjectOwner,
+      Permission.ProjectAdmin,
+      Permission.CreateProjectCallSMSConfig,
+    ],
+    read: [
+      Permission.ProjectOwner,
+      Permission.ProjectAdmin,
+      Permission.ProjectMember,
+      Permission.Viewer,
+      Permission.SettingsAdmin,
+      Permission.SettingsMember,
+      Permission.SettingsViewer,
+      Permission.ReadProjectCallSMSConfig,
+    ],
+    update: [
+      Permission.ProjectOwner,
+      Permission.ProjectAdmin,
+      Permission.EditProjectCallSMSConfig,
+    ],
+  })
+  @TableColumn({
+    type: TableColumnType.Number,
+    title: "FreeSwitch Event Socket Port",
+    description: "FreeSwitch ESL port. Default: 8021",
+  })
+  @Column({
+    type: ColumnType.Number,
+    nullable: true,
+    unique: false,
+  })
+  public freeSwitchEventSocketPort?: number = undefined;
+
+  @ColumnAccessControl({
+    create: [
+      Permission.ProjectOwner,
+      Permission.ProjectAdmin,
+      Permission.CreateProjectCallSMSConfig,
+    ],
+    read: [
+      Permission.ProjectOwner,
+      Permission.ProjectAdmin,
+      Permission.ProjectMember,
+      Permission.Viewer,
+      Permission.SettingsAdmin,
+      Permission.SettingsMember,
+      Permission.SettingsViewer,
+      Permission.ReadProjectCallSMSConfig,
+    ],
+    update: [
+      Permission.ProjectOwner,
+      Permission.ProjectAdmin,
+      Permission.EditProjectCallSMSConfig,
+    ],
+  })
+  @TableColumn({
+    type: TableColumnType.VeryLongText,
+    title: "FreeSwitch Event Socket Password",
+    description: "FreeSwitch ESL password. Default: ClueCon",
+  })
+  @Column({
+    type: ColumnType.VeryLongText,
+    nullable: true,
+    unique: false,
+  })
+  public freeSwitchEventSocketPassword?: string = undefined;
+
+  @ColumnAccessControl({
+    create: [
+      Permission.ProjectOwner,
+      Permission.ProjectAdmin,
+      Permission.CreateProjectCallSMSConfig,
+    ],
+    read: [
+      Permission.ProjectOwner,
+      Permission.ProjectAdmin,
+      Permission.ProjectMember,
+      Permission.Viewer,
+      Permission.SettingsAdmin,
+      Permission.SettingsMember,
+      Permission.SettingsViewer,
+      Permission.ReadProjectCallSMSConfig,
+    ],
+    update: [
+      Permission.ProjectOwner,
+      Permission.ProjectAdmin,
+      Permission.EditProjectCallSMSConfig,
+    ],
+  })
+  @TableColumn({
+    type: TableColumnType.VeryLongText,
+    title: "FreeSwitch Gateway Name",
+    description:
+      "SIP gateway name configured in FreeSwitch (e.g., trunk-provider).",
+  })
+  @Column({
+    type: ColumnType.VeryLongText,
+    nullable: true,
+    unique: false,
+  })
+  public freeSwitchGatewayName?: string = undefined;
+
+  @ColumnAccessControl({
+    create: [
+      Permission.ProjectOwner,
+      Permission.ProjectAdmin,
+      Permission.CreateProjectCallSMSConfig,
+    ],
+    read: [
+      Permission.ProjectOwner,
+      Permission.ProjectAdmin,
+      Permission.ProjectMember,
+      Permission.Viewer,
+      Permission.SettingsAdmin,
+      Permission.SettingsMember,
+      Permission.SettingsViewer,
+      Permission.ReadProjectCallSMSConfig,
+    ],
+    update: [
+      Permission.ProjectOwner,
+      Permission.ProjectAdmin,
+      Permission.EditProjectCallSMSConfig,
+    ],
+  })
+  @TableColumn({
+    type: TableColumnType.VeryLongText,
+    title: "FreeSwitch Default Caller ID",
+    description: "Default caller ID number for outbound calls.",
+  })
+  @Column({
+    type: ColumnType.VeryLongText,
+    nullable: true,
+    unique: false,
+  })
+  public freeSwitchDefaultCallerId?: string = undefined;
+
+  @ColumnAccessControl({
+    create: [
+      Permission.ProjectOwner,
+      Permission.ProjectAdmin,
+      Permission.CreateProjectCallSMSConfig,
+    ],
+    read: [
+      Permission.ProjectOwner,
+      Permission.ProjectAdmin,
+      Permission.ProjectMember,
+      Permission.Viewer,
+      Permission.SettingsAdmin,
+      Permission.SettingsMember,
+      Permission.SettingsViewer,
+      Permission.ReadProjectCallSMSConfig,
+    ],
+    update: [
+      Permission.ProjectOwner,
+      Permission.ProjectAdmin,
+      Permission.EditProjectCallSMSConfig,
+    ],
+  })
+  @TableColumn({
+    type: TableColumnType.ShortText,
+    title: "FreeSwitch TTS Engine",
+    description:
+      "Text-to-speech engine. Options: flite, pico, say. Default: flite",
+  })
+  @Column({
+    type: ColumnType.ShortText,
+    length: ColumnLength.ShortText,
+    nullable: true,
+    unique: false,
+  })
+  public freeSwitchTtsEngine?: string = undefined;
+
+  @ColumnAccessControl({
+    create: [
+      Permission.ProjectOwner,
+      Permission.ProjectAdmin,
+      Permission.CreateProjectCallSMSConfig,
+    ],
+    read: [
+      Permission.ProjectOwner,
+      Permission.ProjectAdmin,
+      Permission.ProjectMember,
+      Permission.Viewer,
+      Permission.SettingsAdmin,
+      Permission.SettingsMember,
+      Permission.SettingsViewer,
+      Permission.ReadProjectCallSMSConfig,
+    ],
+    update: [
+      Permission.ProjectOwner,
+      Permission.ProjectAdmin,
+      Permission.EditProjectCallSMSConfig,
+    ],
+  })
+  @TableColumn({
+    type: TableColumnType.ShortText,
+    title: "FreeSwitch TTS Voice",
+    description:
+      "TTS voice name. For flite: slt (female), rms (male), kal (male). Default: slt",
+  })
+  @Column({
+    type: ColumnType.ShortText,
+    length: ColumnLength.ShortText,
+    nullable: true,
+    unique: false,
+  })
+  public freeSwitchTtsVoice?: string = undefined;
+
+  @ColumnAccessControl({
+    create: [
+      Permission.ProjectOwner,
+      Permission.ProjectAdmin,
+      Permission.CreateProjectCallSMSConfig,
+    ],
+    read: [
+      Permission.ProjectOwner,
+      Permission.ProjectAdmin,
+      Permission.ProjectMember,
+      Permission.Viewer,
+      Permission.SettingsAdmin,
+      Permission.SettingsMember,
+      Permission.SettingsViewer,
+      Permission.ReadProjectCallSMSConfig,
+    ],
+    update: [
+      Permission.ProjectOwner,
+      Permission.ProjectAdmin,
+      Permission.EditProjectCallSMSConfig,
+    ],
+  })
+  @TableColumn({
     isDefaultValueColumn: true,
     required: true,
     type: TableColumnType.Boolean,

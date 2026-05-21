@@ -399,6 +399,25 @@ export default class GlobalConfig extends GlobalConfigModel {
     update: [],
   })
   @TableColumn({
+    type: TableColumnType.ShortText,
+    title: "Call Provider Type",
+    description: "Select which call provider to use: twilio or freeswitch",
+    isDefaultValueColumn: true,
+  })
+  @Column({
+    type: ColumnType.ShortText,
+    length: ColumnLength.ShortText,
+    nullable: true,
+    unique: false,
+  })
+  public callProviderType?: string = undefined;
+
+  @ColumnAccessControl({
+    create: [],
+    read: [],
+    update: [],
+  })
+  @TableColumn({
     type: TableColumnType.VeryLongText,
     title: "FreeSwitch Event Socket Host",
     description: "FreeSwitch ESL host address. Default: freeswitch",
