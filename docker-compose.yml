@@ -71,6 +71,21 @@ services:
       - "traefik.http.routers.oneuptime.tls.certresolver=letsencrypt"
       - "traefik.http.services.oneuptime.loadbalancer.server.port=7849"
 
+  freeswitch:
+    image: docker.io/signalwire/freeswitch:latest
+    restart: unless-stopped
+    networks:
+      - oneuptime
+    ports:
+      - "5060:5060/udp"
+      - "5060:5060/tcp"
+      - "8021:8021"
+    volumes:
+      - ./FreeSwitch/event_socket.conf.xml:/etc/freeswitch/autoload_configs/event_socket.conf.xml:ro
+    cap_add:
+      - NET_ADMIN
+      - SYS_PTRACE
+
   backup:
     build:
       context: ./DockerBackup
