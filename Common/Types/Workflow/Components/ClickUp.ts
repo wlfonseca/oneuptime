@@ -24,13 +24,13 @@ const components: Array<ComponentMetadata> = [
         placeholder: "pk_1234567890_ABCDEFGHIJKLMNOPQRSTUVWXYZ",
       },
       {
-        id: "list-id",
-        name: "List ID",
+        id: "list-url",
+        name: "List URL",
         description:
-          "The ID of the ClickUp list where the task will be created. Find it in the URL when viewing a list.",
-        type: ComponentInputType.Text,
+          "URL of the ClickUp list where the task will be created. Example: https://app.clickup.com/123456/v/li/987654",
+        type: ComponentInputType.URL,
         required: true,
-        placeholder: "123456789",
+        placeholder: "https://app.clickup.com/123456/v/li/987654",
       },
       {
         id: "task-name",

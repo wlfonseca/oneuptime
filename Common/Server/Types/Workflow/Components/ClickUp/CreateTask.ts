@@ -61,8 +61,8 @@ export default class CreateTask extends ComponentCode {
       );
     }
 
-    if (!args["list-id"]) {
-      throw options.onError(new BadDataException("ClickUp List ID not found"));
+    if (!args["list-url"]) {
+      throw options.onError(new BadDataException("ClickUp List URL not found"));
     }
 
     if (!args["task-name"]) {
@@ -72,7 +72,24 @@ export default class CreateTask extends ComponentCode {
     }
 
     const apiToken: string = args["api-token"]?.toString() as string;
-    const listId: string = args["list-id"]?.toString() as string;
+    const listUrl: string = args["list-url"]?.toString() as string;
+
+    const listUrlParts: string[] = listUrl.split("/");
+    const liIndex: number = listUrlParts.indexOf("li");
+    let listId: string = "";
+
+    if (liIndex !== -1 && liIndex + 1 < listUrlParts.length) {
+      listId = listUrlParts[liIndex + 1]?.split("?")[0]?.split("#")[0] || "";
+    }
+
+    if (!listId) {
+      throw options.onError(
+        new BadDataException(
+          "Could not extract List ID from the provided URL. Make sure it's a valid ClickUp list URL like https://app.clickup.com/123456/v/li/987654",
+        ),
+      );
+    }
+
     const taskName: string = args["task-name"]?.toString() as string;
     const taskDescription: string | undefined =
       args["task-description"]?.toString();
