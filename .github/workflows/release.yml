@@ -1577,18 +1577,13 @@ jobs:
 
       - name: Switch nginx upstream and stop old container
         run: |
-          THESEARCH=$(ssh "${{ secrets.PROD_SSH_USER }}@${{ secrets.PROD_SSH_HOST }}" \
-            "grep -o 'set \$backend_app http://oneuptime-app-[a-z]*:3002' /etc/nginx/conf.d/default.conf || echo 'NOTFOUND'")
-          if [ "$THESEARCH" != "NOTFOUND" ]; then
-            ssh "${{ secrets.PROD_SSH_USER }}@${{ secrets.PROD_SSH_HOST }}" \
-              "docker cp /etc/nginx/conf.d/default.conf oneuptime-ingress-1:/etc/nginx/conf.d/default.conf"
-            ssh "${{ secrets.PROD_SSH_USER }}@${{ secrets.PROD_SSH_HOST }}" \
-              "docker exec oneuptime-ingress-1 sed -i 's|set \$backend_app http://oneuptime-app-[a-z]*:3002|set \$backend_app http://${{ steps.color.outputs.next_name }}:3002|' /etc/nginx/conf.d/default.conf"
-            ssh "${{ secrets.PROD_SSH_USER }}@${{ secrets.PROD_SSH_HOST }}" \
-              "docker exec oneuptime-ingress-1 nginx -s reload"
-          else
-            echo "WARNING: Could not find nginx backend upstream to update"
-          fi
+          # Update nginx backend - handles both first deploy (app:3002) and blue/green switch
+          ssh "${{ secrets.PROD_SSH_USER }}@${{ secrets.PROD_SSH_HOST }}" \
+            "docker exec oneuptime-ingress-1 sed -i 's|set \$backend_app http://[a-z0-9-]*:3002|set \$backend_app http://${{ steps.color.outputs.next_name }}:3002|g' /etc/nginx/conf.d/default.conf"
+          ssh "${{ secrets.PROD_SSH_USER }}@${{ secrets.PROD_SSH_HOST }}" \
+            "docker exec oneuptime-ingress-1 sed -i 's|set \$backend_app_grpc grpc://[a-z0-9-]*:4317|set \$backend_app_grpc grpc://${{ steps.color.outputs.next_name }}:4317|g' /etc/nginx/conf.d/default.conf"
+          ssh "${{ secrets.PROD_SSH_USER }}@${{ secrets.PROD_SSH_HOST }}" \
+            "docker exec oneuptime-ingress-1 nginx -s reload"
           ssh "${{ secrets.PROD_SSH_USER }}@${{ secrets.PROD_SSH_HOST }}" \
             "echo '${{ steps.color.outputs.next }}' > /opt/oneuptime/active-color"
           ssh "${{ secrets.PROD_SSH_USER }}@${{ secrets.PROD_SSH_HOST }}" \
