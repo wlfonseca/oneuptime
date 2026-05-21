@@ -10,6 +10,7 @@ import LessThanOrEqual from "../../../Types/BaseDatabase/LessThanOrEqual";
 import LessThanOrNull from "../../../Types/BaseDatabase/LessThanOrNull";
 import GreaterThanOrNull from "../../../Types/BaseDatabase/GreaterThanOrNull";
 import NotEqual from "../../../Types/BaseDatabase/NotEqual";
+import RegexMatch from "../../../Types/BaseDatabase/RegexMatch";
 import Search from "../../../Types/BaseDatabase/Search";
 import OneUptimeDate from "../../../Types/Date";
 import Dictionary from "../../../Types/Dictionary";
@@ -95,6 +96,8 @@ export class Statement implements BaseQueryParams {
 
       finalValue = tempArr;
     } else if (v.value instanceof ObjectID) {
+      finalValue = v.value.toString();
+    } else if (v.value instanceof RegexMatch) {
       finalValue = v.value.toString();
     } else if (v.value instanceof Search) {
       finalValue = `%${v.value.toString()}%`;

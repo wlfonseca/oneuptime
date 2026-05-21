@@ -161,6 +161,10 @@ export default class MonitorCriteriaObservationBuilder {
         return MonitorCriteriaObservationBuilder.describeLogCountObservation(
           input,
         );
+      case CheckOn.LogBodyMatch:
+        return MonitorCriteriaObservationBuilder.describeLogBodyMatchObservation(
+          input,
+        );
       case CheckOn.SpanCount:
         return MonitorCriteriaObservationBuilder.describeSpanCountObservation(
           input,
@@ -865,13 +869,13 @@ export default class MonitorCriteriaObservationBuilder {
 
     const isValid: boolean = Boolean(
       sslResponse &&
-        probeResponse?.isOnline &&
-        sslResponse.expiresAt &&
-        !sslResponse.isSelfSigned &&
-        OneUptimeDate.isAfter(
-          sslResponse.expiresAt,
-          OneUptimeDate.getCurrentDate(),
-        ),
+      probeResponse?.isOnline &&
+      sslResponse.expiresAt &&
+      !sslResponse.isSelfSigned &&
+      OneUptimeDate.isAfter(
+        sslResponse.expiresAt,
+        OneUptimeDate.getCurrentDate(),
+      ),
     );
 
     if (!sslResponse) {
@@ -897,12 +901,12 @@ export default class MonitorCriteriaObservationBuilder {
       !probeResponse?.isOnline ||
       Boolean(
         sslResponse &&
-          sslResponse.expiresAt &&
-          (sslResponse.isSelfSigned ||
-            OneUptimeDate.isBefore(
-              sslResponse.expiresAt,
-              OneUptimeDate.getCurrentDate(),
-            )),
+        sslResponse.expiresAt &&
+        (sslResponse.isSelfSigned ||
+          OneUptimeDate.isBefore(
+            sslResponse.expiresAt,
+            OneUptimeDate.getCurrentDate(),
+          )),
       );
 
     if (!sslResponse) {
@@ -1096,6 +1100,25 @@ export default class MonitorCriteriaObservationBuilder {
     }
 
     return `Log count was ${logResponse.logCount}.`;
+  }
+
+  private static describeLogBodyMatchObservation(input: {
+    dataToProcess: DataToProcess;
+  }): string | null {
+    const logResponse: LogMonitorResponse | null =
+      MonitorCriteriaDataExtractor.getLogMonitorResponse(input.dataToProcess);
+
+    if (!logResponse) {
+      return null;
+    }
+
+    const hasMatch: boolean = (logResponse.logCount || 0) > 0;
+
+    if (hasMatch) {
+      return `Log body pattern matched ${logResponse.logCount} log(s).`;
+    }
+
+    return "Log body pattern did not match any logs.";
   }
 
   private static describeSpanCountObservation(input: {

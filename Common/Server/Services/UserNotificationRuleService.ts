@@ -1904,50 +1904,50 @@ export class Service extends DatabaseService<Model> {
         ? `Incident number ${incident.incidentNumberWithPrefix || incident.incidentNumber}, ${incident.title || "Incident"}`
         : incident.title || "Incident";
 
+    const dataArray: Array<any> = [
+      {
+        sayMessage: "This is a call from OneUptime",
+      },
+      {
+        sayMessage: "A new incident has been created",
+      },
+      {
+        sayMessage: incidentIdentifier,
+      },
+      {
+        introMessage: "To acknowledge this incident press 1",
+        numDigits: 1,
+        timeoutInSeconds: 10,
+        noInputMessage: "You have not entered any input. Good bye",
+        onInputCallRequest: {
+          "1": {
+            sayMessage: "You have acknowledged this incident. Good bye",
+          },
+          default: {
+            sayMessage: "Invalid input. Good bye",
+          },
+        },
+        responseUrl: new URL(
+          httpProtocol,
+          host,
+          new Route(AppApiRoute.toString())
+            .addRoute(new UserOnCallLogTimeline().crudApiPath!)
+            .addRoute(
+              "/call/gather-input/" + userOnCallLogTimelineId.toString(),
+            ),
+        ),
+      },
+    ];
+
+    if (aiMessage) {
+      dataArray.splice(1, 2, {
+        sayMessage: aiMessage,
+      });
+    }
+
     const callRequest: CallRequest = {
       to: to,
-      data: [
-        {
-          sayMessage: "This is a call from OneUptime",
-        },
-        ...(aiMessage
-          ? [
-              {
-                sayMessage: aiMessage,
-              },
-            ]
-          : [
-              {
-                sayMessage: "A new incident has been created",
-              },
-              {
-                sayMessage: incidentIdentifier,
-              },
-            ]),
-        {
-          introMessage: "To acknowledge this incident press 1",
-          numDigits: 1,
-          timeoutInSeconds: 10,
-          noInputMessage: "You have not entered any input. Good bye",
-          onInputCallRequest: {
-            "1": {
-              sayMessage: "You have acknowledged this incident. Good bye",
-            },
-            default: {
-              sayMessage: "Invalid input. Good bye",
-            },
-          },
-          responseUrl: new URL(
-            httpProtocol,
-            host,
-            new Route(AppApiRoute.toString())
-              .addRoute(new UserOnCallLogTimeline().crudApiPath!)
-              .addRoute(
-                "/call/gather-input/" + userOnCallLogTimelineId.toString(),
-              ),
-          ),
-        },
-      ],
+      data: dataArray,
     };
 
     return callRequest;

@@ -375,11 +375,16 @@ const MonitorStepElement: FunctionComponent<ComponentProps> = (
     if (props.monitorStep.data?.logMonitor?.body) {
       logMonitorDetailView.body = props.monitorStep.data?.logMonitor?.body;
 
+      const isRegex: boolean =
+        props.monitorStep.data?.logMonitor?.bodyRegex || false;
+
       logFields.push({
         key: "body",
         title: "Filter Log Message",
-        description: "Filter by log message with this text:",
-        fieldType: FieldType.Text,
+        description: isRegex
+          ? "Filter by log message with this regex pattern:"
+          : "Filter by log message with this text:",
+        fieldType: isRegex ? FieldType.Text : FieldType.Text,
         placeholder: "No log message entered",
       });
     }

@@ -575,6 +575,46 @@ export default class MonitorCriteriaInstance extends DatabaseProperty {
       };
     }
 
+    if (arg.monitorType === MonitorType.Logs) {
+      monitorCriteriaInstance.data = {
+        id: ObjectID.generate().toString(),
+        monitorStatusId: arg.monitorStatusId,
+        filterCondition: FilterCondition.Any,
+        filters: [
+          {
+            checkOn: CheckOn.LogBodyMatch,
+            filterType: FilterType.True,
+            value: undefined,
+          },
+        ],
+        incidents: [
+          {
+            title: `${arg.monitorName} matched log pattern`,
+            description: `${arg.monitorName} detected logs matching the configured pattern.`,
+            incidentSeverityId: arg.incidentSeverityId,
+            autoResolveIncident: true,
+            id: ObjectID.generate().toString(),
+            onCallPolicyIds: [],
+          },
+        ],
+        changeMonitorStatus: true,
+        createIncidents: true,
+        createAlerts: false,
+        alerts: [
+          {
+            title: `${arg.monitorName} matched log pattern`,
+            description: `${arg.monitorName} detected logs matching the configured pattern.`,
+            alertSeverityId: arg.alertSeverityId,
+            autoResolveAlert: true,
+            id: ObjectID.generate().toString(),
+            onCallPolicyIds: [],
+          },
+        ],
+        name: `Check if ${arg.monitorName} matched a log pattern`,
+        description: `This criteria checks if ${arg.monitorName} has logs matching the configured body pattern`,
+      };
+    }
+
     if (arg.monitorType === MonitorType.SNMP) {
       monitorCriteriaInstance.data = {
         id: ObjectID.generate().toString(),

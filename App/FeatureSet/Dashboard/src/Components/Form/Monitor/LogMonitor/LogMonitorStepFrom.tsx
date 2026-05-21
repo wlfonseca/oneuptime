@@ -66,6 +66,16 @@ const LogMonitorStepForm: FunctionComponent<ComponentProps> = (
           },
           {
             field: {
+              bodyRegex: true,
+            },
+            fieldType: FormFieldSchemaType.Toggle,
+            title: "Use Regex",
+            description:
+              "Enable regex pattern matching for the log body filter. Allows combining multiple patterns with | (OR).",
+            hideOptionalLabel: true,
+          },
+          {
+            field: {
               lastXSecondsOfLogs: true,
             },
             defaultValue: 60,

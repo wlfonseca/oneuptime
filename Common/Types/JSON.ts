@@ -83,6 +83,7 @@ export enum ObjectType {
   StartsWith = "StartsWith",
   EndsWith = "EndsWith",
   NotContains = "NotContains",
+  RegexMatch = "RegexMatch",
   DashboardComponent = "DashboardComponent",
   DashboardViewConfig = "DashboardViewConfig",
 }

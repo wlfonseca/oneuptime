@@ -4,6 +4,7 @@ import CompareCriteria from "./CompareCriteria";
 import {
   CheckOn,
   CriteriaFilter,
+  FilterType,
 } from "../../../../Types/Monitor/CriteriaFilter";
 import LogMonitorResponse from "../../../../Types/Monitor/LogMonitor/LogMonitorResponse";
 
@@ -29,6 +30,23 @@ export default class LogMonitorCriteria {
         threshold: threshold as number,
         criteriaFilter: input.criteriaFilter,
       });
+    }
+
+    if (input.criteriaFilter.checkOn === CheckOn.LogBodyMatch) {
+      const currentLogCount: number =
+        (input.dataToProcess as LogMonitorResponse).logCount || 0;
+
+      const hasMatch: boolean = currentLogCount > 0;
+
+      if (input.criteriaFilter.filterType === FilterType.True) {
+        return hasMatch ? null : "Log body pattern did not match any logs.";
+      }
+
+      if (input.criteriaFilter.filterType === FilterType.False) {
+        return hasMatch ? "Log body pattern matched logs." : null;
+      }
+
+      return null;
     }
 
     return null;

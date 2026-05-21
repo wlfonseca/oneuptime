@@ -2,6 +2,7 @@ import Log from "../../Models/AnalyticsModels/Log";
 import InBetween from "../BaseDatabase/InBetween";
 import Includes from "../BaseDatabase/Includes";
 import Query from "../BaseDatabase/Query";
+import RegexMatch from "../BaseDatabase/RegexMatch";
 import Search from "../BaseDatabase/Search";
 import OneUptimeDate from "../Date";
 import Dictionary from "../Dictionary";
@@ -12,6 +13,7 @@ import ObjectID from "../ObjectID";
 export default interface MonitorStepLogMonitor {
   attributes: Dictionary<string | number | boolean>;
   body: string;
+  bodyRegex: boolean;
   severityTexts: Array<LogSeverity>;
   telemetryServiceIds: Array<ObjectID>;
   lastXSecondsOfLogs: number;
@@ -45,7 +47,11 @@ export class MonitorStepLogMonitorUtil {
     }
 
     if (monitorStepLogMonitor.body) {
-      query.body = new Search(monitorStepLogMonitor.body);
+      if (monitorStepLogMonitor.bodyRegex) {
+        query.body = new RegexMatch(monitorStepLogMonitor.body);
+      } else {
+        query.body = new Search(monitorStepLogMonitor.body);
+      }
     }
 
     if (monitorStepLogMonitor.lastXSecondsOfLogs) {
@@ -64,6 +70,7 @@ export class MonitorStepLogMonitorUtil {
     return {
       attributes: {},
       body: "",
+      bodyRegex: false,
       severityTexts: [],
       telemetryServiceIds: [],
       lastXSecondsOfLogs: 60,
@@ -75,6 +82,7 @@ export class MonitorStepLogMonitorUtil {
       attributes:
         (json["attributes"] as Dictionary<string | number | boolean>) || {},
       body: json["body"] as string,
+      bodyRegex: (json["bodyRegex"] as boolean) || false,
       severityTexts: json["severityTexts"] as Array<LogSeverity>,
       telemetryServiceIds: ObjectID.fromJSONArray(
         json["telemetryServiceIds"] as Array<JSONObject>,
@@ -87,6 +95,7 @@ export class MonitorStepLogMonitorUtil {
     return {
       attributes: monitor.attributes,
       body: monitor.body,
+      bodyRegex: monitor.bodyRegex,
       severityTexts: monitor.severityTexts,
       telemetryServiceIds: ObjectID.toJSONArray(monitor.telemetryServiceIds),
       lastXSecondsOfLogs: monitor.lastXSecondsOfLogs,

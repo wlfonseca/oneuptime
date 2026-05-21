@@ -295,7 +295,7 @@ export default class CriteriaFilterUtil {
 
     if (monitorType === MonitorType.Logs) {
       options = options.filter((i: DropdownOption) => {
-        return i.value === CheckOn.LogCount;
+        return i.value === CheckOn.LogCount || i.value === CheckOn.LogBodyMatch;
       });
     }
 
@@ -484,7 +484,11 @@ export default class CriteriaFilterUtil {
       });
     }
 
-    if (checkOn === CheckOn.IsOnline || checkOn === CheckOn.IsRequestTimeout) {
+    if (
+      checkOn === CheckOn.IsOnline ||
+      checkOn === CheckOn.IsRequestTimeout ||
+      checkOn === CheckOn.LogBodyMatch
+    ) {
       options = options.filter((i: DropdownOption) => {
         return i.value === FilterType.True || i.value === FilterType.False;
       });

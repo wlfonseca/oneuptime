@@ -12,6 +12,7 @@ import IncludesNone from "./BaseDatabase/IncludesNone";
 import StartsWith from "./BaseDatabase/StartsWith";
 import EndsWith from "./BaseDatabase/EndsWith";
 import NotContains from "./BaseDatabase/NotContains";
+import RegexMatch from "./BaseDatabase/RegexMatch";
 import IsNull from "./BaseDatabase/IsNull";
 import LessThan from "./BaseDatabase/LessThan";
 import LessThanOrEqual from "./BaseDatabase/LessThanOrEqual";
@@ -19,6 +20,7 @@ import LessThanOrNull from "./BaseDatabase/LessThanOrNull";
 import GreaterThanOrNull from "./BaseDatabase/GreaterThanOrNull";
 import NotEqual from "./BaseDatabase/NotEqual";
 import NotNull from "./BaseDatabase/NotNull";
+import RegexMatch from "./BaseDatabase/RegexMatch";
 import Search from "./BaseDatabase/Search";
 import MultiSearch from "./BaseDatabase/MultiSearch";
 import Color from "./Color";
@@ -77,6 +79,7 @@ const SerializableObjectDictionary: Dictionary<any> = {
   [ObjectType.StartsWith]: StartsWith,
   [ObjectType.EndsWith]: EndsWith,
   [ObjectType.NotContains]: NotContains,
+  [ObjectType.RegexMatch]: RegexMatch,
   [ObjectType.NotNull]: NotNull,
   [ObjectType.IsNull]: IsNull,
   [ObjectType.Recurring]: Recurring,

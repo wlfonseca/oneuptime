@@ -29,6 +29,7 @@ import LessThanOrNull from "../../../Types/BaseDatabase/LessThanOrNull";
 import NotEqual from "../../../Types/BaseDatabase/NotEqual";
 import NotContains from "../../../Types/BaseDatabase/NotContains";
 import NotNull from "../../../Types/BaseDatabase/NotNull";
+import RegexMatch from "../../../Types/BaseDatabase/RegexMatch";
 import Search from "../../../Types/BaseDatabase/Search";
 import MultiSearch from "../../../Types/BaseDatabase/MultiSearch";
 import StartsWith from "../../../Types/BaseDatabase/StartsWith";
@@ -71,7 +72,7 @@ export default class StatementGenerator<TBaseModel extends AnalyticsBaseModel> {
       .append(setStatement)
       .append(
         SQL`
-            WHERE TRUE `
+            WHERE TRUE `,
       )
       .append(whereStatement);
     /* eslint-enable prettier/prettier */
@@ -422,7 +423,14 @@ export default class StatementGenerator<TBaseModel extends AnalyticsBaseModel> {
         whereStatement.append(SQL` `);
       }
 
-      if (value instanceof Search) {
+      if (value instanceof RegexMatch) {
+        whereStatement.append(
+          SQL`AND match(${key}, ${{
+            value: value,
+            type: tableColumn.type,
+          }})`,
+        );
+      } else if (value instanceof Search) {
         whereStatement.append(
           SQL`AND ${key} ILIKE ${{
             value: value,
