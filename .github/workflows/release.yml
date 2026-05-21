@@ -1508,9 +1508,81 @@ jobs:
           # Optional. Defaults to repository settings.
           retention-days: 7
 
+  deploy-production:
+    name: Deploy to production (blue/green)
+    needs: [test-e2e-release-saas, test-e2e-release-self-hosted, generate-build-number, read-version, app-docker-image-merge]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/release'
+    environment: production
+    steps:
+      - name: Install SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.PROD_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H "${{ secrets.PROD_SSH_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Determine active color
+        id: color
+        run: |
+          ACTIVE=$(ssh "${{ secrets.PROD_SSH_USER }}@${{ secrets.PROD_SSH_HOST }}" \
+            "cat /opt/oneuptime/active-color 2>/dev/null || echo 'blue'")
+          if [ "$ACTIVE" = "blue" ]; then
+            echo "next=green" >> "$GITHUB_OUTPUT"
+            echo "next_port=${{ secrets.PROD_GREEN_PORT || '3003' }}" >> "$GITHUB_OUTPUT"
+            echo "active_name=oneuptime-app-blue" >> "$GITHUB_OUTPUT"
+            echo "next_name=oneuptime-app-green" >> "$GITHUB_OUTPUT"
+          else
+            echo "next=blue" >> "$GITHUB_OUTPUT"
+            echo "next_port=${{ secrets.PROD_BLUE_PORT || '3002' }}" >> "$GITHUB_OUTPUT"
+            echo "active_name=oneuptime-app-green" >> "$GITHUB_OUTPUT"
+            echo "next_name=oneuptime-app-blue" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Pull image and start new container
+        run: |
+          IMAGE="ghcr.io/wlfonseca/oneuptime-app:${{ needs.read-version.outputs.major_minor }}"
+          ssh "${{ secrets.PROD_SSH_USER }}@${{ secrets.PROD_SSH_HOST }}" \
+            docker pull "$IMAGE"
+          ssh "${{ secrets.PROD_SSH_USER }}@${{ secrets.PROD_SSH_HOST }}" \
+            docker rm -f "${{ steps.color.outputs.next_name }}" 2>/dev/null || true
+          ssh "${{ secrets.PROD_SSH_USER }}@${{ secrets.PROD_SSH_HOST }}" \
+            docker run -d --name "${{ steps.color.outputs.next_name }}" \
+            --restart unless-stopped \
+            -p "${{ steps.color.outputs.next_port }}:3002" \
+            -v /opt/oneuptime/config.env:/usr/src/app/config.env:ro \
+            "$IMAGE"
+
+      - name: Health check new container
+        run: |
+          for i in $(seq 1 30); do
+            CODE=$(ssh "${{ secrets.PROD_SSH_USER }}@${{ secrets.PROD_SSH_HOST }}" \
+              "curl -s -o /dev/null -w '%{http_code}' http://localhost:${{ steps.color.outputs.next_port }}/status 2>/dev/null || echo 000")
+            if [ "$CODE" = "200" ] || [ "$CODE" = "301" ]; then
+              echo "New container healthy (HTTP $CODE)"
+              exit 0
+            fi
+            echo "Attempt $i — HTTP $CODE"
+            sleep 5
+          done
+          echo "Health check failed"
+          ssh "${{ secrets.PROD_SSH_USER }}@${{ secrets.PROD_SSH_HOST }}" \
+            "docker logs ${{ steps.color.outputs.next_name }} --tail 20"
+          exit 1
+
+      - name: Switch nginx and stop old container
+        run: |
+          ssh "${{ secrets.PROD_SSH_USER }}@${{ secrets.PROD_SSH_HOST }}" \
+            "echo '${{ steps.color.outputs.next }}' > /opt/oneuptime/active-color"
+          ssh "${{ secrets.PROD_SSH_USER }}@${{ secrets.PROD_SSH_HOST }}" \
+            "sed -i 's|localhost:308\\?[0-9]\\{2,4\\}|localhost:${{ steps.color.outputs.next_port }}|g' /etc/nginx/conf.d/oneuptime.conf"
+          ssh "${{ secrets.PROD_SSH_USER }}@${{ secrets.PROD_SSH_HOST }}" nginx -s reload
+          ssh "${{ secrets.PROD_SSH_USER }}@${{ secrets.PROD_SSH_HOST }}" \
+            "docker stop ${{ steps.color.outputs.active_name }} 2>/dev/null; docker rm ${{ steps.color.outputs.active_name }} 2>/dev/null; docker image prune -f 2>/dev/null" || true
+
   draft-github-release:
     name: Create draft GitHub release
-    needs: [test-e2e-release-saas, test-e2e-release-self-hosted, generate-build-number, read-version, push-release-tags]
+    needs: [test-e2e-release-saas, test-e2e-release-self-hosted, generate-build-number, read-version, push-release-tags, deploy-production]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/release'
     permissions:
