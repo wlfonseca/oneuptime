@@ -423,14 +423,24 @@ export const getFreeSwitchConfig: GetFreeSwitchConfigFunction =
       return null;
     }
 
-    return {
+    const freeSwitchConfig: any = {
       eventSocketHost: globalConfig.freeSwitchEventSocketHost,
       eventSocketPort: globalConfig.freeSwitchEventSocketPort || 8021,
       eventSocketPassword:
         globalConfig.freeSwitchEventSocketPassword || "ClueCon",
-      gatewayName: globalConfig.freeSwitchGatewayName || undefined,
-      defaultCallerId: globalConfig.freeSwitchDefaultCallerId || undefined,
       ttsEngine: globalConfig.freeSwitchTtsEngine || "flite",
       ttsVoice: globalConfig.freeSwitchTtsVoice || "slt",
+    };
+
+    if (globalConfig.freeSwitchGatewayName) {
+      freeSwitchConfig.gatewayName = globalConfig.freeSwitchGatewayName;
+    }
+
+    if (globalConfig.freeSwitchDefaultCallerId) {
+      freeSwitchConfig.defaultCallerId =
+        globalConfig.freeSwitchDefaultCallerId;
+    }
+
+    return freeSwitchConfig as FreeSwitchConfig;
     };
   };

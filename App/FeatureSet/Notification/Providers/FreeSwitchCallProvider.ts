@@ -12,6 +12,8 @@ import {
 import FreeSwitchConfig from "Common/Types/CallAndSMS/FreeSwitchConfig";
 import BadDataException from "Common/Types/Exception/BadDataException";
 import logger from "Common/Server/Utils/Logger";
+import { exec } from "child_process";
+import { promisify } from "util";
 
 export default class FreeSwitchCallProvider implements ICallProvider {
   private config: FreeSwitchConfig;
@@ -189,8 +191,6 @@ export default class FreeSwitchCallProvider implements ICallProvider {
   }
 
   private async sendFsCli(command: string): Promise<string> {
-    const { exec } = await import("child_process");
-    const { promisify } = await import("util");
     const execAsync = promisify(exec);
 
     const escaped: string = command.replace(/"/g, '\\"');

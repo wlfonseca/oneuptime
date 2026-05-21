@@ -20,7 +20,6 @@ import LessThanOrNull from "./BaseDatabase/LessThanOrNull";
 import GreaterThanOrNull from "./BaseDatabase/GreaterThanOrNull";
 import NotEqual from "./BaseDatabase/NotEqual";
 import NotNull from "./BaseDatabase/NotNull";
-import RegexMatch from "./BaseDatabase/RegexMatch";
 import Search from "./BaseDatabase/Search";
 import MultiSearch from "./BaseDatabase/MultiSearch";
 import Color from "./Color";
