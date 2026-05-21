@@ -1,4 +1,5 @@
 import ComponentCode, { RunOptions, RunReturnType } from "../../ComponentCode";
+import Headers from "../../../../../Types/API/Headers";
 import HTTPErrorResponse from "../../../../../Types/API/HTTPErrorResponse";
 import HTTPResponse from "../../../../../Types/API/HTTPResponse";
 import URL from "../../../../../Types/API/URL";
@@ -168,7 +169,7 @@ export default class CreateTask extends ComponentCode {
         await API.post({
           url: clickupApiUrl,
           data: requestBody,
-          headers: { Authorization: apiToken } as any,
+          headers: { Authorization: apiToken } as Headers,
         });
 
       if (apiResult instanceof HTTPErrorResponse) {
@@ -225,7 +226,7 @@ export default class CreateTask extends ComponentCode {
     listId: string,
     fieldId: string,
     value: string,
-    options: RunOptions,
+    _options: RunOptions,
   ): Promise<string | null> {
     const searchUrl: URL = URL.fromString(
       `https://api.clickup.com/api/v2/list/${listId}/task?custom_fields=[{"field_id":"${fieldId}","operator":"=","value":"${value}"}]`,

@@ -1,4 +1,5 @@
 import ComponentCode, { RunOptions, RunReturnType } from "../../ComponentCode";
+import Headers from "../../../../../Types/API/Headers";
 import HTTPErrorResponse from "../../../../../Types/API/HTTPErrorResponse";
 import HTTPResponse from "../../../../../Types/API/HTTPResponse";
 import URL from "../../../../../Types/API/URL";
@@ -141,7 +142,7 @@ export default class UpdateTask extends ComponentCode {
         await API.put({
           url: clickupApiUrl,
           data: { status: statusInput },
-          headers: { Authorization: apiToken } as any,
+          headers: { Authorization: apiToken } as Headers,
         });
 
       if (apiResult instanceof HTTPErrorResponse) {
@@ -166,7 +167,7 @@ export default class UpdateTask extends ComponentCode {
           await API.post({
             url: commentUrl,
             data: { comment_text: commentInput },
-            headers: { Authorization: apiToken } as any,
+            headers: { Authorization: apiToken } as Headers,
           });
         } catch (_commentErr) {
           // comment is optional, ignore errors
