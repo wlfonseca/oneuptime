@@ -337,6 +337,7 @@ import { MigrateLegacyManagerRolesToAdmin1778900000000 } from "./1778900000000-M
 import { AddOnCallDutyPolicyScheduleOwners1778929624633 } from "./1778929624633-AddOnCallDutyPolicyScheduleOwners";
 import { AddOnCallIncomingCallOwnersAndRules1778931537020 } from "./1778931537020-AddOnCallIncomingCallOwnersAndRules";
 import { IncreaseSmtpUsernameLength1779125489830 } from "./1779125489830-IncreaseSmtpUsernameLength";
+import { AddGlobalFreeSwitchConfig1779500000000 } from "./1779500000000-AddGlobalFreeSwitchConfig";
 export default [
   InitialMigration,
   MigrationName1717678334852,
@@ -677,4 +678,5 @@ export default [
   AddOnCallDutyPolicyScheduleOwners1778929624633,
   AddOnCallIncomingCallOwnersAndRules1778931537020,
   IncreaseSmtpUsernameLength1779125489830,
+  AddGlobalFreeSwitchConfig1779500000000,
 ];
