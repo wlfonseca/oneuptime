@@ -491,9 +491,10 @@ export default class GlobalConfig extends GlobalConfigModel {
       "Text-to-speech engine. Options: flite, pico, say. Default: flite",
   })
   @Column({
-    type: ColumnType.Text,
+    type: ColumnType.ShortText,
     nullable: true,
     unique: false,
+    length: ColumnLength.ShortText,
   })
   public freeSwitchTtsEngine?: string = undefined;
 
@@ -503,15 +504,16 @@ export default class GlobalConfig extends GlobalConfigModel {
     update: [],
   })
   @TableColumn({
-    type: TableColumnType.Text,
+    type: TableColumnType.ShortText,
     title: "FreeSwitch TTS Voice",
     description:
       "TTS voice name. For flite: slt (female), rms (male), kal (male). Default: slt",
   })
   @Column({
-    type: ColumnType.Text,
+    type: ColumnType.ShortText,
     nullable: true,
     unique: false,
+    length: ColumnLength.ShortText,
   })
   public freeSwitchTtsVoice?: string = undefined;
 
