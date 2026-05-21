@@ -28,6 +28,9 @@ export class AddProjectCallSMSFreeSwitchConfig1780000000000 implements Migration
     await queryRunner.query(
       `ALTER TABLE "ProjectCallSMSConfig" ADD "freeSwitchTtsVoice" character varying(50)`,
     );
+    await queryRunner.query(
+      `ALTER TABLE "ProjectCallSMSConfig" ADD "aiVoiceEnabled" boolean DEFAULT false`,
+    );
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
@@ -54,6 +57,9 @@ export class AddProjectCallSMSFreeSwitchConfig1780000000000 implements Migration
     );
     await queryRunner.query(
       `ALTER TABLE "ProjectCallSMSConfig" DROP COLUMN "freeSwitchTtsVoice"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "ProjectCallSMSConfig" DROP COLUMN "aiVoiceEnabled"`,
     );
   }
 }

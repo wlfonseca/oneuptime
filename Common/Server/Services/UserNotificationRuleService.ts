@@ -22,6 +22,7 @@ import Protocol from "../../Types/API/Protocol";
 import Route from "../../Types/API/Route";
 import URL from "../../Types/API/URL";
 import CallRequest from "../../Types/Call/CallRequest";
+import AIVoiceService from "./AIVoiceService";
 import { LIMIT_PER_PROJECT } from "../../Types/Database/LimitMax";
 import QueryHelper from "../Types/Database/QueryHelper";
 import OneUptimeDate from "../../Types/Date";
@@ -1885,6 +1886,19 @@ export class Service extends DatabaseService<Model> {
 
     const httpProtocol: Protocol = await DatabaseConfig.getHttpProtocol();
 
+    let aiMessage: string | null = null;
+
+    if (incident.projectId) {
+      try {
+        aiMessage = await AIVoiceService.generateIncidentVoiceMessage(
+          incident.projectId,
+          incident,
+        );
+      } catch (_err) {
+        // fall back to default message
+      }
+    }
+
     const incidentIdentifier: string =
       incident.incidentNumber !== undefined
         ? `Incident number ${incident.incidentNumberWithPrefix || incident.incidentNumber}, ${incident.title || "Incident"}`
@@ -1896,12 +1910,20 @@ export class Service extends DatabaseService<Model> {
         {
           sayMessage: "This is a call from OneUptime",
         },
-        {
-          sayMessage: "A new incident has been created",
-        },
-        {
-          sayMessage: incidentIdentifier,
-        },
+        ...(aiMessage
+          ? [
+              {
+                sayMessage: aiMessage,
+              },
+            ]
+          : [
+              {
+                sayMessage: "A new incident has been created",
+              },
+              {
+                sayMessage: incidentIdentifier,
+              },
+            ]),
         {
           introMessage: "To acknowledge this incident press 1",
           numDigits: 1,

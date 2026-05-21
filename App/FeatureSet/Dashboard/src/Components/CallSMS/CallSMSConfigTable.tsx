@@ -218,77 +218,6 @@ const CustomCallSMSTable: FunctionComponent = (): ReactElement => {
           },
           {
             field: {
-              freeSwitchEventSocketHost: true,
-            },
-            title: "FreeSwitch ESL Host",
-            stepId: "freeswitch-info",
-            fieldType: FormFieldSchemaType.Text,
-            required: false,
-            description: "FreeSwitch Event Socket host. Default: freeswitch",
-            placeholder: "freeswitch",
-          },
-          {
-            field: {
-              freeSwitchEventSocketPort: true,
-            },
-            title: "FreeSwitch ESL Port",
-            stepId: "freeswitch-info",
-            fieldType: FormFieldSchemaType.Number,
-            required: false,
-            description: "FreeSwitch ESL port. Default: 8021",
-            placeholder: "8021",
-          },
-          {
-            field: {
-              freeSwitchEventSocketPassword: true,
-            },
-            title: "FreeSwitch ESL Password",
-            stepId: "freeswitch-info",
-            fieldType: FormFieldSchemaType.Text,
-            required: false,
-            description: "FreeSwitch ESL password. Default: ClueCon",
-            placeholder: "ClueCon",
-          },
-          {
-            field: {
-              freeSwitchGatewayName: true,
-            },
-            title: "FreeSwitch Gateway Name",
-            stepId: "freeswitch-info",
-            fieldType: FormFieldSchemaType.Text,
-            required: false,
-            description: "SIP gateway name configured in FreeSwitch.",
-            placeholder: "trunk-provider",
-          },
-          {
-            field: {
-              freeSwitchDefaultCallerId: true,
-            },
-            title: "FreeSwitch Default Caller ID",
-            stepId: "freeswitch-info",
-            fieldType: FormFieldSchemaType.Text,
-            required: false,
-            description: "Default caller ID for outbound calls.",
-            placeholder: "+5511999999999",
-          },
-          {
-            field: {
-              freeSwitchTtsEngine: true,
-            },
-            title: "FreeSwitch TTS Engine",
-            stepId: "freeswitch-info",
-            fieldType: FormFieldSchemaType.Dropdown,
-            required: false,
-            description:
-              "TTS engine. Options: flite, pico, say. Default: flite",
-            dropdownOptions: [
-              { label: "Flite (padrao)", value: "flite" },
-              { label: "Pico", value: "pico" },
-              { label: "Say", value: "say" },
-            ],
-          },
-          {
-            field: {
               freeSwitchTtsVoice: true,
             },
             title: "FreeSwitch TTS Voice",
@@ -298,6 +227,17 @@ const CustomCallSMSTable: FunctionComponent = (): ReactElement => {
             description:
               "TTS voice. For flite: slt (female), rms (male), kal (male). Default: slt",
             placeholder: "slt",
+          },
+          {
+            field: {
+              aiVoiceEnabled: true,
+            },
+            title: "AI Voice",
+            stepId: "freeswitch-info",
+            fieldType: FormFieldSchemaType.Toggle,
+            required: false,
+            description:
+              "When enabled, the AI provider configured for this project will generate a friendly voice message for incident and alert calls instead of generic messages. Requires an LLM Provider configured in Settings > AI.",
           },
         ]}
         showRefreshButton={true}
@@ -389,6 +329,13 @@ const CustomCallSMSTable: FunctionComponent = (): ReactElement => {
             },
             title: "FreeSwitch ESL Host",
             type: FieldType.Text,
+          },
+          {
+            field: {
+              aiVoiceEnabled: true,
+            },
+            title: "AI Voice",
+            type: FieldType.Boolean,
           },
           {
             field: {
