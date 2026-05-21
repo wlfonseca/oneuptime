@@ -2,70 +2,112 @@
 # For example, if you want to use the image from Github Container Registry, you can change the image tag from oneuptime/dashboard:latest to ghcr.io/oneuptime/dashboard:latest
 
 x-common-depends-on: &common-depends-on
-    postgres:
-        condition: service_healthy
-    redis:
-        condition: service_healthy
-    clickhouse:
-        condition: service_healthy
+  postgres:
+    condition: service_healthy
+  redis:
+    condition: service_healthy
+  clickhouse:
+    condition: service_healthy
 
 services:
+  redis:
+    extends:
+      file: ./docker-compose.base.yml
+      service: redis
 
-    redis:
-        extends:
-            file: ./docker-compose.base.yml
-            service: redis
+  clickhouse:
+    extends:
+      file: ./docker-compose.base.yml
+      service: clickhouse
 
-    clickhouse:
-        extends:
-            file: ./docker-compose.base.yml
-            service: clickhouse
+  postgres:
+    ports:
+      - "5400:5432" # for access to postgres for backups. If you don't need backup, you can comment this line out to make it more secure.
+    extends:
+      file: ./docker-compose.base.yml
+      service: postgres
 
-    postgres:
-        ports:
-          - "5400:5432" # for access to postgres for backups. If you don't need backup, you can comment this line out to make it more secure.
-        extends:
-            file: ./docker-compose.base.yml
-            service: postgres
+  app:
+    image: oneuptime/app:${APP_TAG}
+    extends:
+      file: ./docker-compose.base.yml
+      service: app
+    depends_on:
+      <<: *common-depends-on
+    command:
+      [
+        "/bin/bash",
+        "-c",
+        "NODE_OPTIONS='--max-old-space-size=4096' node --no-node-snapshot --require ts-node/register Index.ts",
+      ]
 
+  probe-1:
+    image: oneuptime/probe:${APP_TAG}
+    extends:
+      file: ./docker-compose.base.yml
+      service: probe-1
+    depends_on:
+      <<: *common-depends-on
+    command:
+      [
+        "/bin/bash",
+        "-c",
+        "NODE_OPTIONS='--max-old-space-size=2048' node --no-node-snapshot --require ts-node/register Index.ts",
+      ]
 
-    app:
-        image:  oneuptime/app:${APP_TAG}
-        extends:
-            file: ./docker-compose.base.yml
-            service: app
-        depends_on:
-            <<: *common-depends-on
-        command: ["/bin/bash", "-c", "NODE_OPTIONS='--max-old-space-size=4096' node --no-node-snapshot --require ts-node/register Index.ts"]
+  ingress:
+    image: oneuptime/nginx:${APP_TAG}
+    extends:
+      file: ./docker-compose.base.yml
+      service: ingress
+    depends_on:
+      <<: *common-depends-on
+    ports:
+      - "127.0.0.1:7849:7849"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.oneuptime.rule=Host(`oneuptime.cw2tecnologia.com.br`)"
+      - "traefik.http.routers.oneuptime.tls=true"
+      - "traefik.http.routers.oneuptime.tls.certresolver=letsencrypt"
+      - "traefik.http.services.oneuptime.loadbalancer.server.port=7849"
 
-    probe-1:
-        image:  oneuptime/probe:${APP_TAG}
-        extends:
-            file: ./docker-compose.base.yml
-            service: probe-1
-        depends_on:
-            <<: *common-depends-on
-        command: ["/bin/bash", "-c", "NODE_OPTIONS='--max-old-space-size=2048' node --no-node-snapshot --require ts-node/register Index.ts"]
-
-    ingress:
-      image: oneuptime/nginx:${APP_TAG}
-      extends:
-        file: ./docker-compose.base.yml
-        service: ingress
-      depends_on:
-        <<: *common-depends-on
-      ports:
-        - "127.0.0.1:7849:7849"
-      labels:
-        - "traefik.enable=true"
-        - "traefik.http.routers.oneuptime.rule=Host(`oneuptime.cw2tecnologia.com.br`)"
-        - "traefik.http.routers.oneuptime.tls=true"
-        - "traefik.http.routers.oneuptime.tls.certresolver=letsencrypt"
-        - "traefik.http.services.oneuptime.loadbalancer.server.port=7849"
+  backup:
+    build:
+      context: ./DockerBackup
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    networks:
+      - oneuptime
+    depends_on:
+      postgres:
+        condition: service_healthy
+      clickhouse:
+        condition: service_healthy
+    environment:
+      - DATABASE_HOST=postgres
+      - DATABASE_PORT=5432
+      - DATABASE_USERNAME=${DATABASE_USERNAME}
+      - DATABASE_PASSWORD=${DATABASE_PASSWORD}
+      - DATABASE_NAME=${DATABASE_NAME}
+      - CLICKHOUSE_HOST=clickhouse
+      - CLICKHOUSE_PORT=8123
+      - CLICKHOUSE_USER=${CLICKHOUSE_USER}
+      - CLICKHOUSE_PASSWORD=${CLICKHOUSE_PASSWORD}
+      - CLICKHOUSE_DATABASE=${CLICKHOUSE_DATABASE}
+      - S3_BUCKET=${S3_BUCKET:-}
+      - S3_PREFIX=${S3_PREFIX:-oneuptime-backups}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-}
+      - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION:-us-east-1}
+      - RETENTION_DAYS=${BACKUP_RETENTION_DAYS:-30}
+      - CRON_SCHEDULE=${BACKUP_CRON_SCHEDULE:-0 3 * * *}
+    volumes:
+      - backups:/backups
 
 volumes:
-    postgres:
-    clickhouse:
+  postgres:
+  clickhouse:
+  backups:
 
 networks:
   oneuptime:
