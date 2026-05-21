@@ -132,10 +132,6 @@ export default class UpdateTask extends ComponentCode {
       );
     }
 
-    const apiHeaders: JSONObject = {
-      Authorization: apiToken,
-    };
-
     const clickupApiUrl: URL = URL.fromString(
       `https://api.clickup.com/api/v2/task/${taskId}`,
     );
@@ -145,7 +141,7 @@ export default class UpdateTask extends ComponentCode {
         await API.put({
           url: clickupApiUrl,
           data: { status: statusInput },
-          headers: apiHeaders,
+          headers: { Authorization: apiToken } as any,
         });
 
       if (apiResult instanceof HTTPErrorResponse) {
@@ -170,7 +166,7 @@ export default class UpdateTask extends ComponentCode {
           await API.post({
             url: commentUrl,
             data: { comment_text: commentInput },
-            headers: apiHeaders,
+            headers: { Authorization: apiToken } as any,
           });
         } catch (_commentErr) {
           // comment is optional, ignore errors

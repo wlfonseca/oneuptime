@@ -107,10 +107,6 @@ export default class CreateTask extends ComponentCode {
       );
     }
 
-    const apiHeaders: JSONObject = {
-      Authorization: apiToken,
-    };
-
     const requestBody: JSONObject = {
       name: taskName,
     };
@@ -172,7 +168,7 @@ export default class CreateTask extends ComponentCode {
         await API.post({
           url: clickupApiUrl,
           data: requestBody,
-          headers: apiHeaders,
+          headers: { Authorization: apiToken } as any,
         });
 
       if (apiResult instanceof HTTPErrorResponse) {
@@ -262,8 +258,8 @@ export default class CreateTask extends ComponentCode {
     counterFieldId: string | undefined,
     duplicatePort: Port | undefined,
     successPort: Port | undefined,
-    errorPort: Port | undefined,
-    options: RunOptions,
+    _errorPort: Port | undefined,
+    _options: RunOptions,
   ): Promise<RunReturnType> {
     let eventCount: number = 1;
 
