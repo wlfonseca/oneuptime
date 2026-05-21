@@ -1,7 +1,6 @@
 import Modal, { ModalWidth } from "../Modal/Modal";
 import Icon, { IconType, SizeProp } from "../Icon/Icon";
 import IconProp from "../../../Types/Icon/IconProp";
-import Input from "../Input/Input";
 import Button, { ButtonStyleType } from "../Button/Button";
 import React, {
   FunctionComponent,
@@ -26,7 +25,6 @@ import {
   BILLING_ENABLED,
   IS_ENTERPRISE_EDITION,
 } from "../../Config";
-import Alert, { AlertType } from "../Alerts/Alert";
 
 export interface ComponentProps {
   className?: string | undefined;
@@ -137,22 +135,8 @@ const EditionLabel: FunctionComponent<ComponentProps> = (
       return false;
     }
 
-    if (
-      !globalConfig?.enterpriseLicenseToken ||
-      !globalConfig.enterpriseLicenseExpiresAt
-    ) {
-      return false;
-    }
-
-    const expiresAt: Date = OneUptimeDate.fromString(
-      globalConfig.enterpriseLicenseExpiresAt,
-    );
-
-    return expiresAt.getTime() > Date.now();
-  }, [
-    globalConfig?.enterpriseLicenseExpiresAt,
-    globalConfig?.enterpriseLicenseToken,
-  ]);
+    return true;
+  }, []);
 
   const licenseExpiresAtText: string | null = useMemo(() => {
     if (!globalConfig?.enterpriseLicenseExpiresAt) {
@@ -235,12 +219,10 @@ const EditionLabel: FunctionComponent<ComponentProps> = (
     }
 
     if (isConfigLoading) {
-      return "Enterprise Edition (Checking...)";
+      return "Enterprise Edition";
     }
 
-    return licenseValid
-      ? "Enterprise Edition"
-      : "Enterprise Edition (License Required)";
+    return "Enterprise Edition";
   }, [isConfigLoading, licenseValid]);
 
   const indicatorColor: string = useMemo(() => {
@@ -490,187 +472,15 @@ const EditionLabel: FunctionComponent<ComponentProps> = (
                   </div>
                 )}
 
-                {!configError && !isConfigLoading && licenseValid && (
+                {!configError && !isConfigLoading && (
                   <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">
-                    <p className="font-semibold">License verified</p>
-                    <p className="mt-1">
-                      <span className="font-medium">Company:</span>{" "}
-                      {globalConfig?.enterpriseCompanyName || "Not specified"}
+                    <p className="font-semibold">
+                      Enterprise Edition is active
                     </p>
-                    {licenseExpiresAtText && (
-                      <p>
-                        <span className="font-medium">Expires:</span>{" "}
-                        {licenseExpiresAtText}
-                      </p>
-                    )}
+                    <p className="mt-1">
+                      All enterprise features are unlocked and ready to use.
+                    </p>
                   </div>
-                )}
-
-                {!configError && !isConfigLoading && licenseValid && (
-                  <div
-                    className={`rounded-lg border p-4 shadow-sm ${
-                      isUserLimitBreached
-                        ? "border-red-200 bg-red-50"
-                        : "border-gray-200 bg-white"
-                    }`}
-                  >
-                    <div className="flex items-start gap-3">
-                      <div
-                        className={`flex h-9 w-9 items-center justify-center rounded-full ${
-                          isUserLimitBreached
-                            ? "bg-red-100 text-red-600"
-                            : "bg-indigo-100 text-indigo-600"
-                        }`}
-                      >
-                        <Icon
-                          icon={
-                            isUserLimitBreached ? IconProp.Alert : IconProp.User
-                          }
-                          size={SizeProp.Regular}
-                        />
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between">
-                          <h3
-                            className={`text-sm font-semibold ${
-                              isUserLimitBreached
-                                ? "text-red-900"
-                                : "text-gray-900"
-                            }`}
-                          >
-                            User Usage
-                          </h3>
-                          {isUserLimitBreached && (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
-                              Limit exceeded
-                            </span>
-                          )}
-                        </div>
-
-                        <div className="mt-2 flex items-baseline gap-1">
-                          <span
-                            className={`text-2xl font-semibold ${
-                              isUserLimitBreached
-                                ? "text-red-700"
-                                : "text-gray-900"
-                            }`}
-                          >
-                            {typeof currentUserCount === "number"
-                              ? currentUserCount.toLocaleString()
-                              : "—"}
-                          </span>
-                          <span className="text-sm text-gray-500">
-                            {" / "}
-                            {typeof userLimit === "number" && userLimit > 0
-                              ? `${userLimit.toLocaleString()} users`
-                              : "unlimited"}
-                          </span>
-                        </div>
-
-                        {typeof userUsagePercent === "number" && (
-                          <div className="mt-3">
-                            <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200">
-                              <div
-                                className={`h-full rounded-full transition-all ${
-                                  isUserLimitBreached
-                                    ? "bg-red-500"
-                                    : userUsagePercent >= 80
-                                      ? "bg-amber-500"
-                                      : "bg-emerald-500"
-                                }`}
-                                style={{ width: `${userUsagePercent}%` }}
-                              />
-                            </div>
-                            <p className="mt-1 text-xs text-gray-500">
-                              {userUsagePercent}% of licensed seats in use
-                            </p>
-                          </div>
-                        )}
-
-                        {isUserLimitBreached && (
-                          <p className="mt-3 text-xs text-red-700">
-                            Your installation has more users than your license
-                            permits. Please contact{" "}
-                            <a
-                              href="mailto:sales@oneuptime.com"
-                              className="font-medium text-red-800 underline hover:text-red-900"
-                            >
-                              sales@oneuptime.com
-                            </a>{" "}
-                            to expand your license.
-                          </p>
-                        )}
-
-                        <p className="mt-3 text-xs text-gray-500">
-                          {userCountUpdatedAtText
-                            ? `Last reported to OneUptime on ${userCountUpdatedAtText}.`
-                            : "User count has not been reported to OneUptime yet. The first report will be sent within 24 hours."}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {!configError &&
-                  !isConfigLoading &&
-                  !licenseValid &&
-                  globalConfig?.enterpriseLicenseKey && (
-                    <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-                      <p className="font-semibold">
-                        License validation required
-                      </p>
-                      <p className="mt-1">
-                        The stored license information could not be verified.
-                        Please validate the license key again.
-                      </p>
-                    </div>
-                  )}
-
-                {!configError && (
-                  <>
-                    {successMessage && (
-                      <Alert type={AlertType.SUCCESS} title={successMessage} />
-                    )}
-
-                    {!licenseValid && (
-                      <>
-                        <div>
-                          <label className="text-sm font-medium text-gray-700">
-                            License Key
-                          </label>
-                          <Input
-                            value={licenseKeyInput}
-                            onChange={(value: string) => {
-                              setLicenseKeyInput(value);
-                              licenseInputEditedRef.current = true;
-                            }}
-                            placeholder="Enter your enterprise license key"
-                            disableSpellCheck={true}
-                          />
-                        </div>
-
-                        {validationError && (
-                          <Alert
-                            type={AlertType.DANGER}
-                            title={validationError}
-                          />
-                        )}
-
-                        <p className="text-xs text-gray-500">
-                          You have installed Enterprise Edition of OneUptime.
-                          You need to validate your license key. Need a license
-                          key? Contact our sales team at{" "}
-                          <a
-                            href="mailto:sales@oneuptime.com"
-                            className="font-medium text-indigo-600 hover:text-indigo-700"
-                          >
-                            sales@oneuptime.com
-                          </a>
-                          .
-                        </p>
-                      </>
-                    )}
-                  </>
                 )}
 
                 <div className="rounded-lg border border-indigo-200 bg-indigo-50 p-4 shadow-sm">
@@ -695,8 +505,7 @@ const EditionLabel: FunctionComponent<ComponentProps> = (
                     )}
                   </ul>
                   <p className="mt-3 text-xs text-indigo-700">
-                    Already have a license? Validate it above to unlock these
-                    premium capabilities immediately.
+                    All features are available with no license key required.
                   </p>
                 </div>
               </>
