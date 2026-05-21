@@ -111,6 +111,88 @@ const components: Array<ComponentMetadata> = [
       },
     ],
   },
+  {
+    id: ComponentID.ClickUpUpdateTask,
+    title: "Update ClickUp Task",
+    category: "ClickUp",
+    description:
+      "Update a task in ClickUp (e.g. change status to resolved/closed)",
+    iconProp: IconProp.Bookmark,
+    componentType: ComponentType.Component,
+    arguments: [
+      {
+        id: "api-token",
+        name: "ClickUp API Token",
+        description:
+          "Your ClickUp personal API token. Generate one from ClickUp Settings > Apps > API Token.",
+        type: ComponentInputType.Password,
+        required: true,
+        placeholder: "pk_1234567890_ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+      },
+      {
+        id: "task-url",
+        name: "Task URL",
+        description:
+          "URL of the ClickUp task to update. You can use the task-url output from 'Create ClickUp Task' component.",
+        type: ComponentInputType.URL,
+        required: true,
+        placeholder: "https://app.clickup.com/t/86ahk2zrg",
+      },
+      {
+        id: "status",
+        name: "Status",
+        description:
+          "The new status for the task (e.g., 'Done', 'Resolved', 'Closed').",
+        type: ComponentInputType.Text,
+        required: true,
+        placeholder: "Done",
+      },
+      {
+        id: "comment",
+        name: "Comment",
+        description: "Optional comment to add when updating the task status.",
+        type: ComponentInputType.LongText,
+        required: false,
+        placeholder: "Incident resolved in OneUptime",
+      },
+    ],
+    returnValues: [
+      {
+        id: "task-id",
+        name: "Task ID",
+        description: "The ID of the updated task in ClickUp.",
+        type: ComponentInputType.Text,
+        required: false,
+      },
+      {
+        id: "error",
+        name: "Error",
+        description: "Error, if there is any.",
+        type: ComponentInputType.Text,
+        required: false,
+      },
+    ],
+    inPorts: [
+      {
+        title: "In",
+        description:
+          "Please connect components to this port for this component to work.",
+        id: "in",
+      },
+    ],
+    outPorts: [
+      {
+        title: "Success",
+        description: "This is executed when the task is successfully updated",
+        id: "success",
+      },
+      {
+        title: "Error",
+        description: "This is executed when there is an error",
+        id: "error",
+      },
+    ],
+  },
 ];
 
 export default components;

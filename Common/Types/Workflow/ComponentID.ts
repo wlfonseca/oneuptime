@@ -20,6 +20,7 @@ enum ComponentID {
   IfElse = "if-else",
   WorkflowRun = "workflow-run",
   ClickUpCreateTask = "clickup-create-task",
+  ClickUpUpdateTask = "clickup-update-task",
 }
 
 export default ComponentID;
