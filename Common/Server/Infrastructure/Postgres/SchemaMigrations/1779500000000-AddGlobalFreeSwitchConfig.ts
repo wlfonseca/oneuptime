@@ -5,6 +5,9 @@ export class AddGlobalFreeSwitchConfig1779500000000 implements MigrationInterfac
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
+      `ALTER TABLE "GlobalConfig" ADD "callProviderType" character varying(100)`,
+    );
+    await queryRunner.query(
       `ALTER TABLE "GlobalConfig" ADD "freeSwitchEventSocketHost" character varying(500)`,
     );
     await queryRunner.query(
@@ -28,6 +31,9 @@ export class AddGlobalFreeSwitchConfig1779500000000 implements MigrationInterfac
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.query(
+      `ALTER TABLE "GlobalConfig" DROP COLUMN "callProviderType"`,
+    );
     await queryRunner.query(
       `ALTER TABLE "GlobalConfig" DROP COLUMN "freeSwitchEventSocketHost"`,
     );
