@@ -1556,6 +1556,7 @@ jobs:
             docker run -d --name "${{ steps.color.outputs.next_name }}" \
             --restart unless-stopped \
             --network "$INGRESS_NET" \
+            --env-file /root/oneuptime/.env \
             "$IMAGE"
 
       - name: Health check
@@ -1574,6 +1575,11 @@ jobs:
           ssh "${{ secrets.PROD_SSH_USER }}@${{ secrets.PROD_SSH_HOST }}" \
             "docker logs ${{ steps.color.outputs.next_name }} --tail 20"
           exit 1
+
+      - name: Pin compose to GHCR image (prevent docker compose up from reverting)
+        run: |
+          ssh "${{ secrets.PROD_SSH_USER }}@${{ secrets.PROD_SSH_HOST }}" \
+            "sed -i 's|image: oneuptime/app:\${APP_TAG}|image: ghcr.io/wlfonseca/oneuptime-app:\${APP_TAG}|' /root/oneuptime/docker-compose.yml"
 
       - name: Switch nginx upstream and stop old container
         run: |
