@@ -1531,12 +1531,10 @@ jobs:
             echo "next=green" >> "$GITHUB_OUTPUT"
             echo "next_name=oneuptime-app-green" >> "$GITHUB_OUTPUT"
             echo "active_name=oneuptime-app-blue" >> "$GITHUB_OUTPUT"
-            echo "current_service_name=app-blue" >> "$GITHUB_OUTPUT"
           else
             echo "next=blue" >> "$GITHUB_OUTPUT"
             echo "next_name=oneuptime-app-blue" >> "$GITHUB_OUTPUT"
             echo "active_name=oneuptime-app-green" >> "$GITHUB_OUTPUT"
-            echo "current_service_name=app-green" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Pull new image
@@ -1576,11 +1574,6 @@ jobs:
             "docker logs ${{ steps.color.outputs.next_name }} --tail 20"
           exit 1
 
-      - name: Pin compose to GHCR image (prevent docker compose up from reverting)
-        run: |
-          ssh "${{ secrets.PROD_SSH_USER }}@${{ secrets.PROD_SSH_HOST }}" \
-            "sed -i 's|image: oneuptime/app:\${APP_TAG}|image: ghcr.io/wlfonseca/oneuptime-app:\${APP_TAG}|' /root/oneuptime/docker-compose.yml"
-
       - name: Switch nginx upstream and stop old container
         run: |
           # Update nginx backend - handles both first deploy (app:3002) and blue/green switch
@@ -1601,7 +1594,7 @@ jobs:
 
   draft-github-release:
     name: Create draft GitHub release
-    needs: [test-e2e-release-saas, test-e2e-release-self-hosted, generate-build-number, read-version, push-release-tags, deploy-production]
+    needs: [test-e2e-release-saas, test-e2e-release-self-hosted, generate-build-number, read-version, push-release-tags]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/release'
     permissions:
