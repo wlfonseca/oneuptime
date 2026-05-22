@@ -139,9 +139,9 @@ const ComponentsModal: FunctionComponent<ComponentProps> = (
 
       const isTypingContext: boolean = Boolean(
         target &&
-          (target.tagName === "INPUT" ||
-            target.tagName === "TEXTAREA" ||
-            target.getAttribute("contenteditable") === "true"),
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.getAttribute("contenteditable") === "true"),
       );
 
       if (
@@ -175,7 +175,7 @@ const ComponentsModal: FunctionComponent<ComponentProps> = (
         return componentMetadata.category === category.name;
       });
     })
-    .slice(0, 4);
+    .slice(0, 12);
 
   const renderHighlightedText: (
     text: string,
