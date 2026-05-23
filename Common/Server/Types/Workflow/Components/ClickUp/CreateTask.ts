@@ -101,6 +101,14 @@ export default class CreateTask extends ComponentCode {
     }
 
     if (!listId) {
+      const numericParts: string[] = listUrlParts.filter((p: string) =>
+        /^\d+$/.test(p),
+      );
+      listId =
+        numericParts.length > 0 ? numericParts[numericParts.length - 1] : "";
+    }
+
+    if (!listId) {
       throw options.onError(
         new BadDataException(
           "Could not extract List ID from the provided URL. Make sure it's a valid ClickUp list URL like https://app.clickup.com/123456/v/li/987654",
