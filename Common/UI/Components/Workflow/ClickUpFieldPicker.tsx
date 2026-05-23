@@ -30,9 +30,17 @@ interface ClickUpField {
 
 function extractListId(listUrl: string): string | null {
   const m: RegExpMatchArray | null = listUrl.match(
-    /clickup\.com\/\d+\/.*?\/(?:li|v)\/(\d+)/,
+    /clickup\.com\/.*?\/(?:li|list)\/(\d+)/,
   );
-  return m ? m[1] : null;
+  if (m) {
+    return m[1] ? m[1].split("?")[0]?.split("#")[0] || null : null;
+  }
+  const parts: string[] = listUrl.split("/");
+  const liIndex: number = parts.indexOf("li");
+  if (liIndex !== -1 && liIndex + 1 < parts.length) {
+    return parts[liIndex + 1]?.split("?")[0]?.split("#")[0] || null;
+  }
+  return null;
 }
 
 const ClickUpFieldPicker: FunctionComponent<ComponentProps> = (
