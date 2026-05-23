@@ -105,7 +105,9 @@ export default class CreateTask extends ComponentCode {
         /^\d+$/.test(p),
       );
       listId =
-        numericParts.length > 0 ? numericParts[numericParts.length - 1] : "";
+        numericParts.length > 0
+          ? (numericParts[numericParts.length - 1] as string)
+          : "";
     }
 
     if (!listId) {
