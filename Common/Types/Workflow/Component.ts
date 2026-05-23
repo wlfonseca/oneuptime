@@ -28,6 +28,7 @@ export enum ComponentInputType {
   Markdown = "Markdown",
   ValueType = "Value Type",
   WorkflowSelect = "Workflow Select",
+  ClickUpListField = "ClickUp List Field",
 }
 
 export enum ComponentType {

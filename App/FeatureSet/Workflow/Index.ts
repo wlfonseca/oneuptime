@@ -1,3 +1,4 @@
+import ClickUpAPI from "./API/ClickUp";
 import ComponentCodeAPI from "./API/ComponentCode";
 import ManualAPI from "./API/Manual";
 import ModelSchemaAPI from "./API/ModelSchema";
@@ -29,6 +30,8 @@ const WorkflowFeatureSet: FeatureSet = {
       app.use(`/${APP_NAME}`, new ModelSchemaAPI().router);
 
       app.use(`/${APP_NAME}`, new WorkflowAPI().router);
+
+      app.use(`/${APP_NAME}`, new ClickUpAPI().router);
 
       app.get(
         `/${APP_NAME}/docs/:componentName`,

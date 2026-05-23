@@ -185,6 +185,12 @@ export const componentInputTypeToFormFieldType: ComponentInputTypeToFormFieldTyp
       };
     }
 
+    if (componentInputType === ComponentInputType.ClickUpListField) {
+      return {
+        fieldType: FormFieldSchemaType.CustomComponent,
+      };
+    }
+
     if (componentInputType === ComponentInputType.Operator) {
       return {
         fieldType: FormFieldSchemaType.Dropdown,

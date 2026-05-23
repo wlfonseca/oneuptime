@@ -6,6 +6,7 @@ import { CustomElementProps } from "../Forms/Types/Field";
 import FormValues from "../Forms/Types/FormValues";
 import ComponentValuePickerModal from "./ComponentValuePickerModal";
 import ModelFieldPicker from "./ModelFieldPicker";
+import ClickUpFieldPicker from "./ClickUpFieldPicker";
 import { componentInputTypeToFormFieldType } from "./Utils";
 import VariableModal from "./VariableModal";
 import Dictionary from "../../../Types/Dictionary";
@@ -187,6 +188,9 @@ const ArgumentsForm: FunctionComponent<ComponentProps> = (
                   const isWorkflowSelect: boolean =
                     arg.type === ComponentInputType.WorkflowSelect;
 
+                  const isClickUpField: boolean =
+                    arg.type === ComponentInputType.ClickUpListField;
+
                   /*
                    * Database Select args (the "Select Fields" / "Listen on"
                    * trigger inputs) get a tree-style field picker backed by
@@ -226,12 +230,34 @@ const ArgumentsForm: FunctionComponent<ComponentProps> = (
                           );
                         },
                       }
-                    : componentInputTypeToFormFieldType(
-                        arg.type,
-                        component.arguments && component.arguments[arg.id]
-                          ? component.arguments[arg.id]
-                          : null,
-                      );
+                    : isClickUpField
+                      ? {
+                          fieldType: FormFieldSchemaType.CustomComponent,
+                          getCustomElement: (
+                            values: FormValues<JSONObject>,
+                            customProps: CustomElementProps,
+                          ): ReactElement => {
+                            return (
+                              <ClickUpFieldPicker
+                                apiToken={values["api-token"] as string}
+                                listUrl={values["list-url"] as string}
+                                initialValue={customProps.initialValue}
+                                onChange={(value: string) => {
+                                  void customProps.onChange?.(value);
+                                }}
+                                placeholder={customProps.placeholder}
+                                error={customProps.error}
+                                tabIndex={customProps.tabIndex}
+                              />
+                            );
+                          },
+                        }
+                      : componentInputTypeToFormFieldType(
+                          arg.type,
+                          component.arguments && component.arguments[arg.id]
+                            ? component.arguments[arg.id]
+                            : null,
+                        );
 
                   /*
                    * For WorkflowSelect, inject the dynamically fetched list

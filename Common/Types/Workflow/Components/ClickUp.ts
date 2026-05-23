@@ -77,21 +77,21 @@ const components: Array<ComponentMetadata> = [
       },
       {
         id: "dedup-field-id",
-        name: "Dedup Hash Field ID",
+        name: "Dedup Hash Field",
         description:
-          "ID of the ClickUp custom text field where the deduplication key is stored. Required if Deduplication Key is set.",
-        type: ComponentInputType.Text,
+          "ClickUp custom text field where the deduplication key is stored. Required if Deduplication Key is set.",
+        type: ComponentInputType.ClickUpListField,
         required: false,
-        placeholder: "3435ed4d-40c2-45a5-ad7c-da3647557d2c",
+        placeholder: "Selecione o campo para armazenar a chave de dedup...",
       },
       {
         id: "counter-field-id",
-        name: "Event Counter Field ID",
+        name: "Event Counter Field",
         description:
-          "ID of the ClickUp custom number field for the event counter (incremented on each duplicate).",
-        type: ComponentInputType.Text,
+          "ClickUp custom number field for the event counter (incremented on each duplicate). Automatically populated with fields from your selected list.",
+        type: ComponentInputType.ClickUpListField,
         required: false,
-        placeholder: "4cebf685-35e9-4908-b8d1-f539da082718",
+        placeholder: "Selecione o campo para o contador de eventos...",
       },
       {
         id: "custom-fields",
@@ -222,12 +222,12 @@ const components: Array<ComponentMetadata> = [
       },
       {
         id: "dedup-field-id",
-        name: "Dedup Hash Field ID",
+        name: "Dedup Hash Field",
         description:
-          "Custom field ID where the dedup key is stored. Required if using Deduplication Key.",
-        type: ComponentInputType.Text,
+          "ClickUp custom text field where the dedup key is stored. Required if using Deduplication Key.",
+        type: ComponentInputType.ClickUpListField,
         required: false,
-        placeholder: "3435ed4d-40c2-45a5-ad7c-da3647557d2c",
+        placeholder: "Selecione o campo para a chave de dedup...",
       },
       {
         id: "list-url",
