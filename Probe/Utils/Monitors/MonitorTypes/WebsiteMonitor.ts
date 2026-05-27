@@ -3,6 +3,7 @@ import HTTPMethod from "Common/Types/API/HTTPMethod";
 import Headers from "Common/Types/API/Headers";
 import Protocol from "Common/Types/API/Protocol";
 import URL from "Common/Types/API/URL";
+import Dictionary from "Common/Types/Dictionary";
 import HTML from "Common/Types/Html";
 import ObjectID from "Common/Types/ObjectID";
 import PositiveNumber from "Common/Types/PositiveNumber";
@@ -38,12 +39,13 @@ export default class WebsiteMonitor {
       currentRetryCount?: number | undefined;
       monitorId?: ObjectID | undefined;
       isOnlineCheckRequest?: boolean | undefined;
-      timeout?: PositiveNumber; // timeout in milliseconds
+      timeout?: PositiveNumber;
       doNotFollowRedirects?: boolean | undefined;
       allowSelfSignedCertificates?: boolean | undefined;
       tlsClientCertificate?: string | undefined;
       tlsClientKey?: string | undefined;
       tlsClientKeyPassphrase?: string | undefined;
+      requestHeaders?: Dictionary<string> | undefined;
     },
   ): Promise<ProbeWebsiteResponse | null> {
     if (!options) {
@@ -132,6 +134,7 @@ export default class WebsiteMonitor {
         isHeadRequest: options.isHeadRequest,
         timeout: options.timeout?.toNumber() || 5000,
         doNotFollowRedirects: options.doNotFollowRedirects || false,
+        headers: options.requestHeaders || undefined,
         ...buildAgents(),
       });
 
@@ -145,6 +148,7 @@ export default class WebsiteMonitor {
           isHeadRequest: false,
           timeout: options.timeout?.toNumber() || 5000,
           doNotFollowRedirects: options.doNotFollowRedirects || false,
+          headers: options.requestHeaders || undefined,
           ...buildAgents(),
         });
       }
@@ -167,7 +171,7 @@ export default class WebsiteMonitor {
 
       const probeWebsiteResponse: ProbeWebsiteResponse = {
         url: url,
-        requestHeaders: {},
+        requestHeaders: options.requestHeaders || {},
         isOnline: true,
         isSecure: url.protocol === Protocol.HTTPS,
         responseTimeInMS: responseTimeInMS,
@@ -219,7 +223,7 @@ export default class WebsiteMonitor {
         probeWebsiteResponse = {
           url: url,
           isOnline: Boolean(err.response),
-          requestHeaders: {},
+          requestHeaders: options.requestHeaders || {},
           isSecure: url.protocol === Protocol.HTTPS,
           responseTimeInMS: new PositiveNumber(0),
           statusCode: err.response?.status,
@@ -234,7 +238,7 @@ export default class WebsiteMonitor {
           url: url,
           isOnline: false,
 
-          requestHeaders: {},
+          requestHeaders: options.requestHeaders || {},
           isSecure: url.protocol === Protocol.HTTPS,
           responseTimeInMS: new PositiveNumber(0),
           statusCode: (err as any)?.response?.status,

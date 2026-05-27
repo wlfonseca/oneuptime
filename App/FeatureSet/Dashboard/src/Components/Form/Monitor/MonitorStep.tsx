@@ -138,8 +138,8 @@ const MonitorStepElement: FunctionComponent<ComponentProps> = (
     useState<boolean>(
       Boolean(
         props.value?.data?.tlsClientCertificate ||
-          props.value?.data?.tlsClientKey ||
-          props.value?.data?.tlsClientKeyPassphrase,
+        props.value?.data?.tlsClientKey ||
+        props.value?.data?.tlsClientKeyPassphrase,
       ),
     );
 
@@ -381,7 +381,7 @@ return {
   const hasAdvancedOptionsConfigured: boolean =
     Boolean(
       monitorStep.data?.requestHeaders &&
-        Object.keys(monitorStep.data.requestHeaders).length > 0,
+      Object.keys(monitorStep.data.requestHeaders).length > 0,
     ) ||
     Boolean(monitorStep.data?.requestBody) ||
     Boolean(monitorStep.data?.doNotFollowRedirects) ||
@@ -848,7 +848,9 @@ return {
             monitorStep.data?.doNotFollowRedirects ||
             monitorStep.data?.allowSelfSignedCertificates ||
             monitorStep.data?.tlsClientCertificate ||
-            monitorStep.data?.tlsClientKey
+            monitorStep.data?.tlsClientKey ||
+            (monitorStep.data?.requestHeaders &&
+              Object.keys(monitorStep.data.requestHeaders).length > 0)
               ? "Configured"
               : undefined
           }
@@ -858,6 +860,10 @@ return {
             !monitorStep.data?.allowSelfSignedCertificates &&
             !monitorStep.data?.tlsClientCertificate &&
             !monitorStep.data?.tlsClientKey &&
+            !(
+              monitorStep.data?.requestHeaders &&
+              Object.keys(monitorStep.data.requestHeaders).length > 0
+            ) &&
             !showDoNotFollowRedirects
           }
           onToggle={(isCollapsed: boolean) => {
@@ -1010,6 +1016,40 @@ return {
                 </div>
               </>
             )}
+
+            <div>
+              <FieldLabelElement
+                title={"Request Headers"}
+                description={
+                  <p>
+                    Custom HTTP request headers (e.g. User-Agent,
+                    Authorization).{" "}
+                    <Link
+                      className="underline"
+                      openInNewTab={true}
+                      to={URL.fromString(
+                        DOCS_URL.toString() + "/monitor/monitor-secrets",
+                      )}
+                    >
+                      You can use secrets here.
+                    </Link>
+                  </p>
+                }
+                required={false}
+              />
+              <DictionaryOfStrings
+                addButtonSuffix="Request Header"
+                keyPlaceholder={"Header Name"}
+                valuePlaceholder={"Header Value"}
+                initialValue={monitorStep.data?.requestHeaders || {}}
+                onChange={(value: Dictionary<string>) => {
+                  monitorStep.setRequestHeaders(value);
+                  if (props.onChange) {
+                    props.onChange(MonitorStep.clone(monitorStep));
+                  }
+                }}
+              />
+            </div>
           </div>
         </CollapsibleSection>
       )}

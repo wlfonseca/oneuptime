@@ -480,6 +480,7 @@ export default class MonitorUtil {
           tlsClientKey: monitorStep.data?.tlsClientKey || undefined,
           tlsClientKeyPassphrase:
             monitorStep.data?.tlsClientKeyPassphrase || undefined,
+          requestHeaders: monitorStep.data?.requestHeaders || undefined,
         },
       );
 

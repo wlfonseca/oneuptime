@@ -244,6 +244,13 @@ const MonitorStepElement: FunctionComponent<ComponentProps> = (
         fieldType: FieldType.Boolean,
         placeholder: "No",
       },
+      {
+        key: "requestHeaders",
+        title: "Request Headers",
+        description: "Custom HTTP request headers to send (e.g. User-Agent).",
+        fieldType: FieldType.DictionaryOfStrings,
+        placeholder: "No data entered",
+      },
     ];
   } else if (props.monitorType === MonitorType.Ping) {
     fields = [

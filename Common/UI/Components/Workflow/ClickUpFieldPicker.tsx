@@ -29,12 +29,15 @@ interface ClickUpField {
 }
 
 function extractListId(listUrl: string): string | null {
-  const parts: string[] = listUrl.split("/");
+  const clean: string = listUrl.replace(/\/+$/, "");
+  const parts: string[] = clean.split("/");
   const liIndex: number = parts.indexOf("li");
   if (liIndex !== -1 && liIndex + 1 < parts.length) {
-    return parts[liIndex + 1]?.split("?")[0]?.split("#")[0] || null;
+    return parts[liIndex + 1]?.split("?")[0]?.split("#")[0]?.trim() || null;
   }
-  const numericParts: string[] = parts.filter((p: string) => /^\d+$/.test(p));
+  const numericParts: string[] = parts.filter((p: string) =>
+    /^\d{6,}$/.test(p),
+  );
   return numericParts.length > 0
     ? (numericParts[numericParts.length - 1] ?? null)
     : null;
