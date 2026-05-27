@@ -13,13 +13,13 @@ import URL from "../../../Types/API/URL";
 import { WORKFLOW_URL } from "../../Config";
 
 export interface ComponentProps {
-  apiToken?: string;
-  listUrl?: string;
-  initialValue?: string;
-  onChange?: (value: string) => void;
-  placeholder?: string;
-  error?: string;
-  tabIndex?: number;
+  apiToken?: string | undefined;
+  listUrl?: string | undefined;
+  initialValue?: string | undefined;
+  onChange?: ((value: string) => void) | undefined;
+  placeholder?: string | undefined;
+  error?: string | undefined;
+  tabIndex?: number | undefined;
 }
 
 interface ClickUpField {
@@ -35,7 +35,9 @@ function extractListId(listUrl: string): string | null {
     return parts[liIndex + 1]?.split("?")[0]?.split("#")[0] || null;
   }
   const numericParts: string[] = parts.filter((p: string) => /^\d+$/.test(p));
-  return numericParts.length > 0 ? numericParts[numericParts.length - 1] : null;
+  return numericParts.length > 0
+    ? (numericParts[numericParts.length - 1] ?? null)
+    : null;
 }
 
 const ClickUpFieldPicker: FunctionComponent<ComponentProps> = (

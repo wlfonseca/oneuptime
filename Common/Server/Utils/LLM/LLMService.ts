@@ -47,6 +47,7 @@ export default class LLMService {
     switch (config.llmType) {
       case LlmType.OpenAI:
       case LlmType.Groq:
+      case LlmType.DeepSeek:
       case LlmType.Mistral:
         return await this.getOpenAICompatibleCompletion(config, request);
       case LlmType.AzureOpenAI:
@@ -72,12 +73,14 @@ export default class LLMService {
     const defaultBaseUrls: Record<string, string> = {
       [LlmType.OpenAI]: "https://api.openai.com/v1",
       [LlmType.Groq]: "https://api.groq.com/openai/v1",
+      [LlmType.DeepSeek]: "https://api.deepseek.com/v1",
       [LlmType.Mistral]: "https://api.mistral.ai/v1",
     };
 
     const defaultModels: Record<string, string> = {
       [LlmType.OpenAI]: "gpt-4o",
       [LlmType.Groq]: "llama-3.3-70b-versatile",
+      [LlmType.DeepSeek]: "deepseek-chat",
       [LlmType.Mistral]: "mistral-large-latest",
     };
 

@@ -206,6 +206,8 @@ export default class OpenCodeAgent implements CodeAgent {
       openCodeConfig.enabled_providers = ["anthropic"];
     } else if (this.config.llmType === LlmType.OpenAI) {
       openCodeConfig.enabled_providers = ["openai"];
+    } else if (this.config.llmType === LlmType.DeepSeek) {
+      openCodeConfig.enabled_providers = ["openai"];
     }
 
     await LocalFile.write(configPath, JSON.stringify(openCodeConfig, null, 2));
@@ -279,6 +281,8 @@ export default class OpenCodeAgent implements CodeAgent {
         return "anthropic";
       case LlmType.OpenAI:
         return "openai";
+      case LlmType.DeepSeek:
+        return "openai";
       case LlmType.Ollama:
         return "ollama";
       default:
@@ -299,6 +303,8 @@ export default class OpenCodeAgent implements CodeAgent {
         return "claude-sonnet-4-20250514";
       case LlmType.OpenAI:
         return "gpt-4o";
+      case LlmType.DeepSeek:
+        return "deepseek-chat";
       case LlmType.Ollama:
         return "llama2";
       default:
@@ -319,6 +325,8 @@ export default class OpenCodeAgent implements CodeAgent {
         return "claude-haiku-4-20250514";
       case LlmType.OpenAI:
         return "gpt-4o-mini";
+      case LlmType.DeepSeek:
+        return "deepseek-chat";
       case LlmType.Ollama:
         return "llama2";
       default:
@@ -367,6 +375,14 @@ export default class OpenCodeAgent implements CodeAgent {
               break;
             case LlmType.OpenAI:
               env["OPENAI_API_KEY"] = this.config.apiKey;
+              break;
+            case LlmType.DeepSeek:
+              env["OPENAI_API_KEY"] = this.config.apiKey;
+              if (this.config.baseUrl) {
+                env["OPENAI_BASE_URL"] = this.config.baseUrl;
+              } else {
+                env["OPENAI_BASE_URL"] = "https://api.deepseek.com/v1";
+              }
               break;
             case LlmType.Ollama:
               if (this.config.baseUrl) {

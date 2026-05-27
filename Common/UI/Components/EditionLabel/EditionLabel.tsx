@@ -472,6 +472,20 @@ const EditionLabel: FunctionComponent<ComponentProps> = (
                   </div>
                 )}
 
+                {validationError && (
+                  <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                    <p className="font-semibold">Validation Error</p>
+                    <p className="mt-1">{validationError}</p>
+                  </div>
+                )}
+
+                {successMessage && (
+                  <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">
+                    <p className="font-semibold">Success</p>
+                    <p className="mt-1">{successMessage}</p>
+                  </div>
+                )}
+
                 {!configError && !isConfigLoading && (
                   <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">
                     <p className="font-semibold">
@@ -480,6 +494,27 @@ const EditionLabel: FunctionComponent<ComponentProps> = (
                     <p className="mt-1">
                       All enterprise features are unlocked and ready to use.
                     </p>
+                    {(licenseExpiresAtText ||
+                      userCountUpdatedAtText ||
+                      userUsagePercent !== null) && (
+                      <div className="mt-3 space-y-1 border-t border-emerald-300 pt-3 text-xs">
+                        {licenseExpiresAtText && (
+                          <p>License expires: {licenseExpiresAtText}</p>
+                        )}
+                        {currentUserCount !== null && userLimit !== null && (
+                          <p>
+                            Users: {currentUserCount} / {userLimit}
+                            {userUsagePercent !== null &&
+                              ` (${userUsagePercent}%)`}
+                          </p>
+                        )}
+                        {userCountUpdatedAtText && (
+                          <p>
+                            User count last updated: {userCountUpdatedAtText}
+                          </p>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
 
