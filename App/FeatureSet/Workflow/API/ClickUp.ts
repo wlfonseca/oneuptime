@@ -33,9 +33,9 @@ export default class ClickUpAPI {
     next: NextFunction,
   ): Promise<void> {
     try {
-      const apiToken: string | undefined = req.query["apiToken"] as
-        | string
-        | undefined;
+      const apiToken: string | undefined = (
+        req.query["apiToken"] as string | undefined
+      )?.trim();
       const listId: string | undefined = req.query["listId"] as
         | string
         | undefined;

@@ -71,7 +71,7 @@ const ClickUpFieldPicker: FunctionComponent<ComponentProps> = (
     API.get<JSONObject>({
       url,
       params: {
-        apiToken: props.apiToken,
+        apiToken: (props.apiToken || "").trim(),
         listId,
       },
     }).then(

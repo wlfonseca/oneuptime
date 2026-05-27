@@ -78,7 +78,7 @@ export default class CreateTask extends ComponentCode {
       );
     }
 
-    const apiToken: string = args["api-token"]?.toString() as string;
+    const apiToken: string = (args["api-token"]?.toString() as string).trim();
     const listUrl: string = args["list-url"]?.toString() as string;
     const taskName: string = args["task-name"]?.toString() as string;
     const taskDescription: string | undefined =

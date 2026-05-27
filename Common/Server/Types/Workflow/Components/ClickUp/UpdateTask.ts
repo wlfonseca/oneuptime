@@ -74,7 +74,7 @@ export default class UpdateTask extends ComponentCode {
       );
     }
 
-    const apiToken: string = args["api-token"]?.toString() as string;
+    const apiToken: string = (args["api-token"]?.toString() as string).trim();
     const statusInput: string = args["status"]?.toString() as string;
     const commentInput: string | undefined = args["comment"]?.toString();
     const taskUrl: string | undefined = args["task-url"]?.toString();
