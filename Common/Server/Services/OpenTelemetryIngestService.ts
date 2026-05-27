@@ -15,6 +15,7 @@ import { extractOneuptimeLabelNames } from "../Utils/Telemetry/OneuptimeLabel";
 import CaptureSpan from "../Utils/Telemetry/CaptureSpan";
 import SortOrder from "../../Types/BaseDatabase/SortOrder";
 import logger from "../Utils/Logger";
+import AutoMonitorService from "./AutoMonitorService";
 
 export enum OtelAggregationTemporality {
   Cumulative = "AGGREGATION_TEMPORALITY_CUMULATIVE",
@@ -166,6 +167,16 @@ export default class OTelIngestService {
           },
         });
 
+        AutoMonitorService.createDefaultLogMonitorForService({
+          serviceId: createdService.id!,
+          serviceName: data.serviceName,
+          projectId: data.projectId,
+        }).catch((err: Error) => {
+          logger.warn(
+            `Failed to auto-create log monitor for service "${data.serviceName}": ${err.message}`,
+          );
+        });
+
         return {
           serviceId: createdService.id!,
           dataRententionInDays: projectDefaultRetention,
@@ -193,6 +204,16 @@ export default class OTelIngestService {
         });
 
         if (existingService) {
+          AutoMonitorService.createDefaultLogMonitorForService({
+            serviceId: existingService.id!,
+            serviceName: data.serviceName,
+            projectId: data.projectId,
+          }).catch((err: Error) => {
+            logger.warn(
+              `Failed to auto-create log monitor for existing service "${data.serviceName}": ${err.message}`,
+            );
+          });
+
           return {
             serviceId: existingService.id!,
             dataRententionInDays:

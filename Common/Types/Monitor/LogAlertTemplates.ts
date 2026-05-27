@@ -4,9 +4,10 @@ import MonitorCriteria from "./MonitorCriteria";
 import MonitorCriteriaInstance from "./MonitorCriteriaInstance";
 import FilterCondition from "../Filter/FilterCondition";
 import { CheckOn, FilterType } from "./CriteriaFilter";
+import LogSeverity from "../Log/LogSeverity";
 import MonitorStepLogMonitor from "./MonitorStepLogMonitor";
 
-export type LogAlertTemplateCategory = "Security" | "System";
+export type LogAlertTemplateCategory = "Security" | "System" | "Application";
 
 export type LogAlertTemplateSeverity = "Critical" | "Warning" | "Info";
 
@@ -247,8 +248,55 @@ const FAIL2BAN_DETECTION_TEMPLATE: LogAlertTemplate = {
   },
 };
 
+const APPLICATION_ERROR_DETECTION_TEMPLATE: LogAlertTemplate = {
+  id: "log-application-error-detection",
+  name: "Application Error Detection",
+  description:
+    "Detects application errors and exceptions from log output. Matches logs with ERROR, FATAL, or CRITICAL severity, plus common error patterns like stack traces, panic messages, and HTTP 5xx errors.",
+  category: "Application",
+  severity: "Critical",
+  getMonitorStep: (args: LogAlertTemplateArgs): MonitorStep => {
+    const logMonitor: MonitorStepLogMonitor = {
+      attributes: {},
+      body: "ERROR|FATAL|CRITICAL|panic|exception|stack trace|500 Internal Server Error|UnhandledPromiseRejection|Uncaught Exception|fatal error",
+      bodyRegex: true,
+      severityTexts: [LogSeverity.Error, LogSeverity.Fatal],
+      telemetryServiceIds: [],
+      lastXSecondsOfLogs: 60,
+    };
+
+    const offlineCriteria: MonitorCriteriaInstance =
+      buildLogOfflineCriteriaInstance({
+        offlineMonitorStatusId: args.offlineMonitorStatusId,
+        incidentSeverityId: args.defaultIncidentSeverityId,
+        alertSeverityId: args.defaultAlertSeverityId,
+        monitorName: args.monitorName,
+        incidentTitle: `${args.monitorName} - Application Error Detected`,
+        incidentDescription: `${args.monitorName} has detected application errors in the logs. One or more log entries matched the configured error patterns (ERROR, FATAL, CRITICAL severity or error regex patterns).`,
+        criteriaName: `${args.monitorName} - Error Pattern Matched`,
+        criteriaDescription:
+          "Triggers when logs contain application error patterns (ERROR/FATAL/CRITICAL severity or error regex matches).",
+      });
+
+    const onlineCriteria: MonitorCriteriaInstance =
+      buildLogOnlineCriteriaInstance({
+        onlineMonitorStatusId: args.onlineMonitorStatusId,
+      });
+
+    return buildLogMonitorStep({
+      logMonitor,
+      offlineCriteriaInstance: offlineCriteria,
+      onlineCriteriaInstance: onlineCriteria,
+    });
+  },
+};
+
 export function getAllLogAlertTemplates(): Array<LogAlertTemplate> {
-  return [OOM_DETECTION_TEMPLATE, FAIL2BAN_DETECTION_TEMPLATE];
+  return [
+    OOM_DETECTION_TEMPLATE,
+    FAIL2BAN_DETECTION_TEMPLATE,
+    APPLICATION_ERROR_DETECTION_TEMPLATE,
+  ];
 }
 
 export function getLogAlertTemplatesByCategory(
