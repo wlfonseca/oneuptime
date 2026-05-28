@@ -151,11 +151,91 @@ export default class CallService {
 
       logger.debug("Call Cost: " + callCost);
 
-      const twilioConfig: TwilioConfig | null =
-        options.customTwilioConfig || (await getTwilioConfig());
+      callLog.toNumber = callRequest.to;
+      callLog.callData =
+        options && options.isSensitive
+          ? ({ message: "This call is sensitive and is not logged" } as any)
+          : ({
+              message: extractSayMessagesFromCallRequest(callRequest),
+            } as any);
+      callLog.callCostInUSDCents = 0;
 
-      if (!twilioConfig) {
-        throw new BadDataException("Twilio Config not found");
+      if (options.projectId) {
+        callLog.projectId = options.projectId;
+      }
+
+      if (options.incidentId) {
+        callLog.incidentId = options.incidentId;
+      }
+
+      if (options.alertId) {
+        callLog.alertId = options.alertId;
+      }
+
+      if (options.monitorId) {
+        callLog.monitorId = options.monitorId;
+      }
+
+      if (options.scheduledMaintenanceId) {
+        callLog.scheduledMaintenanceId = options.scheduledMaintenanceId;
+      }
+
+      if (options.statusPageId) {
+        callLog.statusPageId = options.statusPageId;
+      }
+
+      if (options.statusPageAnnouncementId) {
+        callLog.statusPageAnnouncementId = options.statusPageAnnouncementId;
+      }
+
+      if (options.userOnCallLogTimelineId) {
+        callLog.userOnCallLogTimelineId = options.userOnCallLogTimelineId;
+      }
+
+      if (options.userId) {
+        callLog.userId = options.userId;
+      }
+
+      if (options.onCallPolicyId) {
+        callLog.onCallDutyPolicyId = options.onCallPolicyId;
+      }
+
+      if (options.onCallPolicyEscalationRuleId) {
+        callLog.onCallDutyPolicyEscalationRuleId =
+          options.onCallPolicyEscalationRuleId;
+      }
+
+      if (options.teamId) {
+        callLog.teamId = options.teamId;
+      }
+
+      if (options.onCallScheduleId) {
+        callLog.onCallDutyPolicyScheduleId = options.onCallScheduleId;
+      }
+
+      let fromNumber: Phone = callRequest.to;
+
+      if (CallProvider !== "freeswitch") {
+        const twilioConfig: TwilioConfig | null =
+          options.customTwilioConfig || (await getTwilioConfig());
+
+        if (!twilioConfig) {
+          throw new BadDataException("Twilio Config not found");
+        }
+
+        const client: Twilio.Twilio = Twilio(
+          twilioConfig.accountSid,
+          twilioConfig.authToken,
+        );
+
+        fromNumber = Phone.pickPhoneNumberToSendSMSOrCallFrom({
+          to: callRequest.to,
+          primaryPhoneNumberToPickFrom: twilioConfig.primaryPhoneNumber,
+          secondaryPhoneNumbersToPickFrom:
+            twilioConfig.secondaryPhoneNumbers || [],
+        });
+
+        callLog.fromNumber = fromNumber;
       }
 
       const client: Twilio.Twilio = Twilio(
