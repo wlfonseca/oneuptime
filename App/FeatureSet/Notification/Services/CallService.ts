@@ -213,52 +213,29 @@ export default class CallService {
         callLog.onCallDutyPolicyScheduleId = options.onCallScheduleId;
       }
 
-      let fromNumber: Phone = callRequest.to;
+      const twilioConfig: TwilioConfig | null =
+        options.customTwilioConfig || (await getTwilioConfig());
 
       if (CallProvider !== "freeswitch") {
-        const twilioConfig: TwilioConfig | null =
-          options.customTwilioConfig || (await getTwilioConfig());
-
         if (!twilioConfig) {
           throw new BadDataException("Twilio Config not found");
         }
 
-        const client: Twilio.Twilio = Twilio(
-          twilioConfig.accountSid,
-          twilioConfig.authToken,
-        );
-
-        fromNumber = Phone.pickPhoneNumberToSendSMSOrCallFrom({
+        callLog.fromNumber = Phone.pickPhoneNumberToSendSMSOrCallFrom({
           to: callRequest.to,
           primaryPhoneNumberToPickFrom: twilioConfig.primaryPhoneNumber,
           secondaryPhoneNumbersToPickFrom:
             twilioConfig.secondaryPhoneNumbers || [],
         });
-
-        callLog.fromNumber = fromNumber;
       }
 
-      const client: Twilio.Twilio = Twilio(
-        twilioConfig.accountSid,
-        twilioConfig.authToken,
-      );
+      if (CallProvider === "freeswitch" || !twilioConfig) {
+        callLog.fromNumber = callRequest.to;
+      }
 
-      callLog.toNumber = callRequest.to;
-
-      const fromNumber: Phone = Phone.pickPhoneNumberToSendSMSOrCallFrom({
-        to: callRequest.to,
-        primaryPhoneNumberToPickFrom: twilioConfig.primaryPhoneNumber,
-        secondaryPhoneNumbersToPickFrom:
-          twilioConfig.secondaryPhoneNumbers || [],
-      });
-      callLog.fromNumber = fromNumber;
-      callLog.callData =
-        options && options.isSensitive
-          ? ({ message: "This call is sensitive and is not logged" } as any)
-          : ({
-              message: extractSayMessagesFromCallRequest(callRequest),
-            } as any);
-      callLog.callCostInUSDCents = 0;
+      const client: Twilio.Twilio | null = twilioConfig
+        ? Twilio(twilioConfig.accountSid, twilioConfig.authToken)
+        : null;
 
       if (options.projectId) {
         callLog.projectId = options.projectId;
