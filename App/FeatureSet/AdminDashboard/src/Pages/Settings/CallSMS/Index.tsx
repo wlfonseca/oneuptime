@@ -75,154 +75,24 @@ const Settings: FunctionComponent = (): ReactElement => {
             title: "Call Provider",
             fieldType: FormFieldSchemaType.Dropdown,
             required: false,
-            description:
-              "Select your call provider: twilio or freeswitch. Twilio is the default.",
+            description: "Select your call provider: twilio or freeswitch.",
             placeholder: "Select provider",
             dropdownOptions: [
-              {
-                label: "Twilio",
-                value: "twilio",
-              },
-              {
-                label: "FreeSwitch (SIP)",
-                value: "freeswitch",
-              },
+              { label: "FreeSwitch (SIP)", value: "freeswitch" },
+              { label: "Twilio", value: "twilio" },
             ],
           },
+          // ─── FreeSwitch ───
           {
-            field: {
-              twilioAccountSID: true,
-            },
-            title: "Twilio Account SID",
-            fieldType: FormFieldSchemaType.Text,
-            required: false,
-            description: "You can find this in your Twilio console.",
-            placeholder: "",
-          },
-          {
-            field: {
-              twilioAuthToken: true,
-            },
-            title: "Twilio Auth Token",
-            fieldType: FormFieldSchemaType.Text,
-            required: false,
-            description: "You can find this in your Twilio console.",
-            placeholder: "",
-          },
-          {
-            field: {
-              twilioPrimaryPhoneNumber: true,
-            },
-            title: "Primary Twilio Phone Number",
-            fieldType: FormFieldSchemaType.Phone,
-            required: false,
-            description: "You can find this in your Twilio console.",
-            placeholder: "",
-          },
-          {
-            field: {
-              twilioSecondaryPhoneNumbers: true,
-            },
-            title: "Secondary Twilio Phone Number",
-            fieldType: FormFieldSchemaType.LongText,
-            required: false,
-            description:
-              "If you have bought more phone numbers from Twilio for specific countries, you can add them here.",
-            placeholder: "+1234567890, +4444444444",
-          },
-          {
-            field: {
-              freeSwitchEventSocketHost: true,
-            },
-            title: "FreeSwitch ESL Host",
-            fieldType: FormFieldSchemaType.Text,
-            required: false,
-            description:
-              "FreeSwitch Event Socket host address. Default: freeswitch",
-            placeholder: "freeswitch",
-          },
-          {
-            field: {
-              freeSwitchEventSocketPort: true,
-            },
-            title: "FreeSwitch ESL Port",
-            fieldType: FormFieldSchemaType.Number,
-            required: false,
-            description: "FreeSwitch Event Socket port. Default: 8021",
-            placeholder: "8021",
-          },
-          {
-            field: {
-              freeSwitchEventSocketPassword: true,
-            },
-            title: "FreeSwitch ESL Password",
-            fieldType: FormFieldSchemaType.Text,
-            required: false,
-            description: "FreeSwitch Event Socket password. Default: ClueCon",
-            placeholder: "ClueCon",
-          },
-          {
-            field: {
-              freeSwitchGatewayName: true,
-            },
-            title: "FreeSwitch Gateway Name",
-            fieldType: FormFieldSchemaType.Text,
-            required: false,
-            description:
-              "SIP gateway name configured in FreeSwitch (e.g., trunk-provider).",
-            placeholder: "",
-          },
-          {
-            field: {
-              freeSwitchDefaultCallerId: true,
-            },
-            title: "FreeSwitch Default Caller ID",
-            fieldType: FormFieldSchemaType.Text,
-            required: false,
-            description: "Default caller ID number for outbound calls.",
-            placeholder: "+5511999999999",
-          },
-          {
-            field: {
-              freeSwitchTtsEngine: true,
-            },
-            title: "FreeSwitch TTS Engine",
-            fieldType: FormFieldSchemaType.Dropdown,
-            required: false,
-            description:
-              "Text-to-speech engine. Options: flite, pico, say. Default: flite",
-            dropdownOptions: [
-              { label: "Flite (padrao)", value: "flite" },
-              { label: "Pico", value: "pico" },
-              { label: "Say", value: "say" },
-            ],
-          },
-          {
-            field: {
-              freeSwitchTtsVoice: true,
-            },
-            title: "FreeSwitch TTS Voice",
-            fieldType: FormFieldSchemaType.Text,
-            required: false,
-            description:
-              "TTS voice name. For flite: slt (female), rms (male), kal (male). Default: slt",
-            placeholder: "slt",
-          },
-          {
-            field: {
-              freeSwitchSipServer: true,
-            },
+            field: { freeSwitchSipServer: true },
             title: "SIP Trunk Server",
             fieldType: FormFieldSchemaType.Text,
             required: false,
-            description:
-              "SIP trunk provider hostname or IP (e.g., sip.provedor.com.br).",
+            description: "SIP trunk provider hostname or IP.",
             placeholder: "sip.provedor.com.br",
           },
           {
-            field: {
-              freeSwitchSipPort: true,
-            },
+            field: { freeSwitchSipPort: true },
             title: "SIP Trunk Port",
             fieldType: FormFieldSchemaType.Number,
             required: false,
@@ -230,26 +100,114 @@ const Settings: FunctionComponent = (): ReactElement => {
             placeholder: "5060",
           },
           {
-            field: {
-              freeSwitchSipUser: true,
-            },
+            field: { freeSwitchSipUser: true },
             title: "SIP Trunk Username",
             fieldType: FormFieldSchemaType.Text,
             required: false,
-            description:
-              "SIP account username for authentication with the provider.",
+            description: "SIP account username.",
             placeholder: "",
           },
           {
-            field: {
-              freeSwitchSipPassword: true,
-            },
+            field: { freeSwitchSipPassword: true },
             title: "SIP Trunk Password",
             fieldType: FormFieldSchemaType.Password,
             required: false,
-            description:
-              "SIP account password for authentication with the provider.",
+            description: "SIP account password.",
             placeholder: "",
+          },
+          {
+            field: { freeSwitchGatewayName: true },
+            title: "SIP Gateway Name",
+            fieldType: FormFieldSchemaType.Text,
+            required: false,
+            description: "Gateway name configured in FreeSwitch SIP profile.",
+            placeholder: "setevoip",
+          },
+          {
+            field: { freeSwitchDefaultCallerId: true },
+            title: "Default Caller ID",
+            fieldType: FormFieldSchemaType.Phone,
+            required: false,
+            description: "Default caller ID number for outbound calls.",
+            placeholder: "+5511999999999",
+          },
+          {
+            field: { freeSwitchEventSocketHost: true },
+            title: "ESL Host",
+            fieldType: FormFieldSchemaType.Text,
+            required: false,
+            description: "FreeSwitch Event Socket host. Default: freeswitch",
+            placeholder: "freeswitch",
+          },
+          {
+            field: { freeSwitchEventSocketPort: true },
+            title: "ESL Port",
+            fieldType: FormFieldSchemaType.Number,
+            required: false,
+            description: "FreeSwitch Event Socket port. Default: 8021",
+            placeholder: "8021",
+          },
+          {
+            field: { freeSwitchEventSocketPassword: true },
+            title: "ESL Password",
+            fieldType: FormFieldSchemaType.Text,
+            required: false,
+            description: "FreeSwitch Event Socket password.",
+            placeholder: "ClueCon",
+          },
+          {
+            field: { freeSwitchTtsEngine: true },
+            title: "TTS Engine",
+            fieldType: FormFieldSchemaType.Dropdown,
+            required: false,
+            description: "Text-to-speech engine. Default: flite",
+            dropdownOptions: [
+              { label: "Flite", value: "flite" },
+              { label: "Pico", value: "pico" },
+              { label: "Say", value: "say" },
+            ],
+          },
+          {
+            field: { freeSwitchTtsVoice: true },
+            title: "TTS Voice",
+            fieldType: FormFieldSchemaType.Text,
+            required: false,
+            description:
+              "TTS voice name. For flite: slt (female), rms (male). Default: slt",
+            placeholder: "slt",
+          },
+          // ─── Twilio ───
+          {
+            field: { twilioAccountSID: true },
+            title: "Twilio Account SID",
+            fieldType: FormFieldSchemaType.Text,
+            required: false,
+            description: "Twilio Account SID.",
+            placeholder: "",
+          },
+          {
+            field: { twilioAuthToken: true },
+            title: "Twilio Auth Token",
+            fieldType: FormFieldSchemaType.Text,
+            required: false,
+            description: "Twilio Auth Token.",
+            placeholder: "",
+          },
+          {
+            field: { twilioPrimaryPhoneNumber: true },
+            title: "Twilio Primary Phone",
+            fieldType: FormFieldSchemaType.Phone,
+            required: false,
+            description: "Primary Twilio phone number.",
+            placeholder: "",
+          },
+          {
+            field: { twilioSecondaryPhoneNumbers: true },
+            title: "Twilio Secondary Phones",
+            fieldType: FormFieldSchemaType.LongText,
+            required: false,
+            description: "Additional Twilio phone numbers.",
+            placeholder: "+1234567890, +4444444444",
           },
         ]}
         modelDetailProps={{
@@ -257,90 +215,77 @@ const Settings: FunctionComponent = (): ReactElement => {
           id: "model-detail-global-config",
           fields: [
             {
-              field: {
-                callProviderType: true,
-              },
+              field: { callProviderType: true },
               title: "Call Provider",
-              placeholder: "twilio",
+              placeholder: "freeswitch",
             },
             {
-              field: {
-                twilioAccountSID: true,
-              },
-              title: "Twilio Account SID",
+              field: { freeSwitchSipServer: true },
+              title: "SIP Server",
               placeholder: t("common.none"),
             },
             {
-              field: {
-                twilioPrimaryPhoneNumber: true,
-              },
-              title: "Primary Twilio Phone Number",
+              field: { freeSwitchSipPort: true },
+              title: "SIP Port",
+              placeholder: t("common.none"),
+            },
+            {
+              field: { freeSwitchSipUser: true },
+              title: "SIP User",
+              placeholder: t("common.none"),
+            },
+            {
+              field: { freeSwitchSipPassword: true },
+              title: "SIP Password",
+              placeholder: "********",
+            },
+            {
+              field: { freeSwitchGatewayName: true },
+              title: "SIP Gateway",
+              placeholder: t("common.none"),
+            },
+            {
+              field: { freeSwitchDefaultCallerId: true },
+              title: "Caller ID",
               fieldType: FieldType.Phone,
               placeholder: t("common.none"),
             },
             {
-              field: {
-                twilioSecondaryPhoneNumbers: true,
-              },
-              title: "Secondary Twilio Phone Numbers",
+              field: { freeSwitchEventSocketHost: true },
+              title: "ESL Host",
+              placeholder: t("common.none"),
+            },
+            {
+              field: { freeSwitchEventSocketPort: true },
+              title: "ESL Port",
+              placeholder: t("common.none"),
+            },
+            {
+              field: { freeSwitchTtsEngine: true },
+              title: "TTS Engine",
+              placeholder: t("common.none"),
+            },
+            {
+              field: { freeSwitchTtsVoice: true },
+              title: "TTS Voice",
+              placeholder: t("common.none"),
+            },
+            {
+              field: { twilioAccountSID: true },
+              title: "Twilio Account SID",
+              placeholder: t("common.none"),
+            },
+            {
+              field: { twilioPrimaryPhoneNumber: true },
+              title: "Twilio Primary Phone",
+              fieldType: FieldType.Phone,
+              placeholder: t("common.none"),
+            },
+            {
+              field: { twilioSecondaryPhoneNumbers: true },
+              title: "Twilio Secondary Phones",
               fieldType: FieldType.LongText,
               placeholder: t("common.none"),
-            },
-            {
-              field: {
-                freeSwitchEventSocketHost: true,
-              },
-              title: "FreeSwitch ESL Host",
-              placeholder: t("common.none"),
-            },
-            {
-              field: {
-                freeSwitchGatewayName: true,
-              },
-              title: "FreeSwitch Gateway",
-              placeholder: t("common.none"),
-            },
-            {
-              field: {
-                freeSwitchTtsEngine: true,
-              },
-              title: "FreeSwitch TTS Engine",
-              placeholder: t("common.none"),
-            },
-            {
-              field: {
-                freeSwitchTtsVoice: true,
-              },
-              title: "FreeSwitch TTS Voice",
-              placeholder: t("common.none"),
-            },
-            {
-              field: {
-                freeSwitchSipServer: true,
-              },
-              title: "SIP Trunk Server",
-              placeholder: t("common.none"),
-            },
-            {
-              field: {
-                freeSwitchSipPort: true,
-              },
-              title: "SIP Trunk Port",
-              placeholder: t("common.none"),
-            },
-            {
-              field: {
-                freeSwitchSipUser: true,
-              },
-              title: "SIP Trunk Username",
-              placeholder: t("common.none"),
-            },
-            {
-              field: {
-                freeSwitchSipPassword: true,
-              },
-              title: "SIP Trunk Password",
-              placeholder: "********",
             },
           ],
           modelId: ObjectID.getZeroObjectID(),
