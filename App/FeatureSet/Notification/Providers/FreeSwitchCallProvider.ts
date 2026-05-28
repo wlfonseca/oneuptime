@@ -250,7 +250,7 @@ export default class FreeSwitchCallProvider implements ICallProvider {
     const port: string | number =
       this.config.eventSocketPort?.toString() || "8021";
 
-    const cmd: string = `${fsCli} -h ${host} -p ${port} --password=${password} -x "${escaped}"`;
+    const cmd: string = `${fsCli} -H ${host} -P ${port} -p ${password} -x "${escaped}"`;
 
     try {
       const { stdout } = await execAsync(cmd, { timeout: 30000 });
