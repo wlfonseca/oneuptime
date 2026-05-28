@@ -1,5 +1,6 @@
 import TwilioConfig from "Common/Types/CallAndSMS/TwilioConfig";
 import FreeSwitchConfig from "Common/Types/CallAndSMS/FreeSwitchConfig";
+import BaresipConfig from "Common/Types/CallAndSMS/BaresipConfig";
 import URL from "Common/Types/API/URL";
 import Email from "Common/Types/Email";
 import EmailServer from "Common/Types/Email/EmailServer";
@@ -412,6 +413,10 @@ export const getFreeSwitchConfig: GetFreeSwitchConfigFunction =
           freeSwitchDefaultCallerId: true,
           freeSwitchTtsEngine: true,
           freeSwitchTtsVoice: true,
+          freeSwitchSipServer: true,
+          freeSwitchSipPort: true,
+          freeSwitchSipUser: true,
+          freeSwitchSipPassword: true,
         },
       });
 
@@ -440,5 +445,68 @@ export const getFreeSwitchConfig: GetFreeSwitchConfigFunction =
       freeSwitchConfig.defaultCallerId = globalConfig.freeSwitchDefaultCallerId;
     }
 
+    if (globalConfig.freeSwitchSipServer) {
+      freeSwitchConfig.sipProviderHost = globalConfig.freeSwitchSipServer;
+    }
+
+    if (globalConfig.freeSwitchSipPort) {
+      freeSwitchConfig.sipProviderPort = globalConfig.freeSwitchSipPort;
+    }
+
+    if (globalConfig.freeSwitchSipUser) {
+      freeSwitchConfig.sipProviderUsername = globalConfig.freeSwitchSipUser;
+    }
+
+    if (globalConfig.freeSwitchSipPassword) {
+      freeSwitchConfig.sipProviderPassword = globalConfig.freeSwitchSipPassword;
+    }
+
     return freeSwitchConfig as FreeSwitchConfig;
+  };
+
+type GetBaresipConfigFunction = () => Promise<BaresipConfig | null>;
+
+export const getBaresipConfig: GetBaresipConfigFunction =
+  async (): Promise<BaresipConfig | null> => {
+    const globalConfig: GlobalConfig | null =
+      await GlobalConfigService.findOneBy({
+        query: {
+          _id: ObjectID.getZeroObjectID().toString(),
+        },
+        props: {
+          isRoot: true,
+        },
+        select: {
+          freeSwitchSipServer: true,
+          freeSwitchSipPort: true,
+          freeSwitchSipUser: true,
+          freeSwitchSipPassword: true,
+          freeSwitchSipTransport: true,
+          baresipBridgeUrl: true,
+          baresipDefaultCallerId: true,
+          baresipTtsEngine: true,
+          baresipTtsVoice: true,
+        },
+      });
+
+    if (!globalConfig) {
+      throw new BadDataException("Global Config not found");
+    }
+
+    if (!globalConfig.freeSwitchSipServer || !globalConfig.freeSwitchSipUser) {
+      return null;
+    }
+
+    return {
+      sipServer: globalConfig.freeSwitchSipServer,
+      sipPort: globalConfig.freeSwitchSipPort || 5060,
+      sipUser: globalConfig.freeSwitchSipUser,
+      sipPassword: globalConfig.freeSwitchSipPassword || "",
+      sipTransport:
+        (globalConfig.freeSwitchSipTransport as "udp" | "tcp" | "tls") || "udp",
+      bridgeUrl: globalConfig.baresipBridgeUrl || "http://sip-bridge:8000",
+      defaultCallerId: globalConfig.baresipDefaultCallerId || undefined,
+      ttsEngine: globalConfig.baresipTtsEngine || "flite",
+      ttsVoice: globalConfig.baresipTtsVoice || "slt",
+    };
   };

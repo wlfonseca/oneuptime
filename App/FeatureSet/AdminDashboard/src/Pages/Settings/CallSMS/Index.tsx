@@ -185,6 +185,49 @@ const Settings: FunctionComponent = (): ReactElement => {
               "TTS voice name. For flite: slt (female), rms (male), kal (male). Default: slt",
             placeholder: "slt",
           },
+          {
+            field: {
+              freeSwitchSipServer: true,
+            },
+            title: "SIP Trunk Server",
+            fieldType: FormFieldSchemaType.Text,
+            required: false,
+            description:
+              "SIP trunk provider hostname or IP (e.g., sip.provedor.com.br).",
+            placeholder: "sip.provedor.com.br",
+          },
+          {
+            field: {
+              freeSwitchSipPort: true,
+            },
+            title: "SIP Trunk Port",
+            fieldType: FormFieldSchemaType.Number,
+            required: false,
+            description: "SIP trunk server port. Default: 5060",
+            placeholder: "5060",
+          },
+          {
+            field: {
+              freeSwitchSipUser: true,
+            },
+            title: "SIP Trunk Username",
+            fieldType: FormFieldSchemaType.Text,
+            required: false,
+            description:
+              "SIP account username for authentication with the provider.",
+            placeholder: "",
+          },
+          {
+            field: {
+              freeSwitchSipPassword: true,
+            },
+            title: "SIP Trunk Password",
+            fieldType: FormFieldSchemaType.Password,
+            required: false,
+            description:
+              "SIP account password for authentication with the provider.",
+            placeholder: "",
+          },
         ]}
         modelDetailProps={{
           modelType: GlobalConfig,
@@ -247,6 +290,34 @@ const Settings: FunctionComponent = (): ReactElement => {
               },
               title: "FreeSwitch TTS Voice",
               placeholder: t("common.none"),
+            },
+            {
+              field: {
+                freeSwitchSipServer: true,
+              },
+              title: "SIP Trunk Server",
+              placeholder: t("common.none"),
+            },
+            {
+              field: {
+                freeSwitchSipPort: true,
+              },
+              title: "SIP Trunk Port",
+              placeholder: t("common.none"),
+            },
+            {
+              field: {
+                freeSwitchSipUser: true,
+              },
+              title: "SIP Trunk Username",
+              placeholder: t("common.none"),
+            },
+            {
+              field: {
+                freeSwitchSipPassword: true,
+              },
+              title: "SIP Trunk Password",
+              placeholder: "********",
             },
           ],
           modelId: ObjectID.getZeroObjectID(),

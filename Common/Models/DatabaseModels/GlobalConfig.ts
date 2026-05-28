@@ -536,6 +536,167 @@ export default class GlobalConfig extends GlobalConfigModel {
   })
   public freeSwitchTtsVoice?: string = undefined;
 
+  // FreeSwitch SIP trunk configuration
+  @ColumnAccessControl({
+    create: [],
+    read: [],
+    update: [],
+  })
+  @TableColumn({
+    type: TableColumnType.VeryLongText,
+    title: "FreeSwitch SIP Server",
+    description: "SIP trunk server hostname or IP (e.g. sip.provider.com).",
+  })
+  @Column({
+    type: ColumnType.VeryLongText,
+    nullable: true,
+    unique: false,
+  })
+  public freeSwitchSipServer?: string = undefined;
+
+  @ColumnAccessControl({
+    create: [],
+    read: [],
+    update: [],
+  })
+  @TableColumn({
+    type: TableColumnType.Number,
+    title: "FreeSwitch SIP Port",
+    description: "SIP trunk server port. Default: 5060",
+  })
+  @Column({
+    type: ColumnType.Number,
+    nullable: true,
+    unique: false,
+  })
+  public freeSwitchSipPort?: number = undefined;
+
+  @ColumnAccessControl({
+    create: [],
+    read: [],
+    update: [],
+  })
+  @TableColumn({
+    type: TableColumnType.VeryLongText,
+    title: "FreeSwitch SIP User",
+    description: "SIP account username (e.g. 1000 or number@provider).",
+  })
+  @Column({
+    type: ColumnType.VeryLongText,
+    nullable: true,
+    unique: false,
+  })
+  public freeSwitchSipUser?: string = undefined;
+
+  @ColumnAccessControl({
+    create: [],
+    read: [],
+    update: [],
+  })
+  @TableColumn({
+    type: TableColumnType.VeryLongText,
+    title: "FreeSwitch SIP Password",
+    description: "SIP account password for authentication.",
+  })
+  @Column({
+    type: ColumnType.VeryLongText,
+    nullable: true,
+    unique: false,
+  })
+  public freeSwitchSipPassword?: string = undefined;
+
+  @ColumnAccessControl({
+    create: [],
+    read: [],
+    update: [],
+  })
+  @TableColumn({
+    type: TableColumnType.ShortText,
+    title: "FreeSwitch SIP Transport",
+    description: "SIP transport protocol. Options: udp, tcp, tls. Default: udp",
+  })
+  @Column({
+    type: ColumnType.ShortText,
+    nullable: true,
+    unique: false,
+    length: ColumnLength.ShortText,
+  })
+  public freeSwitchSipTransport?: string = undefined;
+
+  @ColumnAccessControl({
+    create: [],
+    read: [],
+    update: [],
+  })
+  @TableColumn({
+    type: TableColumnType.VeryLongText,
+    title: "Baresip Bridge URL",
+    description:
+      "HTTP API URL of the baresip bridge. Default: http://sip-bridge:8000",
+  })
+  @Column({
+    type: ColumnType.VeryLongText,
+    nullable: true,
+    unique: false,
+  })
+  public baresipBridgeUrl?: string = undefined;
+
+  @ColumnAccessControl({
+    create: [],
+    read: [],
+    update: [],
+  })
+  @TableColumn({
+    type: TableColumnType.VeryLongText,
+    title: "Baresip Default Caller ID",
+    description: "Default caller ID number for outbound calls.",
+  })
+  @Column({
+    type: ColumnType.VeryLongText,
+    nullable: true,
+    unique: false,
+  })
+  public baresipDefaultCallerId?: string = undefined;
+
+  @ColumnAccessControl({
+    create: [],
+    read: [],
+    update: [],
+  })
+  @TableColumn({
+    type: TableColumnType.ShortText,
+    title: "Baresip TTS Engine",
+    description:
+      "Text-to-speech engine for converting messages to audio. Options: flite, pico, say. Default: flite",
+  })
+  @Column({
+    type: ColumnType.ShortText,
+    nullable: true,
+    unique: false,
+    length: ColumnLength.ShortText,
+  })
+  public baresipTtsEngine?: string = undefined;
+
+  @ColumnAccessControl({
+    create: [],
+    read: [],
+    update: [],
+  })
+  @TableColumn({
+    type: TableColumnType.ShortText,
+    title: "Baresip TTS Voice",
+    description:
+      "TTS voice name. For flite: slt (female), rms (male), kal (male). Default: slt",
+  })
+  @Column({
+    type: ColumnType.ShortText,
+    nullable: true,
+    unique: false,
+    length: ColumnLength.ShortText,
+  })
+  public baresipTtsVoice?: string = undefined;
+
+  // Meta WhatsApp Config
   @ColumnAccessControl({
     create: [],
     read: [],

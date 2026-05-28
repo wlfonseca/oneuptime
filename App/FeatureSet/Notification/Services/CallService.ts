@@ -2,6 +2,7 @@ import {
   CallDefaultCostInCentsPerMinute,
   CallHighRiskCostInCentsPerMinute,
   getTwilioConfig,
+  CallProvider,
 } from "../Config";
 import CallRequest, {
   GatherInput,
@@ -28,6 +29,8 @@ import Project from "Common/Models/DatabaseModels/Project";
 import Twilio from "twilio";
 import { CallInstance } from "twilio/lib/rest/api/v2010/account/call";
 import Phone from "Common/Types/Phone";
+import CallProviderFactory from "../Providers/CallProviderFactory";
+import { ICallProvider } from "Common/Types/Call/CallProvider";
 
 /**
  * Extracts the main sayMessage values from a CallRequest's data array for call summary.
@@ -374,18 +377,53 @@ export default class CallService {
 
       logger.debug("Sending Call Request.");
 
-      const twillioCall: CallInstance = await client.calls.create({
-        twiml: this.generateTwimlForCall(callRequest),
-        to: callRequest.to.toString(),
-        from: fromNumber.toString(), // From a valid Twilio number
-      });
+      let callId: string = "";
+      let callDuration: number = 0;
+
+      if (CallProvider === "freeswitch") {
+        const provider: ICallProvider | null =
+          await CallProviderFactory.getProvider();
+
+        if (!provider) {
+          throw new BadDataException(
+            "FreeSwitch provider not configured. Check FreeSwitch settings.",
+          );
+        }
+
+        const message: string =
+          CallService.extractTtsTextFromCallRequest(callRequest);
+
+        await provider.makeCall(
+          callRequest.to.toString(),
+          fromNumber.toString(),
+          message,
+          60,
+          "",
+        );
+
+        callId = `freeswitch-call-${Date.now()}`;
+        callDuration = 0;
+
+        logger.debug("FreeSwitch call initiated successfully.");
+      } else {
+        const twillioCall: CallInstance = await client.calls.create({
+          twiml: this.generateTwimlForCall(callRequest),
+          to: callRequest.to.toString(),
+          from: fromNumber.toString(),
+        });
+
+        callId = twillioCall.sid || "";
+        callDuration = parseInt(twillioCall.duration) || 0;
+
+        logger.debug("Twilio call initiated successfully.");
+      }
 
       logger.debug("Call Request sent successfully.");
 
       callLog.status = CallStatus.Success;
-      callLog.statusMessage = "Call ID: " + twillioCall.sid;
+      callLog.statusMessage = "Call ID: " + callId;
 
-      logger.debug("Call ID: " + twillioCall.sid);
+      logger.debug("Call ID: " + callId);
       logger.debug(callLog.statusMessage);
 
       if (shouldChargeForCall && project) {
@@ -393,9 +431,9 @@ export default class CallService {
 
         callLog.callCostInUSDCents = callCost * 100;
 
-        if (twillioCall && parseInt(twillioCall.duration) > 60) {
+        if (callDuration > 60) {
           callLog.callCostInUSDCents = Math.ceil(
-            Math.ceil(parseInt(twillioCall.duration) / 60) * (callCost * 100),
+            Math.ceil(callDuration / 60) * (callCost * 100),
           );
         }
 
@@ -409,7 +447,7 @@ export default class CallService {
           data: {
             smsOrCallCurrentBalanceInUSDCents:
               project.smsOrCallCurrentBalanceInUSDCents,
-            notEnabledSmsOrCallNotificationSentToOwners: false, // reset this flag
+            notEnabledSmsOrCallNotificationSentToOwners: false,
           },
           id: project.id!,
           props: {
@@ -467,6 +505,24 @@ export default class CallService {
     if (callError) {
       throw callError;
     }
+  }
+
+  public static extractTtsTextFromCallRequest(
+    callRequest: CallRequest,
+  ): string {
+    const messages: string[] = [];
+
+    for (const item of callRequest.data) {
+      if ((item as Say).sayMessage) {
+        messages.push((item as Say).sayMessage as string);
+      }
+
+      if ((item as GatherInput) && (item as GatherInput).introMessage) {
+        messages.push((item as GatherInput).introMessage as string);
+      }
+    }
+
+    return messages.join(". ");
   }
 
   public static generateTwimlForCall(callRequest: CallRequest): string {

@@ -2,9 +2,16 @@ import { ICallProvider } from "Common/Types/Call/CallProvider";
 import CallProviderType from "Common/Types/Call/CallProviderType";
 import TwilioCallProvider from "./TwilioCallProvider";
 import FreeSwitchCallProvider from "./FreeSwitchCallProvider";
-import { getTwilioConfig, getFreeSwitchConfig, CallProvider } from "../Config";
+import BaresipCallProvider from "./BaresipCallProvider";
+import {
+  getTwilioConfig,
+  getFreeSwitchConfig,
+  getBaresipConfig,
+  CallProvider,
+} from "../Config";
 import TwilioConfig from "Common/Types/CallAndSMS/TwilioConfig";
 import FreeSwitchConfig from "Common/Types/CallAndSMS/FreeSwitchConfig";
+import BaresipConfig from "Common/Types/CallAndSMS/BaresipConfig";
 import BadDataException from "Common/Types/Exception/BadDataException";
 
 export default class CallProviderFactory {
@@ -45,6 +52,19 @@ export default class CallProviderFactory {
         this.currentProviderType = providerType;
         break;
       }
+      case CallProviderType.Baresip: {
+        const baresipConfig: BaresipConfig | null = await getBaresipConfig();
+
+        if (!baresipConfig) {
+          throw new BadDataException(
+            "Baresip configuration not found. Please configure SIP trunk in Admin Dashboard.",
+          );
+        }
+
+        this.instance = new BaresipCallProvider(baresipConfig);
+        this.currentProviderType = providerType;
+        break;
+      }
       default:
         throw new BadDataException(`Unknown call provider: ${providerType}`);
     }
@@ -53,7 +73,7 @@ export default class CallProviderFactory {
   }
 
   public static getProviderWithConfig(
-    customConfig: TwilioConfig | FreeSwitchConfig,
+    customConfig: TwilioConfig | FreeSwitchConfig | BaresipConfig,
   ): ICallProvider {
     const providerType: CallProviderType = this.getProviderType();
 
@@ -64,13 +84,16 @@ export default class CallProviderFactory {
       case CallProviderType.FreeSwitch: {
         return new FreeSwitchCallProvider(customConfig as FreeSwitchConfig);
       }
+      case CallProviderType.Baresip: {
+        return new BaresipCallProvider(customConfig as BaresipConfig);
+      }
       default:
         throw new BadDataException(`Unknown call provider: ${providerType}`);
     }
   }
 
   public static async getProviderWithOptionalConfig(
-    customConfig?: TwilioConfig | FreeSwitchConfig,
+    customConfig?: TwilioConfig | FreeSwitchConfig | BaresipConfig,
   ): Promise<ICallProvider> {
     if (customConfig) {
       return this.getProviderWithConfig(customConfig);
@@ -84,6 +107,8 @@ export default class CallProviderFactory {
         return CallProviderType.Twilio;
       case "freeswitch":
         return CallProviderType.FreeSwitch;
+      case "baresip":
+        return CallProviderType.Baresip;
       default:
         return CallProviderType.Twilio;
     }

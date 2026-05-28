@@ -339,6 +339,8 @@ import { AddOnCallIncomingCallOwnersAndRules1778931537020 } from "./177893153702
 import { IncreaseSmtpUsernameLength1779125489830 } from "./1779125489830-IncreaseSmtpUsernameLength";
 import { AddGlobalFreeSwitchConfig1779500000000 } from "./1779500000000-AddGlobalFreeSwitchConfig";
 import { AddProjectCallSMSFreeSwitchConfig1780000000000 } from "./1780000000000-AddProjectCallSMSFreeSwitchConfig";
+import { AddFreeSwitchSipColumns1780500000000 } from "./1780500000000-AddFreeSwitchSipColumns";
+import { AddBaresipBridgeColumns1781000000000 } from "./1781000000000-AddBaresipBridgeColumns";
 export default [
   InitialMigration,
   MigrationName1717678334852,
@@ -681,4 +683,6 @@ export default [
   IncreaseSmtpUsernameLength1779125489830,
   AddGlobalFreeSwitchConfig1779500000000,
   AddProjectCallSMSFreeSwitchConfig1780000000000,
+  AddFreeSwitchSipColumns1780500000000,
+  AddBaresipBridgeColumns1781000000000,
 ];

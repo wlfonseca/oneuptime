@@ -144,6 +144,8 @@ export default class FreeSwitchCallProvider implements ICallProvider {
     timeoutSeconds: number,
     statusCallbackUrl: string,
   ): Promise<void> {
+    await this.ensureGatewayConfigured();
+
     const cmd: string = this.buildOriginateCommand(
       to,
       from,
@@ -162,6 +164,54 @@ export default class FreeSwitchCallProvider implements ICallProvider {
         timeoutSeconds,
       );
     }
+  }
+
+  private async ensureGatewayConfigured(): Promise<void> {
+    const gatewayName: string | undefined = this.config.gatewayName;
+    const sipHost: string | undefined = this.config.sipProviderHost;
+
+    if (!gatewayName || !sipHost) {
+      return;
+    }
+
+    const gwList: string = await this.sendCommand(
+      `sofia profile external gw list`,
+    );
+
+    if (gwList.includes(gatewayName)) {
+      return;
+    }
+
+    await this.sendCommand(
+      `sofia profile external gw add ${gatewayName} sip:${sipHost}`,
+    );
+
+    const sipUser: string | undefined = this.config.sipProviderUsername;
+
+    if (sipUser) {
+      await this.sendCommand(
+        `sofia profile external gw set ${gatewayName} auth-username ${sipUser}`,
+      );
+    }
+
+    const sipPass: string | undefined = this.config.sipProviderPassword;
+
+    if (sipPass) {
+      await this.sendCommand(
+        `sofia profile external gw set ${gatewayName} auth-password ${sipPass}`,
+      );
+    }
+
+    await this.sendCommand(
+      `sofia profile external gw set ${gatewayName} register true`,
+    );
+
+    await this.sendCommand(`sofia profile external restart`);
+
+    logger.debug(
+      `FreeSwitch gateway ${gatewayName} configured for ${sipHost}`,
+      { service: "notification" },
+    );
   }
 
   private buildOriginateCommand(

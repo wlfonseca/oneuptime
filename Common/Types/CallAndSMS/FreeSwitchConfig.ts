@@ -8,6 +8,10 @@ interface FreeSwitchConfig {
   ttsEngine?: string;
   ttsVoice?: string;
   fsCliPath?: string;
+  sipProviderHost?: string;
+  sipProviderPort?: number;
+  sipProviderUsername?: string;
+  sipProviderPassword?: string;
 }
 
 export default FreeSwitchConfig;
