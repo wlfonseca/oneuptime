@@ -171,4 +171,41 @@ router.post(
   },
 );
 
+router.post(
+  "/test-global",
+  UserMiddleware.getUserMiddleware,
+  UserMiddleware.requireUserAuthentication,
+  async (req: ExpressRequest, res: ExpressResponse, next: NextFunction) => {
+    try {
+      const body: JSONObject = req.body;
+      const toPhone: Phone = new Phone(body["toPhone"] as string);
+
+      if (!toPhone) {
+        return Response.sendErrorResponse(
+          req,
+          res,
+          new BadDataException("toPhone is required"),
+        );
+      }
+
+      const testCallRequest: CallRequest = {
+        data: [
+          {
+            sayMessage: "This is a test call from OneUptime using FreeSwitch.",
+          },
+        ],
+        to: toPhone,
+      };
+
+      await CallService.makeCall(testCallRequest, {
+        isSensitive: false,
+      });
+
+      return Response.sendEmptySuccessResponse(req, res);
+    } catch (err) {
+      return next(err);
+    }
+  },
+);
+
 export default router;

@@ -8,11 +8,24 @@ import CardModelDetail from "Common/UI/Components/ModelDetail/CardModelDetail";
 import Page from "Common/UI/Components/Page/Page";
 import FieldType from "Common/UI/Components/Types/FieldType";
 import GlobalConfig from "Common/Models/DatabaseModels/GlobalConfig";
-import React, { FunctionComponent, ReactElement } from "react";
+import React, { FunctionComponent, ReactElement, useState } from "react";
 import { useTranslation } from "react-i18next";
+import IconProp from "Common/Types/Icon/IconProp";
+import BasicFormModal from "Common/UI/Components/FormModal/BasicFormModal";
+import { JSONObject } from "Common/Types/JSON";
+import HTTPErrorResponse from "Common/Types/API/HTTPErrorResponse";
+import HTTPResponse from "Common/Types/API/HTTPResponse";
+import API from "Common/UI/Utils/API/API";
+import URL from "Common/Types/API/URL";
+import { NOTIFICATION_URL } from "Common/UI/Config";
+import EmptyResponseData from "Common/Types/API/EmptyResponse";
 
 const Settings: FunctionComponent = (): ReactElement => {
   const { t } = useTranslation();
+  const [showTestCallModal, setShowTestCallModal] = useState<boolean>(false);
+  const [isTestCallLoading, setIsTestCallLoading] = useState<boolean>(false);
+  const [testCallError, setTestCallError] = useState<string>("");
+
   return (
     <Page
       title={t("pages.settings.title")}
@@ -41,6 +54,16 @@ const Settings: FunctionComponent = (): ReactElement => {
         cardProps={{
           title: t("pages.settings.callSms.cardTitle"),
           description: t("pages.settings.callSms.cardDescription"),
+          buttons: [
+            {
+              title: "Test Call",
+              icon: IconProp.Call,
+              onClick: () => {
+                setShowTestCallModal(true);
+                setTestCallError("");
+              },
+            },
+          ],
         }}
         isEditable={true}
         editButtonText={t("pages.settings.callSms.editButton")}
@@ -323,6 +346,66 @@ const Settings: FunctionComponent = (): ReactElement => {
           modelId: ObjectID.getZeroObjectID(),
         }}
       />
+
+      {showTestCallModal ? (
+        <BasicFormModal
+          title="Send Test Call"
+          description="Send a test call via FreeSwitch to verify the configuration."
+          formProps={{
+            error: testCallError,
+            fields: [
+              {
+                field: {
+                  toPhone: true,
+                },
+                title: "Phone Number",
+                fieldType: FormFieldSchemaType.Phone,
+                required: true,
+                description: "Phone number to send the test call to.",
+                placeholder: "+5511999999999",
+              },
+            ],
+          }}
+          submitButtonText="Send Test Call"
+          onClose={() => {
+            setShowTestCallModal(false);
+            setTestCallError("");
+          }}
+          isLoading={isTestCallLoading}
+          onSubmit={async (values: JSONObject) => {
+            try {
+              setIsTestCallLoading(true);
+              setTestCallError("");
+
+              const response:
+                | HTTPResponse<EmptyResponseData>
+                | HTTPErrorResponse = await API.post({
+                url: URL.fromString(NOTIFICATION_URL.toString()).addRoute(
+                  `/call/test-global`,
+                ),
+                data: {
+                  toPhone: values["toPhone"],
+                },
+              });
+
+              if (response.isSuccess()) {
+                setIsTestCallLoading(false);
+                setShowTestCallModal(false);
+                setTestCallError("");
+              }
+
+              if (response instanceof HTTPErrorResponse) {
+                throw response;
+              }
+            } catch (err) {
+              setTestCallError(API.getFriendlyMessage(err));
+              setIsTestCallLoading(false);
+            }
+          }}
+        />
+      ) : (
+        <></>
+      )}
     </Page>
   );
 };
