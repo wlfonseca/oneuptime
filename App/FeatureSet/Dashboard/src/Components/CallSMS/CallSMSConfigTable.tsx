@@ -101,7 +101,7 @@ const CustomCallSMSTable: FunctionComponent = (): ReactElement => {
         cardProps={{
           title: "Call/SMS Config",
           description:
-            "Configure your call and SMS providers (Twilio or FreeSwitch/SIP).",
+            "Configure your call and SMS providers (FreeSwitch/SIP or Twilio).",
         }}
         formSteps={[
           {
@@ -109,12 +109,12 @@ const CustomCallSMSTable: FunctionComponent = (): ReactElement => {
             id: "basic-info",
           },
           {
-            title: "Twilio Config",
-            id: "twilio-info",
-          },
-          {
             title: "FreeSwitch (SIP)",
             id: "freeswitch-info",
+          },
+          {
+            title: "Twilio Config",
+            id: "twilio-info",
           },
         ]}
         name="Settings > Custom CallSMS Config"
@@ -155,11 +155,176 @@ const CustomCallSMSTable: FunctionComponent = (): ReactElement => {
             stepId: "basic-info",
             fieldType: FormFieldSchemaType.Dropdown,
             required: false,
-            description: "Select your call provider: twilio or freeswitch",
+            description: "Select your call provider: freeswitch or twilio",
             dropdownOptions: [
-              { label: "Twilio", value: "twilio" },
               { label: "FreeSwitch (SIP)", value: "freeswitch" },
+              { label: "Twilio", value: "twilio" },
             ],
+          },
+          {
+            field: {
+              isProjectDefault: true,
+            },
+            title: "Set as Project Default",
+            stepId: "basic-info",
+            fieldType: FormFieldSchemaType.Toggle,
+            required: false,
+            description:
+              "When enabled, all SMS and Calls sent to project team members will use this config instead of the global config.",
+          },
+          {
+            field: {
+              freeSwitchSipServer: true,
+            },
+            title: "SIP Trunk Server",
+            stepId: "freeswitch-info",
+            fieldType: FormFieldSchemaType.Text,
+            required: false,
+            description:
+              "SIP trunk provider hostname or IP (e.g., sip.provedor.com.br).",
+            placeholder: "sip.provedor.com.br",
+          },
+          {
+            field: {
+              freeSwitchSipPort: true,
+            },
+            title: "SIP Trunk Port",
+            stepId: "freeswitch-info",
+            fieldType: FormFieldSchemaType.Number,
+            required: false,
+            description: "SIP trunk server port. Default: 5060",
+            placeholder: "5060",
+          },
+          {
+            field: {
+              freeSwitchSipUser: true,
+            },
+            title: "SIP Trunk Username",
+            stepId: "freeswitch-info",
+            fieldType: FormFieldSchemaType.Text,
+            required: false,
+            description:
+              "SIP account username for authentication with the provider.",
+            placeholder: "",
+          },
+          {
+            field: {
+              freeSwitchSipPassword: true,
+            },
+            title: "SIP Trunk Password",
+            stepId: "freeswitch-info",
+            fieldType: FormFieldSchemaType.Password,
+            required: false,
+            description:
+              "SIP account password for authentication with the provider.",
+            placeholder: "",
+          },
+          {
+            field: {
+              freeSwitchSipTransport: true,
+            },
+            title: "SIP Transport",
+            stepId: "freeswitch-info",
+            fieldType: FormFieldSchemaType.Dropdown,
+            required: false,
+            description: "SIP transport protocol. Default: udp",
+            dropdownOptions: [
+              { label: "UDP", value: "udp" },
+              { label: "TCP", value: "tcp" },
+              { label: "TLS", value: "tls" },
+            ],
+          },
+          {
+            field: {
+              freeSwitchEventSocketHost: true,
+            },
+            title: "FreeSwitch ESL Host",
+            stepId: "freeswitch-info",
+            fieldType: FormFieldSchemaType.Text,
+            required: false,
+            description: "FreeSwitch Event Socket hostname (e.g., freeswitch).",
+            placeholder: "freeswitch",
+          },
+          {
+            field: {
+              freeSwitchEventSocketPort: true,
+            },
+            title: "FreeSwitch ESL Port",
+            stepId: "freeswitch-info",
+            fieldType: FormFieldSchemaType.Number,
+            required: false,
+            description: "FreeSwitch Event Socket port. Default: 8021",
+            placeholder: "8021",
+          },
+          {
+            field: {
+              freeSwitchEventSocketPassword: true,
+            },
+            title: "FreeSwitch ESL Password",
+            stepId: "freeswitch-info",
+            fieldType: FormFieldSchemaType.Password,
+            required: false,
+            description: "FreeSwitch Event Socket password.",
+            placeholder: "ClueCon",
+          },
+          {
+            field: {
+              freeSwitchGatewayName: true,
+            },
+            title: "SIP Gateway Name",
+            stepId: "freeswitch-info",
+            fieldType: FormFieldSchemaType.Text,
+            required: false,
+            description:
+              "Gateway name to register in FreeSwitch (e.g., setevoip).",
+            placeholder: "setevoip",
+          },
+          {
+            field: {
+              freeSwitchDefaultCallerId: true,
+            },
+            title: "Default Caller ID",
+            stepId: "freeswitch-info",
+            fieldType: FormFieldSchemaType.Phone,
+            required: false,
+            description:
+              "Default caller ID for outbound calls (e.g., 5511999999999).",
+            placeholder: "5511999999999",
+          },
+          {
+            field: {
+              freeSwitchTtsEngine: true,
+            },
+            title: "FreeSwitch TTS Engine",
+            stepId: "freeswitch-info",
+            fieldType: FormFieldSchemaType.Text,
+            required: false,
+            description:
+              "TTS engine. Options: flite, espeak, etc. Default: flite",
+            placeholder: "flite",
+          },
+          {
+            field: {
+              freeSwitchTtsVoice: true,
+            },
+            title: "FreeSwitch TTS Voice",
+            stepId: "freeswitch-info",
+            fieldType: FormFieldSchemaType.Text,
+            required: false,
+            description:
+              "TTS voice. For flite: slt (female), rms (male), kal (male). Default: slt",
+            placeholder: "slt",
+          },
+          {
+            field: {
+              aiVoiceEnabled: true,
+            },
+            title: "AI Voice",
+            stepId: "freeswitch-info",
+            fieldType: FormFieldSchemaType.Toggle,
+            required: false,
+            description:
+              "When enabled, the AI provider configured for this project will generate a friendly voice message for incident and alert calls instead of generic messages. Requires an LLM Provider configured in Settings > AI.",
           },
           {
             field: {
@@ -205,40 +370,6 @@ const CustomCallSMSTable: FunctionComponent = (): ReactElement => {
             description: "If you have multiple phone numbers, add them here.",
             placeholder: "+441234567890, +461234567890",
           },
-          {
-            field: {
-              isProjectDefault: true,
-            },
-            title: "Set as Project Default",
-            stepId: "twilio-info",
-            fieldType: FormFieldSchemaType.Toggle,
-            required: false,
-            description:
-              "When enabled, all SMS and Calls sent to project team members will use this config instead of the global config.",
-          },
-          {
-            field: {
-              freeSwitchTtsVoice: true,
-            },
-            title: "FreeSwitch TTS Voice",
-            stepId: "freeswitch-info",
-            fieldType: FormFieldSchemaType.Text,
-            required: false,
-            description:
-              "TTS voice. For flite: slt (female), rms (male), kal (male). Default: slt",
-            placeholder: "slt",
-          },
-          {
-            field: {
-              aiVoiceEnabled: true,
-            },
-            title: "AI Voice",
-            stepId: "freeswitch-info",
-            fieldType: FormFieldSchemaType.Toggle,
-            required: false,
-            description:
-              "When enabled, the AI provider configured for this project will generate a friendly voice message for incident and alert calls instead of generic messages. Requires an LLM Provider configured in Settings > AI.",
-          },
         ]}
         showRefreshButton={true}
         viewPageRoute={Navigation.getCurrentRoute()}
@@ -255,6 +386,27 @@ const CustomCallSMSTable: FunctionComponent = (): ReactElement => {
             type: FieldType.LongText,
             field: {
               description: true,
+            },
+          },
+          {
+            title: "SIP Server",
+            type: FieldType.Text,
+            field: {
+              freeSwitchSipServer: true,
+            },
+          },
+          {
+            title: "SIP User",
+            type: FieldType.Text,
+            field: {
+              freeSwitchSipUser: true,
+            },
+          },
+          {
+            title: "FreeSwitch ESL Host",
+            type: FieldType.Text,
+            field: {
+              freeSwitchEventSocketHost: true,
             },
           },
           {
@@ -311,6 +463,41 @@ const CustomCallSMSTable: FunctionComponent = (): ReactElement => {
           },
           {
             field: {
+              freeSwitchSipServer: true,
+            },
+            title: "SIP Server",
+            type: FieldType.Text,
+          },
+          {
+            field: {
+              freeSwitchSipUser: true,
+            },
+            title: "SIP User",
+            type: FieldType.Text,
+          },
+          {
+            field: {
+              freeSwitchEventSocketHost: true,
+            },
+            title: "FreeSwitch ESL Host",
+            type: FieldType.Text,
+          },
+          {
+            field: {
+              freeSwitchGatewayName: true,
+            },
+            title: "Gateway",
+            type: FieldType.Text,
+          },
+          {
+            field: {
+              freeSwitchDefaultCallerId: true,
+            },
+            title: "Caller ID",
+            type: FieldType.Phone,
+          },
+          {
+            field: {
               twilioAccountSID: true,
             },
             title: "Twilio Account SID",
@@ -322,13 +509,6 @@ const CustomCallSMSTable: FunctionComponent = (): ReactElement => {
             },
             title: "Primary Phone Number",
             type: FieldType.Phone,
-          },
-          {
-            field: {
-              freeSwitchEventSocketHost: true,
-            },
-            title: "FreeSwitch ESL Host",
-            type: FieldType.Text,
           },
           {
             field: {
