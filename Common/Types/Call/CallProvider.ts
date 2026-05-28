@@ -96,4 +96,13 @@ export interface ICallProvider {
 
   // Webhook signature validation
   validateWebhookSignature(request: WebhookRequest, signature: string): boolean;
+
+  // Make an outbound call
+  makeCall(
+    to: string,
+    from: string,
+    message: string,
+    timeoutSeconds: number,
+    statusCallbackUrl: string,
+  ): Promise<void>;
 }

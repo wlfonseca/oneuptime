@@ -251,6 +251,22 @@ export default class TwilioCallProvider implements ICallProvider {
     };
   }
 
+  public async makeCall(
+    to: string,
+    from: string,
+    message: string,
+    _timeoutSeconds: number,
+    _statusCallbackUrl: string,
+  ): Promise<void> {
+    await this.client.calls.create({
+      to,
+      from,
+      twiml: new Twilio.twiml.VoiceResponse()
+        .say({ voice: "alice" }, message)
+        .toString(),
+    });
+  }
+
   public validateWebhookSignature(
     request: WebhookRequest,
     signature: string,
