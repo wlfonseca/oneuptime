@@ -12,6 +12,8 @@ interface FreeSwitchConfig {
   sipProviderPort?: number;
   sipProviderUsername?: string;
   sipProviderPassword?: string;
+  piperHost?: string;
+  piperPort?: number;
 }
 
 export default FreeSwitchConfig;
