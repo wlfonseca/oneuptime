@@ -14,6 +14,8 @@ import BadDataException from "Common/Types/Exception/BadDataException";
 import logger from "Common/Server/Utils/Logger";
 import { exec } from "child_process";
 import { promisify } from "util";
+import http from "http";
+import fs from "fs";
 
 export default class FreeSwitchCallProvider implements ICallProvider {
   private config: FreeSwitchConfig;
@@ -98,19 +100,10 @@ export default class FreeSwitchCallProvider implements ICallProvider {
       unknown
     >;
     const callerId: string = (body["Caller-Caller-ID-Number"] as string) || "";
-    const calledNumber: string =
-      (body["variable_dialed_user"] as string) ||
-      (body["Caller-Destination-Number"] as string) ||
-      "";
-
-    if (!callerId) {
-      throw new BadDataException("Caller ID not found in webhook request");
-    }
-
     return {
       callId: (body["Caller-Unique-ID"] as string) || "",
       callerPhoneNumber: callerId,
-      calledPhoneNumber: calledNumber,
+      calledPhoneNumber: (body["Caller-Destination-Number"] as string) || "",
     };
   }
 
@@ -119,14 +112,10 @@ export default class FreeSwitchCallProvider implements ICallProvider {
       string,
       unknown
     >;
-    const hangupCause: string =
-      (body["variable_hangup_cause"] as string) || "NONE_CALL_LEG_FAILED";
-    const billSec: string = (body["variable_billsec"] as string) || "0";
-
+    const status: string = (body["Call-Result"] as string) || "failed";
     return {
-      callId: (body["Caller-Unique-ID"] as string) || "",
-      dialStatus: this.mapHangupCause(hangupCause),
-      dialDurationSeconds: parseInt(billSec) || 0,
+      callId: (body["Call-Unique-ID"] as string) || "",
+      dialStatus: status as DialStatusData["dialStatus"],
     };
   }
 
@@ -137,33 +126,98 @@ export default class FreeSwitchCallProvider implements ICallProvider {
     return true;
   }
 
-  public async makeCall(
-    to: string,
-    from: string,
-    message: string,
-    timeoutSeconds: number,
-    statusCallbackUrl: string,
-  ): Promise<void> {
-    await this.ensureGatewayConfigured();
+  private async generateTtsAudio(message: string): Promise<string | null> {
+    const piperHost: string =
+      this.config.piperHost || "oneuptime-piper-tts";
+    const piperPort: number = this.config.piperPort || 5002;
+    const audioPath: string = `/tmp/oneuptime_audio/call_${Date.now()}.wav`;
 
-    const cmd: string = this.buildOriginateCommand(
-      to,
-      from,
-      message,
-      timeoutSeconds,
-    );
+    try {
+      const audio: Buffer = await new Promise<Buffer>(
+        (resolve, reject) => {
+          const postData: string = JSON.stringify({ text: message });
+          const req: http.ClientRequest = http.request(
+            {
+              hostname: piperHost,
+              port: piperPort,
+              path: "/api/tts",
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Content-Length": Buffer.byteLength(postData),
+              },
+              timeout: 15000,
+            },
+            (res: http.IncomingMessage) => {
+              const chunks: Buffer[] = [];
+              res.on("data", (chunk: Buffer) => chunks.push(chunk));
+              res.on("end", () => {
+                if (res.statusCode === 200) {
+                  resolve(Buffer.concat(chunks));
+                } else {
+                  reject(
+                    new Error(
+                      `Piper HTTP ${res.statusCode}: ${chunks.join("")}`,
+                    ),
+                  );
+                }
+              });
+            },
+          );
+          req.on("error", (err: Error) => reject(err));
+          req.on("timeout", () => {
+            req.destroy();
+            reject(new Error("Piper request timeout"));
+          });
+          req.write(postData);
+          req.end();
+        },
+      );
 
-    logger.debug(`FreeSwitch originate: ${cmd}`, { service: "notification" });
+      fs.writeFileSync(audioPath, audio);
+      logger.debug(`Piper TTS audio saved to ${audioPath}`, {
+        service: "notification",
+      });
+      return audioPath;
+    } catch (err) {
+      logger.error("Piper TTS failed", {
+        error: (err as Error).message,
+        service: "notification",
+      });
+      return null;
+    }
+  }
 
-    await this.sendCommand(cmd);
+  private async sendFsCli(command: string): Promise<string> {
+    const execAsync = promisify(exec);
+    const escaped: string = command.replace(/"/g, '\\"');
+    const fsCli: string = this.config.fsCliPath || "fs_cli";
+    const password: string =
+      this.config.eventSocketPassword || "ClueCon";
+    const host: string =
+      this.config.eventSocketHost || "127.0.0.1";
+    const port: string | number =
+      this.config.eventSocketPort?.toString() || "8021";
+    const cmd: string = `${fsCli} -H ${host} -P ${port} -p ${password} -x "${escaped}"`;
 
-    if (statusCallbackUrl) {
-      await this.configureCallBack(
-        undefined,
-        statusCallbackUrl,
-        timeoutSeconds,
+    try {
+      const { stdout } = await execAsync(cmd, { timeout: 30000 });
+      return stdout;
+    } catch (err: unknown) {
+      const error: Error = err as Error;
+      logger.error("FreeSwitch fs_cli error", {
+        cmd,
+        error: error.message,
+        service: "notification",
+      });
+      throw new BadDataException(
+        `FreeSwitch command failed: ${error.message}`,
       );
     }
+  }
+
+  private async sendCommand(command: string): Promise<string> {
+    return this.sendFsCli(command);
   }
 
   private async ensureGatewayConfigured(): Promise<void> {
@@ -183,22 +237,18 @@ export default class FreeSwitchCallProvider implements ICallProvider {
     }
 
     await this.sendCommand(
-      `sofia profile external gw add ${gatewayName} sip:${sipHost}`,
+      `sofia profile external gw add ${gatewayName} sip:${this.config.sipProviderHost}`,
     );
 
-    const sipUser: string | undefined = this.config.sipProviderUsername;
-
-    if (sipUser) {
+    if (this.config.sipProviderUsername) {
       await this.sendCommand(
-        `sofia profile external gw set ${gatewayName} auth-username ${sipUser}`,
+        `sofia profile external gw set ${gatewayName} auth-username ${this.config.sipProviderUsername}`,
       );
     }
 
-    const sipPass: string | undefined = this.config.sipProviderPassword;
-
-    if (sipPass) {
+    if (this.config.sipProviderPassword) {
       await this.sendCommand(
-        `sofia profile external gw set ${gatewayName} auth-password ${sipPass}`,
+        `sofia profile external gw set ${gatewayName} auth-password ${this.config.sipProviderPassword}`,
       );
     }
 
@@ -207,84 +257,54 @@ export default class FreeSwitchCallProvider implements ICallProvider {
     );
 
     await this.sendCommand(`sofia profile external restart`);
-
-    logger.debug(
-      `FreeSwitch gateway ${gatewayName} configured for ${sipHost}`,
-      { service: "notification" },
-    );
   }
 
-  private buildOriginateCommand(
+  public async makeCall(
     to: string,
     from: string,
     message: string,
-    _timeoutSeconds: number,
-  ): string {
-    const gateway: string = this.config.gatewayName
-      ? `sofia/gateway/${this.config.gatewayName}/${to}`
-      : `user/${to}`;
+    timeoutSeconds: number,
+    statusCallbackUrl: string,
+  ): Promise<void> {
+    // Generate TTS audio via Piper
+    const audioPath: string | null = await this.generateTtsAudio(message);
 
-    const callerId: string = from || this.config.defaultCallerId || "anonymous";
+    await this.ensureGatewayConfigured();
 
-    const ttsEngine: string = this.config.ttsEngine || "flite";
-    const ttsVoice: string = this.config.ttsVoice || "slt";
+    const gatewayName: string =
+      this.config.gatewayName || "setevoip";
+    const callerId: string =
+      this.config.defaultCallerId?.toString() || from || "5511999999999";
+    const timeout: number = timeoutSeconds || 30;
 
-    const audioSource: string = message.startsWith("http")
-      ? `playback(${message})`
-      : `say:${ttsEngine}:${ttsVoice}:${encodeURIComponent(message)}`;
+    let originateCmd: string;
 
-    return `originate {origination_caller_id_number=${callerId},origination_caller_id_name=OneUptime,ignore_early_media=true,absolute_codec_string=PCMA,PCMU}${gateway} ${audioSource}`;
-  }
+    if (audioPath) {
+      originateCmd = `bgapi originate {origination_caller_id_number=${callerId},originate_timeout=${timeout},ignore_early_media=true}sofia/gateway/${gatewayName}/${to} &playback(${audioPath})`;
+    } else {
+      originateCmd = `bgapi originate {origination_caller_id_number=${callerId},originate_timeout=${timeout},ignore_early_media=true}sofia/gateway/${gatewayName}/${to} &say(text="${message}")`;
+    }
 
-  private async sendCommand(command: string): Promise<string> {
-    return this.sendFsCli(command);
-  }
+    logger.debug(`FreeSwitch originate: ${originateCmd}`, {
+      service: "notification",
+    });
 
-  private async sendFsCli(command: string): Promise<string> {
-    const execAsync = promisify(exec);
+    await this.sendCommand(originateCmd);
 
-    const escaped: string = command.replace(/"/g, '\\"');
-    const fsCli: string = this.config.fsCliPath || "fs_cli";
-    const password: string = this.config.eventSocketPassword || "ClueCon";
-    const host: string = this.config.eventSocketHost || "127.0.0.1";
-    const port: string | number =
-      this.config.eventSocketPort?.toString() || "8021";
-
-    const cmd: string = `${fsCli} -H ${host} -P ${port} -p ${password} -x "${escaped}"`;
-
-    try {
-      const { stdout } = await execAsync(cmd, { timeout: 30000 });
-      return stdout;
-    } catch (err: unknown) {
-      const error: Error = err as Error;
-      logger.error("FreeSwitch fs_cli error", {
-        cmd,
-        error: error.message,
-        service: "notification",
-      });
-      throw new BadDataException(`FreeSwitch command failed: ${error.message}`);
+    if (statusCallbackUrl) {
+      await this.configureCallBack(
+        undefined,
+        statusCallbackUrl,
+        timeoutSeconds,
+      );
     }
   }
 
   private async configureCallBack(
-    _channelUuid: string | undefined,
-    _callbackUrl: string,
+    _sessionId: string | undefined,
+    _statusCallbackUrl: string,
     _timeoutSeconds: number,
   ): Promise<void> {
-    // In production, use mod_curl or ESL to set up async callbacks
-  }
-
-  private mapHangupCause(cause: string): DialStatusData["dialStatus"] {
-    const map: Record<string, DialStatusData["dialStatus"]> = {
-      NORMAL_CLEARING: "completed",
-      USER_BUSY: "busy",
-      NO_ANSWER: "no-answer",
-      NO_USER_RESPONSE: "no-answer",
-      CALL_REJECTED: "busy",
-      ORIGINATOR_CANCEL: "canceled",
-      INCOMPATIBLE_DESTINATION: "failed",
-      NONE_CALL_LEG_FAILED: "failed",
-    };
-    return map[cause] || "failed";
+    // Callback configured via SIP headers if needed
   }
 }
