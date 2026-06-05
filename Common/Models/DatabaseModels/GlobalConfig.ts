@@ -536,6 +536,41 @@ export default class GlobalConfig extends GlobalConfigModel {
   })
   public freeSwitchTtsVoice?: string = undefined;
 
+  @ColumnAccessControl({
+    create: [],
+    read: [],
+    update: [],
+  })
+  @TableColumn({
+    type: TableColumnType.ShortText,
+    title: "Piper Host",
+    description: "Piper TTS server host. Default: localhost",
+  })
+  @Column({
+    type: ColumnType.ShortText,
+    nullable: true,
+    unique: false,
+    length: ColumnLength.ShortText,
+  })
+  public piperHost?: string = undefined;
+
+  @ColumnAccessControl({
+    create: [],
+    read: [],
+    update: [],
+  })
+  @TableColumn({
+    type: TableColumnType.Number,
+    title: "Piper Port",
+    description: "Piper TTS server port. Default: 5002",
+  })
+  @Column({
+    type: ColumnType.Number,
+    nullable: true,
+    unique: false,
+  })
+  public piperPort?: number = undefined;
+
   // FreeSwitch SIP trunk configuration
   @ColumnAccessControl({
     create: [],

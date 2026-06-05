@@ -15,7 +15,7 @@ import React, {
   useEffect,
   useState,
 } from "react";
-import { JSONObject } from "../../../Types/JSON";
+import { JSONValue } from "../../../Types/JSON";
 import {
   JSONFieldNode,
   flattenJSONFields,
@@ -193,9 +193,6 @@ const ComponentValuePickerModal: FunctionComponent<ComponentProps> = (
             searchedComponents.length > 0 &&
             searchedComponents.map(
               (component: NodeDataProp, i: number): ReactElement => {
-                const isComponentSelected: boolean =
-                  selectedComponent?.id === component.id;
-
                 return (
                   <div className="p-3 pl-1" key={`component-${i}`}>
                     <h2 className="text-base font-medium text-gray-500">
