@@ -22,6 +22,7 @@ import Radio from "Common/UI/Components/Radio/Radio";
 import TextArea from "Common/UI/Components/TextArea/TextArea";
 import Toggle from "Common/UI/Components/Toggle/Toggle";
 import DropdownUtil from "Common/UI/Utils/Dropdown";
+import useTranslateValue from "Common/UI/Utils/Translation";
 import CollapsibleSection from "Common/UI/Components/CollapsibleSection/CollapsibleSection";
 import React, {
   FunctionComponent,
@@ -54,6 +55,7 @@ export interface ComponentProps {
 const MonitorCriteriaInstanceElement: FunctionComponent<ComponentProps> = (
   props: ComponentProps,
 ): ReactElement => {
+  const t = useTranslateValue().translateString;
   const monitorCriteriaInstance: MonitorCriteriaInstance =
     props.value || new MonitorCriteriaInstance();
 
@@ -158,10 +160,8 @@ const MonitorCriteriaInstanceElement: FunctionComponent<ComponentProps> = (
       <div className="mb-4">
         <div className="mt-3">
           <FieldLabelElement
-            title={"Criteria Name"}
-            description={
-              "Any friendly name for this criteria, that will help you remember later."
-            }
+            title={t("monitor_criteria.criteria_name")}
+            description={t("monitor_criteria.criteria_name_desc")}
             required={true}
           />
           <Input
@@ -187,7 +187,7 @@ const MonitorCriteriaInstanceElement: FunctionComponent<ComponentProps> = (
             error={
               touched["name"] && errors["name"] ? errors["name"] : undefined
             }
-            placeholder="Online Criteria"
+            placeholder={t("monitor_criteria.online_criteria_placeholder")}
             onChange={(value: string) => {
               if (!value) {
                 setErrors({
@@ -212,10 +212,8 @@ const MonitorCriteriaInstanceElement: FunctionComponent<ComponentProps> = (
         </div>
         <div className="mt-4">
           <FieldLabelElement
-            title={"Criteria Description"}
-            description={
-              "Any friendly description for this criteria, that will help you remember later."
-            }
+            title={t("monitor_criteria.criteria_description")}
+            description={t("monitor_criteria.criteria_description_desc")}
             required={true}
           />
           <TextArea
@@ -262,7 +260,7 @@ const MonitorCriteriaInstanceElement: FunctionComponent<ComponentProps> = (
                 );
               }
             }}
-            placeholder="This criteria checks if the monitor is online."
+            placeholder={t("monitor_criteria.online_desc_placeholder")}
           />
         </div>
       </div>
@@ -411,8 +409,8 @@ const MonitorCriteriaInstanceElement: FunctionComponent<ComponentProps> = (
           <div className="mt-4">
             <Toggle
               value={showAlertControl}
-              title="When filters match, create an alert."
-              tooltip="When you create an alert, it is used to notify the team but is not shown on the status page."
+              title={t("monitor_criteria.create_alert").toString()}
+              tooltip={t("monitor_criteria.create_alert_tooltip").toString()}
               onChange={(value: boolean) => {
                 setShowAlertControl(value);
                 monitorCriteriaInstance.setCreateAlerts(value);
@@ -470,8 +468,10 @@ const MonitorCriteriaInstanceElement: FunctionComponent<ComponentProps> = (
           <div className="mt-4">
             <Toggle
               value={showIncidentControl}
-              title="When filters match, declare an incident."
-              tooltip="When you delcare an incident, it is used to notify the team and is shown on the status page as well."
+              title={t("monitor_criteria.declare_incident").toString()}
+              tooltip={t(
+                "monitor_criteria.declare_incident_tooltip",
+              ).toString()}
               onChange={(value: boolean) => {
                 setShowIncidentControl(value);
                 monitorCriteriaInstance.setCreateIncidents(value);

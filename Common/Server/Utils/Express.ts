@@ -78,6 +78,7 @@ class Express {
 
   public static setupExpress(): void {
     this.app = express();
+    this.app.set("port", process.env["PORT"] || 3002);
   }
 
   public static getHttpServer(): Server {

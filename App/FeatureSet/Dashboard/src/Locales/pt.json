@@ -1247,5 +1247,9 @@
   "Workspace Setting": "Espaço de trabalho Configuração",
   "Workspace Settings": "Espaço de trabalho Configurações",
   "Workspace User Auth Token": "Espaço de trabalho Usuário Auth Token",
-  "Workspace User Auth Tokens": "Espaço de trabalho Usuário Auth Tokens"
+  "Workspace User Auth Tokens": "Espaço de trabalho Usuário Auth Tokens",
+  "monitor_criteria.create_alert": "Quando os critérios forem atendidos, crie um alerta (Interno).",
+  "monitor_criteria.create_alert_tooltip": "Alertas notificam a equipe internamente (Slack, e-mail, SMS, plantão) e NÃO aparecem na página de status pública.",
+  "monitor_criteria.declare_incident": "Quando os critérios forem atendidos, declare um incidente (Externo).",
+  "monitor_criteria.declare_incident_tooltip": "Incidentes notificam a equipe e também aparecem na página de status pública."
 }

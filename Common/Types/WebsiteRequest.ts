@@ -33,8 +33,17 @@ export default class WebsiteRequest {
       method: HTTPMethod.GET,
     };
 
+    const defaultHeaders: Headers = {
+      "User-Agent": "OneUptime-Probe/1.0",
+    };
+
     if (options.headers) {
-      axiosOptions.headers = options.headers;
+      axiosOptions.headers = {
+        ...defaultHeaders,
+        ...options.headers,
+      };
+    } else {
+      axiosOptions.headers = defaultHeaders;
     }
 
     if (options.isHeadRequest) {

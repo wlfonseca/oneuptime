@@ -127,6 +127,8 @@ const HostProcesses: FunctionComponent<
   const [error, setError] = useState<string>("");
   const [latestSampleAt, setLatestSampleAt] = useState<Date | null>(null);
   const [refreshedAt, setRefreshedAt] = useState<Date | null>(null);
+  const [sortBy, setSortBy] = useState<string | null>(null);
+  const [sortOrder, setSortOrder] = useState<SortOrder>(SortOrder.Ascending);
 
   const fetchData: PromiseVoidFunction = async (): Promise<void> => {
     setIsLoading(true);
@@ -306,7 +308,6 @@ const HostProcesses: FunctionComponent<
         title: "Process",
         type: FieldType.Element,
         key: "executable",
-        disableSort: true,
         getElement: (row: ProcessRow): ReactElement => {
           return (
             <div className="min-w-0">
@@ -333,14 +334,12 @@ const HostProcesses: FunctionComponent<
         title: "User",
         type: FieldType.Text,
         key: "user",
-        disableSort: true,
         hideOnMobile: true,
       },
       {
         title: "CPU",
         type: FieldType.Element,
         key: "cpuPercent",
-        disableSort: true,
         getElement: (row: ProcessRow): ReactElement => {
           const pct: number = Math.min(100, Math.max(0, row.cpuPercent ?? 0));
           return (
@@ -362,7 +361,6 @@ const HostProcesses: FunctionComponent<
         title: "Memory",
         type: FieldType.Element,
         key: "memoryBytes",
-        disableSort: true,
         getElement: (row: ProcessRow): ReactElement => {
           const pct: number = Math.min(
             100,
@@ -432,6 +430,45 @@ const HostProcesses: FunctionComponent<
     return <ErrorMessage message="Host not found." />;
   }
 
+  const sortedRows: Array<ProcessRow> = useMemo(() => {
+    if (!sortBy || !rows.length) {
+      return rows;
+    }
+
+    const sorted: Array<ProcessRow> = [...rows].sort(
+      (a: ProcessRow, b: ProcessRow) => {
+        const aVal: unknown = (a as Record<string, unknown>)[sortBy];
+        const bVal: unknown = (b as Record<string, unknown>)[sortBy];
+
+        if (aVal == null && bVal == null) {
+          return 0;
+        }
+        if (aVal == null) {
+          return 1;
+        }
+        if (bVal == null) {
+          return -1;
+        }
+
+        if (typeof aVal === "string" && typeof bVal === "string") {
+          return aVal.localeCompare(bVal);
+        }
+
+        if (typeof aVal === "number" && typeof bVal === "number") {
+          return aVal - bVal;
+        }
+
+        return String(aVal).localeCompare(String(bVal));
+      },
+    );
+
+    if (sortOrder === SortOrder.Descending) {
+      sorted.reverse();
+    }
+
+    return sorted;
+  }, [rows, sortBy, sortOrder]);
+
   const noItemsMessage: string = `No process metrics in the last ${PROCESS_LOOKBACK_MINUTES} minutes. Enable the "process" scraper in your OTel collector "hostmetrics" receiver to see per-process CPU, memory, and ownership here. The Documentation tab has a ready-to-paste config snippet.`;
 
   return (
@@ -439,7 +476,7 @@ const HostProcesses: FunctionComponent<
       <Table<ProcessRow>
         id="host-processes-table"
         columns={tableColumns}
-        data={rows}
+        data={sortedRows}
         singularLabel="Process"
         pluralLabel="Processes"
         isLoading={false}
@@ -448,9 +485,15 @@ const HostProcesses: FunctionComponent<
         totalItemsCount={rows.length}
         itemsOnPage={rows.length}
         onNavigateToPage={() => {}}
-        sortOrder={SortOrder.Ascending}
-        sortBy={null}
-        onSortChanged={() => {}}
+        sortOrder={sortOrder}
+        sortBy={sortBy as keyof ProcessRow | null}
+        onSortChanged={(
+          newSortBy: keyof ProcessRow | null,
+          newSortOrder: SortOrder,
+        ) => {
+          setSortBy(newSortBy as string | null);
+          setSortOrder(newSortOrder);
+        }}
         noItemsMessage={noItemsMessage}
       />
     </Card>

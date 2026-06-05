@@ -29,6 +29,7 @@ import Project from "Common/Models/DatabaseModels/Project";
 import Twilio from "twilio";
 import { CallInstance } from "twilio/lib/rest/api/v2010/account/call";
 import Phone from "Common/Types/Phone";
+import CallProviderType from "Common/Types/Call/CallProviderType";
 import CallProviderFactory from "../Providers/CallProviderFactory";
 import { ICallProvider } from "Common/Types/Call/CallProvider";
 
@@ -188,10 +189,6 @@ export default class CallService {
         callLog.statusPageAnnouncementId = options.statusPageAnnouncementId;
       }
 
-      if (options.userOnCallLogTimelineId) {
-        callLog.userOnCallLogTimelineId = options.userOnCallLogTimelineId;
-      }
-
       if (options.userId) {
         callLog.userId = options.userId;
       }
@@ -213,10 +210,14 @@ export default class CallService {
         callLog.onCallDutyPolicyScheduleId = options.onCallScheduleId;
       }
 
-      const twilioConfig: TwilioConfig | null =
-        options.customTwilioConfig || (await getTwilioConfig());
+      const providerType: CallProviderType =
+        CallProviderFactory.getProviderType();
 
-      if (CallProvider !== "freeswitch") {
+      let twilioConfig: TwilioConfig | null = null;
+
+      if (providerType === CallProviderType.Twilio) {
+        twilioConfig = options.customTwilioConfig || (await getTwilioConfig());
+
         if (!twilioConfig) {
           throw new BadDataException("Twilio Config not found");
         }
@@ -227,9 +228,7 @@ export default class CallService {
           secondaryPhoneNumbersToPickFrom:
             twilioConfig.secondaryPhoneNumbers || [],
         });
-      }
-
-      if (CallProvider === "freeswitch" || !twilioConfig) {
+      } else {
         callLog.fromNumber = callRequest.to;
       }
 
@@ -437,13 +436,24 @@ export default class CallService {
       let callId: string = "";
       let callDuration: number = 0;
 
-      if (CallProvider === "freeswitch") {
+      if (providerType === CallProviderType.Twilio) {
+        const twillioCall: CallInstance = await client!.calls.create({
+          twiml: this.generateTwimlForCall(callRequest),
+          to: callRequest.to.toString(),
+          from: callLog.fromNumber!.toString(),
+        });
+
+        callId = twillioCall.sid || "";
+        callDuration = parseInt(twillioCall.duration) || 0;
+
+        logger.debug("Twilio call initiated successfully.");
+      } else {
         const provider: ICallProvider | null =
           await CallProviderFactory.getProvider();
 
         if (!provider) {
           throw new BadDataException(
-            "FreeSwitch provider not configured. Check FreeSwitch settings.",
+            `${CallProvider} provider not configured. Check ${CallProvider} settings.`,
           );
         }
 
@@ -452,27 +462,16 @@ export default class CallService {
 
         await provider.makeCall(
           callRequest.to.toString(),
-          fromNumber.toString(),
+          callLog.fromNumber!.toString(),
           message,
           60,
           "",
         );
 
-        callId = `freeswitch-call-${Date.now()}`;
+        callId = `${CallProvider}-call-${Date.now()}`;
         callDuration = 0;
 
-        logger.debug("FreeSwitch call initiated successfully.");
-      } else {
-        const twillioCall: CallInstance = await client.calls.create({
-          twiml: this.generateTwimlForCall(callRequest),
-          to: callRequest.to.toString(),
-          from: fromNumber.toString(),
-        });
-
-        callId = twillioCall.sid || "";
-        callDuration = parseInt(twillioCall.duration) || 0;
-
-        logger.debug("Twilio call initiated successfully.");
+        logger.debug(`${CallProvider} call initiated successfully.`);
       }
 
       logger.debug("Call Request sent successfully.");

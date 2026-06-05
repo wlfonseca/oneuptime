@@ -28,6 +28,10 @@ services:
       service: postgres
 
   app:
+    build:
+      network: host
+      context: .
+      dockerfile: ./App/Dockerfile
     image: oneuptime/app:${APP_TAG}
     extends:
       file: ./docker-compose.base.yml
@@ -42,6 +46,10 @@ services:
       ]
 
   probe-1:
+    build:
+      network: host
+      context: .
+      dockerfile: ./Probe/Dockerfile
     image: oneuptime/probe:${APP_TAG}
     extends:
       file: ./docker-compose.base.yml
@@ -56,6 +64,10 @@ services:
       ]
 
   ingress:
+    build:
+      network: host
+      context: .
+      dockerfile: ./Nginx/Dockerfile
     image: oneuptime/nginx:${APP_TAG}
     extends:
       file: ./docker-compose.base.yml
@@ -72,16 +84,14 @@ services:
       - "traefik.http.services.oneuptime.loadbalancer.server.port=7849"
 
   freeswitch:
-    image: docker.io/signalwire/freeswitch:latest
+    image: safarov/freeswitch:latest
     restart: unless-stopped
     networks:
       - oneuptime
     ports:
-      - "5060:5060/udp"
-      - "5060:5060/tcp"
       - "8021:8021"
     volumes:
-      - ./FreeSwitch/event_socket.conf.xml:/etc/freeswitch/autoload_configs/event_socket.conf.xml:ro
+      - ./FreeSwitch/event_socket.conf.xml:/etc/freeswitch/autoload_configs/event_socket.conf.xml
     cap_add:
       - NET_ADMIN
       - SYS_PTRACE

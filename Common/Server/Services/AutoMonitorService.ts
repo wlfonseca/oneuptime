@@ -126,6 +126,408 @@ export default class AutoMonitorService {
     }
   }
 
+  @CaptureSpan()
+  public static async createDefaultExceptionMonitorForService(data: {
+    serviceId: ObjectID;
+    serviceName: string;
+    projectId: ObjectID;
+  }): Promise<void> {
+    const monitorName: string = `${data.serviceName} - Application Exceptions`;
+
+    try {
+      const existingMonitor: Monitor | null = await MonitorService.findOneBy({
+        query: {
+          projectId: data.projectId,
+          name: monitorName,
+        },
+        select: {
+          _id: true,
+        },
+        props: {
+          isRoot: true,
+        },
+      });
+
+      if (existingMonitor) {
+        return;
+      }
+
+      const [
+        operationalStatus,
+        offlineStatus,
+        incidentSeverity,
+        alertSeverity,
+      ] = await Promise.all([
+        MonitorStatusService.findOneBy({
+          query: {
+            projectId: data.projectId,
+            isOperationalState: true,
+          },
+          select: { _id: true },
+          props: { isRoot: true },
+        }),
+        MonitorStatusService.findOneBy({
+          query: {
+            projectId: data.projectId,
+            isOfflineState: true,
+          },
+          select: { _id: true },
+          props: { isRoot: true },
+        }),
+        IncidentSeverityService.findOneBy({
+          query: { projectId: data.projectId },
+          select: { _id: true },
+          sort: { order: SortOrder.Ascending },
+          props: { isRoot: true },
+        }),
+        AlertSeverityService.findOneBy({
+          query: { projectId: data.projectId },
+          select: { _id: true },
+          sort: { order: SortOrder.Ascending },
+          props: { isRoot: true },
+        }),
+      ]);
+
+      if (
+        !operationalStatus ||
+        !offlineStatus ||
+        !incidentSeverity ||
+        !alertSeverity
+      ) {
+        logger.warn(
+          `AutoMonitorService: Could not create default exception monitor for service "${data.serviceName}" — missing status/severity config in project ${data.projectId}`,
+        );
+        return;
+      }
+
+      const monitor: Monitor = new Monitor();
+      monitor.name = monitorName;
+      monitor.description = `Auto-created exception monitor for "${data.serviceName}". Watches for application exceptions and creates incidents when exception count exceeds threshold.`;
+      monitor.monitorType = MonitorType.Exceptions;
+      monitor.disableActiveMonitoring = false;
+      monitor.monitoringInterval = "*/1 * * * *";
+      monitor.monitorSteps = AutoMonitorService.buildErrorLogMonitorStep({
+        serviceName: data.serviceName,
+        monitorName,
+        onlineMonitorStatusId: operationalStatus.id!,
+        offlineMonitorStatusId: offlineStatus.id!,
+        incidentSeverityId: incidentSeverity.id!,
+        alertSeverityId: alertSeverity.id!,
+        telemetryServiceId: data.serviceId,
+      });
+
+      await MonitorService.create({
+        data: monitor,
+        props: {
+          tenantId: data.projectId,
+          isRoot: true,
+        },
+      });
+
+      logger.info(
+        `AutoMonitorService: Created default exception monitor "${monitorName}" for service "${data.serviceName}"`,
+      );
+    } catch (err) {
+      logger.warn(
+        `AutoMonitorService: Failed to create default exception monitor for "${data.serviceName}": ${
+          err instanceof Error ? err.message : String(err)
+        }`,
+      );
+    }
+  }
+
+  @CaptureSpan()
+  public static async createDefaultServerMonitorForService(data: {
+    serviceId: ObjectID;
+    serviceName: string;
+    projectId: ObjectID;
+  }): Promise<void> {
+    const monitorName: string = `${data.serviceName} - Auto Monitor`;
+
+    try {
+      const existingMonitor: Monitor | null = await MonitorService.findOneBy({
+        query: {
+          projectId: data.projectId,
+          name: monitorName,
+        },
+        select: {
+          _id: true,
+        },
+        props: {
+          isRoot: true,
+        },
+      });
+
+      if (existingMonitor) {
+        return;
+      }
+
+      const [
+        operationalStatus,
+        offlineStatus,
+        criticalIncidentSeverity,
+        warningIncidentSeverity,
+        criticalAlertSeverity,
+        warningAlertSeverity,
+      ] = await Promise.all([
+        MonitorStatusService.findOneBy({
+          query: {
+            projectId: data.projectId,
+            isOperationalState: true,
+          },
+          select: { _id: true },
+          props: { isRoot: true },
+        }),
+        MonitorStatusService.findOneBy({
+          query: {
+            projectId: data.projectId,
+            isOfflineState: true,
+          },
+          select: { _id: true },
+          props: { isRoot: true },
+        }),
+        IncidentSeverityService.findOneBy({
+          query: { projectId: data.projectId },
+          select: { _id: true },
+          sort: { order: SortOrder.Ascending },
+          props: { isRoot: true },
+        }),
+        IncidentSeverityService.findOneBy({
+          query: { projectId: data.projectId },
+          select: { _id: true },
+          sort: { order: SortOrder.Descending },
+          props: { isRoot: true },
+        }),
+        AlertSeverityService.findOneBy({
+          query: { projectId: data.projectId },
+          select: { _id: true },
+          sort: { order: SortOrder.Ascending },
+          props: { isRoot: true },
+        }),
+        AlertSeverityService.findOneBy({
+          query: { projectId: data.projectId },
+          select: { _id: true },
+          sort: { order: SortOrder.Descending },
+          props: { isRoot: true },
+        }),
+      ]);
+
+      if (
+        !operationalStatus ||
+        !offlineStatus ||
+        !criticalIncidentSeverity ||
+        !warningIncidentSeverity ||
+        !criticalAlertSeverity ||
+        !warningAlertSeverity
+      ) {
+        logger.warn(
+          `AutoMonitorService: Could not create default server monitor for "${data.serviceName}" — missing status/severity config in project ${data.projectId}`,
+        );
+        return;
+      }
+
+      const monitor: Monitor = new Monitor();
+      monitor.name = monitorName;
+      monitor.description = `Auto-created server monitor for "${data.serviceName}". Watches CPU (>80%), memory (>80%), disk (>80%), and load average.`;
+      monitor.monitorType = MonitorType.Server;
+      monitor.disableActiveMonitoring = false;
+      monitor.monitoringInterval = "*/1 * * * *";
+      monitor.monitorSteps = AutoMonitorService.buildServerMonitorStep({
+        serviceName: data.serviceName,
+        monitorName,
+        onlineMonitorStatusId: operationalStatus.id!,
+        offlineMonitorStatusId: offlineStatus.id!,
+        criticalIncidentSeverityId: criticalIncidentSeverity.id!,
+        warningIncidentSeverityId: warningIncidentSeverity.id!,
+        criticalAlertSeverityId: criticalAlertSeverity.id!,
+        warningAlertSeverityId: warningAlertSeverity.id!,
+        serviceId: data.serviceId,
+      });
+
+      await MonitorService.create({
+        data: monitor,
+        props: {
+          tenantId: data.projectId,
+          isRoot: true,
+        },
+      });
+
+      logger.info(
+        `AutoMonitorService: Created default server monitor "${monitorName}" for service "${data.serviceName}"`,
+      );
+    } catch (err) {
+      logger.warn(
+        `AutoMonitorService: Failed to create default server monitor for "${data.serviceName}": ${
+          err instanceof Error ? err.message : String(err)
+        }`,
+      );
+    }
+  }
+
+  private static buildServerMonitorStep(args: {
+    serviceName: string;
+    monitorName: string;
+    onlineMonitorStatusId: ObjectID;
+    offlineMonitorStatusId: ObjectID;
+    criticalIncidentSeverityId: ObjectID;
+    warningIncidentSeverityId: ObjectID;
+    criticalAlertSeverityId: ObjectID;
+    warningAlertSeverityId: ObjectID;
+    serviceId: ObjectID;
+  }): any {
+    const onlineCriteriaId: string = ObjectID.generate().toString();
+
+    const criteria = (
+      checkOn: CheckOn,
+      filterType: FilterType,
+      value: number,
+      criteriaName: string,
+      criteriaDesc: string,
+      incidentSeverityId: ObjectID,
+      alertSeverityId: ObjectID,
+    ) => {
+      const offlineCriteriaId: string = ObjectID.generate().toString();
+      const incidentId: string = ObjectID.generate().toString();
+      const alertId: string = ObjectID.generate().toString();
+      const stepId: string = ObjectID.generate().toString();
+
+      const title = `[Server] ${criteriaName} - ${args.monitorName}`;
+
+      return {
+        data: {
+          id: stepId,
+          monitorDestination: undefined,
+          doNotFollowRedirects: undefined,
+          monitorDestinationPort: undefined,
+          monitorCriteria: {
+            data: {
+              monitorCriteriaInstanceArray: [
+                {
+                  data: {
+                    id: offlineCriteriaId,
+                    monitorStatusId: args.offlineMonitorStatusId,
+                    filterCondition: FilterCondition.Any,
+                    filters: [
+                      {
+                        checkOn,
+                        filterType,
+                        value,
+                      },
+                    ],
+                    incidents: [
+                      {
+                        title,
+                        description: criteriaDesc,
+                        incidentSeverityId,
+                        autoResolveIncident: true,
+                        id: incidentId,
+                        onCallPolicyIds: [],
+                      },
+                    ],
+                    alerts: [
+                      {
+                        title,
+                        description: criteriaDesc,
+                        alertSeverityId,
+                        autoResolveAlert: true,
+                        id: alertId,
+                        onCallPolicyIds: [],
+                      },
+                    ],
+                    changeMonitorStatus: true,
+                    createIncidents: true,
+                    createAlerts: true,
+                    name: `${args.monitorName} - ${criteriaName}`,
+                    description: criteriaDesc,
+                  },
+                },
+                {
+                  data: {
+                    id: onlineCriteriaId,
+                    monitorStatusId: args.onlineMonitorStatusId,
+                    filterCondition: FilterCondition.Any,
+                    filters: [
+                      {
+                        checkOn,
+                        filterType:
+                          filterType === FilterType.GreaterThan
+                            ? FilterType.LessThanOrEqualTo
+                            : FilterType.GreaterThan,
+                        value,
+                      },
+                    ],
+                    incidents: [],
+                    alerts: [],
+                    changeMonitorStatus: true,
+                    createIncidents: false,
+                    createAlerts: false,
+                    name: "Healthy",
+                    description: `Returned to normal for ${checkOn}.`,
+                  },
+                },
+              ],
+            },
+          },
+          requestType: "GET" as any,
+          requestHeaders: undefined,
+          requestBody: undefined,
+          customCode: undefined,
+          screenSizeTypes: undefined,
+          browserTypes: undefined,
+          retryCountOnError: undefined,
+          logMonitor: undefined,
+          traceMonitor: undefined,
+          metricMonitor: undefined,
+          exceptionMonitor: undefined,
+          snmpMonitor: undefined,
+          dnsMonitor: undefined,
+          domainMonitor: undefined,
+          externalStatusPageMonitor: undefined,
+          kubernetesMonitor: undefined,
+          profileMonitor: undefined,
+          dockerMonitor: undefined,
+        },
+      };
+    };
+
+    const cpuStep = criteria(
+      CheckOn.CPUUsagePercent,
+      FilterType.GreaterThan,
+      80,
+      "CPU Usage > 80%",
+      "CPU usage has exceeded 80%. High CPU may cause performance degradation.",
+      args.warningIncidentSeverityId,
+      args.warningAlertSeverityId,
+    );
+
+    const memStep = criteria(
+      CheckOn.MemoryUsagePercent,
+      FilterType.GreaterThan,
+      80,
+      "Memory Usage > 80%",
+      "Memory usage has exceeded 80%. High memory usage may cause OOM killer or swapping.",
+      args.warningIncidentSeverityId,
+      args.warningAlertSeverityId,
+    );
+
+    const diskStep = criteria(
+      CheckOn.DiskUsagePercent,
+      FilterType.GreaterThan,
+      80,
+      "Disk Usage > 80%",
+      "Disk usage has exceeded 80%. A full disk can cause application failures and data loss.",
+      args.criticalIncidentSeverityId,
+      args.criticalAlertSeverityId,
+    );
+
+    return {
+      data: {
+        id: ObjectID.generate().toString(),
+        monitorStepsInstanceArray: [cpuStep, memStep, diskStep],
+      },
+    };
+  }
+
   private static buildErrorLogMonitorStep(args: {
     serviceName: string;
     monitorName: string;

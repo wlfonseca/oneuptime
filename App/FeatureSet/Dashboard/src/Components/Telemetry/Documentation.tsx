@@ -67,6 +67,7 @@ const languages: Array<LanguageOption> = [
   { key: "ruby", label: "Ruby", shortLabel: "Ruby" },
   { key: "elixir", label: "Elixir", shortLabel: "Elixir" },
   { key: "cpp", label: "C++", shortLabel: "C++" },
+
   { key: "swift", label: "Swift", shortLabel: "Swift" },
   { key: "react", label: "React (Browser)", shortLabel: "React" },
   { key: "angular", label: "Angular (Browser)", shortLabel: "Angular" },
@@ -219,14 +220,11 @@ vcpkg install opentelemetry-cpp[otlp-http]
       };
     case "react":
       return {
-        code: `npm install @opentelemetry/api \\
-  @opentelemetry/sdk-trace-web \\
-  @opentelemetry/sdk-trace-base \\
-  @opentelemetry/exporter-trace-otlp-http \\
-  @opentelemetry/instrumentation-document-load \\
-  @opentelemetry/instrumentation-fetch \\
-  @opentelemetry/instrumentation-xml-http-request \\
-  @opentelemetry/context-zone`,
+        code: `npm install @opentelemetry/sdk-node \\
+  @opentelemetry/auto-instrumentations-web \\
+  @opentelemetry/exporter-trace-otlp-proto \\
+  @opentelemetry/exporter-metrics-otlp-proto \\
+  @opentelemetry/exporter-logs-otlp-proto`,
         language: "bash",
       };
     case "angular":
@@ -1624,6 +1622,64 @@ const TelemetryDocumentation: FunctionComponent<ComponentProps> = (
               />,
               true,
             )}
+
+          {renderStep(
+            6,
+            "AWS Lambda Deployment (Optional)",
+            "If you are deploying to AWS Lambda, add the AWS Distro for OpenTelemetry Lambda Layer to your function instead of running the instrumentation manually. Set the environment variables below (no code changes required).",
+            <CodeBlock
+              code={replacePlaceholders(
+                (() => {
+                  const layerArns: Record<string, string> = {
+                    node: "arn:aws:lambda:us-east-1:901920570463:layer:aws-opentelemetry-distro-js-1_42_0:1",
+                    python:
+                      "arn:aws:lambda:us-east-1:901920570463:layer:aws-opentelemetry-distro-py-1_42_0:1",
+                    go: "#    Go functions are compiled binaries — add the OTel SDK dependency and export via OTEL_EXPORTER_OTLP_ENDPOINT",
+                    java: "#    Java: add the AWS OpenTelemetry Lambda layer for Java (search in Lambda console)",
+                    dotnet:
+                      "#    .NET: add the AWS OpenTelemetry Lambda layer for .NET (search in Lambda console)",
+                  };
+
+                  const langLabel: Record<string, string> = {
+                    node: "Node.js",
+                    python: "Python",
+                    go: "Go",
+                    java: "Java",
+                    dotnet: ".NET",
+                  };
+
+                  const layerArn: string =
+                    layerArns[selectedLanguage] ||
+                    `#    ${langLabel[selectedLanguage] || selectedLanguage}: Search "AWS Distro for OpenTelemetry" in Lambda console > Layers > Add layer > AWS layers`;
+
+                  const needsWrapper: boolean =
+                    selectedLanguage === "node" ||
+                    selectedLanguage === "python";
+
+                  return `# AWS Lambda — ${langLabel[selectedLanguage] || selectedLanguage}
+#
+# 1. Add the OTel Lambda Layer:
+${layerArn}
+#
+# 2. Set these environment variables on your Lambda function:
+${
+  needsWrapper
+    ? "#    AWS_LAMBDA_EXEC_WRAPPER: /opt/otel-instrument"
+    : "#    (No AWS_LAMBDA_EXEC_WRAPPER needed for this runtime)"
+}
+#    OTEL_EXPORTER_OTLP_ENDPOINT: {{OTLP_URL}}
+#    OTEL_EXPORTER_OTLP_HEADERS: x-oneuptime-token={{TOKEN}}
+#    OTEL_SERVICE_NAME: my-lambda-function`;
+                })(),
+                otlpUrlValue,
+                otlpHostValue,
+                tokenValue,
+                pyroscopeUrl,
+              )}
+              language="bash"
+            />,
+            true,
+          )}
         </div>
       </div>
     );

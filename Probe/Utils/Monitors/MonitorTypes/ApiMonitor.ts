@@ -127,10 +127,17 @@ export default class ApiMonitor {
       );
 
       let startTime: [number, number] = process.hrtime();
+
+      const apiDefaultHeaders: Headers = {
+        "User-Agent": "OneUptime-Probe/1.0",
+      };
+
       const fetchOptions: any = {
         method: requestType,
         url: url,
-        headers: options.requestHeaders || undefined,
+        headers: options.requestHeaders
+          ? { ...apiDefaultHeaders, ...options.requestHeaders }
+          : apiDefaultHeaders,
         options: {
           timeout: options.timeout?.toNumber() || 5000,
           doNotFollowRedirects: options.doNotFollowRedirects || false,
@@ -154,7 +161,9 @@ export default class ApiMonitor {
         const fetchOptions: any = {
           method: HTTPMethod.GET,
           url: url,
-          headers: options.requestHeaders || undefined,
+          headers: options.requestHeaders
+            ? { ...apiDefaultHeaders, ...options.requestHeaders }
+            : apiDefaultHeaders,
           options: {
             timeout: options.timeout?.toNumber() || 5000,
             doNotFollowRedirects: options.doNotFollowRedirects || false,

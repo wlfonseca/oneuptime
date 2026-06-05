@@ -89,19 +89,44 @@ receivers:
           # without re-aggregating metrics on every page load.
           system.cpu.logical.count:
             enabled: true
+          system.cpu.frequency:
+            enabled: true
       memory:
         metrics:
           system.memory.utilization:
             enabled: true
+          system.memory.usage:
+            enabled: true
       disk:
+        metrics:
+          system.disk.io:
+            enabled: true
+          system.disk.operation_time:
+            enabled: true
+          system.disk.pending_operations:
+            enabled: true
       filesystem:
         metrics:
           system.filesystem.utilization:
             enabled: true
       load:
       network:
+        metrics:
+          system.network.io:
+            enabled: true
+          system.network.errors:
+            enabled: true
+          system.network.dropped:
+            enabled: true
+          system.network.packets:
+            enabled: true
       processes:
       paging:
+        metrics:
+          system.paging.usage:
+            enabled: true
+          system.paging.faults:
+            enabled: true
       process:
         mute_process_name_error: true
         mute_process_exe_error: true
@@ -111,6 +136,18 @@ receivers:
             enabled: true
           process.memory.utilization:
             enabled: true
+          process.memory.usage:
+            enabled: true
+          process.disk.io:
+            enabled: true
+
+  filelog:
+    include:
+      - /var/log/syslog
+      - /var/log/auth.log
+      - /var/log/kern.log
+      - /var/log/messages
+    start_at: beginning
 
 processors:
   resourcedetection:
@@ -144,6 +181,10 @@ service:
   pipelines:
     metrics:
       receivers: [hostmetrics]
+      processors: [resourcedetection, batch]
+      exporters: [otlphttp/oneuptime]
+    logs:
+      receivers: [filelog]
       processors: [resourcedetection, batch]
       exporters: [otlphttp/oneuptime]
 \`\`\`

@@ -156,7 +156,7 @@ export default class API {
 
   public static getDefaultHeaders(_props?: any): Headers {
     const defaultHeaders: Headers = {
-      "Access-Control-Allow-Origin": "*",
+      "User-Agent": "OneUptime-Probe/1.0",
       Accept: "application/json",
       "Content-Type": "application/json;charset=UTF-8",
     };
@@ -374,6 +374,17 @@ export default class API {
 
       let finalBody: JSONObject | JSONArray | URLSearchParams | undefined =
         data;
+
+      // Ensure Content-Type is set for POST/PUT/PATCH with data
+      if (
+        data &&
+        !finalHeaders["Content-Type"] &&
+        (method === HTTPMethod.POST ||
+          method === HTTPMethod.PUT ||
+          method === HTTPMethod.PATCH)
+      ) {
+        finalHeaders["Content-Type"] = "application/json;charset=UTF-8";
+      }
 
       // if content-type is form-url-encoded, then stringify the data
 

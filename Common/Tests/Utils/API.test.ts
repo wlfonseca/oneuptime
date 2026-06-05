@@ -22,7 +22,7 @@ import axios, {
 } from "axios";
 
 const DEFAULT_HEADERS: Headers = {
-  "Access-Control-Allow-Origin": "*",
+  "User-Agent": "OneUptime-Probe/1.0",
   Accept: "application/json",
   "Content-Type": "application/json;charset=UTF-8",
 };
@@ -76,7 +76,7 @@ function createAxiosResponse<T = any, D = any>(
 }
 
 const mergedHeaders: Headers = {
-  "Access-Control-Allow-Origin": "*",
+  "User-Agent": "OneUptime-Probe/1.0",
   Accept: "application/json",
   "Content-Type": "application/json", // replace default header
   "X-PoweredBy": "coffee", // add new header

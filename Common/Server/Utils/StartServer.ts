@@ -430,6 +430,8 @@ const addDefaultRoutes: PromiseVoidFunction = async (): Promise<void> => {
 
       if (err instanceof Promise) {
         err.catch((exception: Exception) => {
+          logger.error("Error handler caught promise rejection:");
+          logger.error(exception);
           if (StatusCode.isValidStatusCode((exception as Exception).code)) {
             res.status((exception as Exception).code);
             res.send({ error: (exception as Exception).message });

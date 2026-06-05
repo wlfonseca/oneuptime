@@ -111,10 +111,16 @@ const CustomCallSMSTable: FunctionComponent = (): ReactElement => {
           {
             title: "FreeSwitch (SIP)",
             id: "freeswitch-info",
+            showIf: (values: Record<string, unknown>): boolean => {
+              return values["callProviderType"] === "freeswitch";
+            },
           },
           {
             title: "Twilio Config",
             id: "twilio-info",
+            showIf: (values: Record<string, unknown>): boolean => {
+              return values["callProviderType"] === "twilio";
+            },
           },
         ]}
         name="Settings > Custom CallSMS Config"

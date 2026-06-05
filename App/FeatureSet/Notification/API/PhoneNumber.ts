@@ -1,4 +1,5 @@
 import CallProviderFactory from "../Providers/CallProviderFactory";
+import { CallProvider } from "../Config";
 import { getProjectTwilioConfig } from "../Utils/TwilioConfigHelper";
 import { HttpProtocol, Host } from "Common/Server/EnvironmentConfig";
 import {
@@ -61,6 +62,13 @@ router.post(
 
       if (!projectId) {
         throw new BadDataException("projectId is required");
+      }
+
+      // FreeSwitch does not support searching/purchasing phone numbers
+      if (CallProvider !== "twilio") {
+        return Response.sendJsonObjectResponse(req, res, {
+          availableNumbers: [],
+        });
       }
 
       if (!projectCallSMSConfigId) {
@@ -197,6 +205,13 @@ router.post(
         throw new BadDataException("projectId is required");
       }
 
+      // FreeSwitch does not support listing owned numbers
+      if (CallProvider !== "twilio") {
+        return Response.sendJsonObjectResponse(req, res, {
+          ownedNumbers: [],
+        });
+      }
+
       if (!projectCallSMSConfigId) {
         throw new BadDataException(
           "projectCallSMSConfigId is required. Please configure a project-level Twilio configuration.",
@@ -308,6 +323,15 @@ router.post(
 
       if (!incomingCallPolicyId) {
         throw new BadDataException("incomingCallPolicyId is required");
+      }
+
+      // FreeSwitch does not support assigning existing phone numbers
+      if (CallProvider !== "twilio") {
+        return Response.sendJsonObjectResponse(req, res, {
+          success: true,
+          phoneNumberId: "freeswitch-sip",
+          phoneNumber: phoneNumber,
+        });
       }
 
       // Check if project exists
@@ -458,6 +482,15 @@ router.post(
 
       if (!incomingCallPolicyId) {
         throw new BadDataException("incomingCallPolicyId is required");
+      }
+
+      // FreeSwitch does not support purchasing phone numbers
+      if (CallProvider !== "twilio") {
+        return Response.sendJsonObjectResponse(req, res, {
+          success: true,
+          phoneNumberId: "freeswitch-sip",
+          phoneNumber: phoneNumber,
+        });
       }
 
       // Check if project exists
@@ -618,26 +651,31 @@ router.delete(
         throw new BadDataException("This policy does not have a phone number");
       }
 
-      // Require project-level Twilio config
-      if (!incomingCallPolicy.projectCallSMSConfigId) {
-        throw new BadDataException(
-          "This policy does not have a project Twilio configuration.",
+      // For FreeSwitch, skip the provider release — no Twilio number to release
+      if (CallProvider === "twilio") {
+        // Require project-level Twilio config
+        if (!incomingCallPolicy.projectCallSMSConfigId) {
+          throw new BadDataException(
+            "This policy does not have a project Twilio configuration.",
+          );
+        }
+
+        // Get project Twilio config
+        const customTwilioConfig: TwilioConfig | null =
+          await getProjectTwilioConfig(
+            incomingCallPolicy.projectCallSMSConfigId,
+          );
+        if (!customTwilioConfig) {
+          throw new BadDataException("Project Call/SMS Config not found");
+        }
+
+        const provider: ICallProvider =
+          CallProviderFactory.getProviderWithConfig(customTwilioConfig);
+
+        await provider.releaseNumber(
+          incomingCallPolicy.callProviderPhoneNumberId,
         );
       }
-
-      // Get project Twilio config
-      const customTwilioConfig: TwilioConfig | null =
-        await getProjectTwilioConfig(incomingCallPolicy.projectCallSMSConfigId);
-      if (!customTwilioConfig) {
-        throw new BadDataException("Project Call/SMS Config not found");
-      }
-
-      const provider: ICallProvider =
-        CallProviderFactory.getProviderWithConfig(customTwilioConfig);
-
-      await provider.releaseNumber(
-        incomingCallPolicy.callProviderPhoneNumberId,
-      );
 
       // Update the incoming call policy to remove the phone number
       await IncomingCallPolicyService.updateOneById({

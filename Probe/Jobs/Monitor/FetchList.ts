@@ -6,21 +6,16 @@ import {
 import MonitorUtil from "../../Utils/Monitors/Monitor";
 import ProbeAPIRequest from "../../Utils/ProbeAPIRequest";
 import BaseModel from "Common/Models/DatabaseModels/DatabaseBaseModel/DatabaseBaseModel";
-import HTTPErrorResponse from "Common/Types/API/HTTPErrorResponse";
-import HTTPMethod from "Common/Types/API/HTTPMethod";
-import HTTPResponse from "Common/Types/API/HTTPResponse";
-import URL from "Common/Types/API/URL";
-import APIException from "Common/Types/Exception/ApiException";
 import { JSONArray } from "Common/Types/JSON";
 import ProbeMonitorResponse from "Common/Types/Probe/ProbeMonitorResponse";
-import API from "Common/Utils/API";
+import URL from "Common/Types/API/URL";
+import APIException from "Common/Types/Exception/ApiException";
 import logger from "Common/Server/Utils/Logger";
 import Monitor from "Common/Models/DatabaseModels/Monitor";
 import { EVERY_MINUTE } from "Common/Utils/CronTime";
 import BasicCron from "Common/Server/Utils/BasicCron";
 import NumberUtil from "Common/Utils/Number";
 import Sleep from "Common/Types/Sleep";
-import ProxyConfig from "../../Utils/ProxyConfig";
 
 const InitJob: VoidFunction = (): void => {
   BasicCron({
@@ -88,27 +83,30 @@ class FetchListAndProbe {
       );
       await Sleep.sleep(sleepTime);
 
-      const monitorListUrl: URL = URL.fromString(
-        PROBE_INGEST_URL.toString(),
-      ).addRoute("/monitor/list");
+      const monitorListUrl: string = URL.fromString(PROBE_INGEST_URL.toString())
+        .addRoute("/monitor/list")
+        .toString();
 
-      const result: HTTPResponse<JSONArray> | HTTPErrorResponse =
-        await API.fetch<JSONArray>({
-          method: HTTPMethod.POST,
-          url: monitorListUrl,
-          data: {
-            ...ProbeAPIRequest.getDefaultRequestBody(),
-            limit: PROBE_MONITOR_FETCH_LIMIT || 100,
+      const axios: any = require("axios");
+      const axiosResponse: any = await axios.post(
+        monitorListUrl,
+        {
+          ...ProbeAPIRequest.getDefaultRequestBody(),
+          limit: PROBE_MONITOR_FETCH_LIMIT || 100,
+        },
+        {
+          headers: {
+            "Content-Type": "application/json;charset=UTF-8",
+            "User-Agent": "OneUptime-Probe/1.0",
           },
-          headers: {},
-          options: { ...ProxyConfig.getRequestProxyAgents(monitorListUrl) },
-        });
+        },
+      );
 
       logger.debug("Fetched monitor list");
-      logger.debug(result);
+      logger.debug(axiosResponse.data);
 
       const monitors: Array<Monitor> = BaseModel.fromJSONArray(
-        result.data as JSONArray,
+        (axiosResponse.data?.data || axiosResponse.data) as JSONArray,
         Monitor,
       );
 

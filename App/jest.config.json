@@ -1,0 +1,6 @@
+{
+  "transform": {
+    "^.+\\.tsx?$": "<rootDir>/../Common/node_modules/ts-jest"
+  },
+  "testEnvironment": "node"
+}

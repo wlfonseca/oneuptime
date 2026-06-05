@@ -238,8 +238,12 @@ export default class CreateTask extends ComponentCode {
     value: string,
     _options: RunOptions,
   ): Promise<string | null> {
+    const customFieldsQuery: string = encodeURIComponent(
+      `[{"field_id":"${fieldId}","operator":"=","value":"${value}"}]`,
+    );
+
     const searchUrl: URL = URL.fromString(
-      `https://api.clickup.com/api/v2/list/${listId}/task?custom_fields=[{"field_id":"${fieldId}","operator":"=","value":"${value}"}]`,
+      `https://api.clickup.com/api/v2/list/${listId}/task?custom_fields=${customFieldsQuery}`,
     );
 
     const result: HTTPResponse<JSONObject> | HTTPErrorResponse | null =

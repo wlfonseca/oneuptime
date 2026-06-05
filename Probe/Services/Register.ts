@@ -136,33 +136,50 @@ export default class Register {
       logger.debug("Registering Probe...");
       logger.debug("Sending request to: " + probeRegistrationUrl.toString());
 
-      const result: HTTPResponse<JSONObject> | HTTPErrorResponse =
-        await API.post({
-          url: probeRegistrationUrl,
-          data: {
+      const axios: any = require("axios");
+      let probeId: string = "";
+
+      try {
+        const axiosResponse: any = await axios.post(
+          probeRegistrationUrl.toString(),
+          {
             probeKey: PROBE_KEY,
             probeName: PROBE_NAME,
             probeDescription: PROBE_DESCRIPTION,
             registerProbeKey: RegisterProbeKey.toString(),
           },
-          options: {
-            ...ProxyConfig.getRequestProxyAgents(probeRegistrationUrl),
+          {
+            headers: {
+              "Content-Type": "application/json;charset=UTF-8",
+              "User-Agent": "OneUptime-Probe/1.0",
+            },
           },
-        });
+        );
 
-      if (result instanceof HTTPErrorResponse || !result.isSuccess()) {
-        const errorMessage: string =
-          result instanceof HTTPErrorResponse
-            ? result.message || JSON.stringify(result.data || {})
-            : "Unknown registration error";
+        logger.debug("Probe Registered");
+        logger.debug(axiosResponse.data);
+
+        probeId = axiosResponse.data["_id"] as string;
+
+        if (!probeId) {
+          throw new Error(
+            "Probe registration succeeded but probe ID is missing",
+          );
+        }
+      } catch (err: any) {
+        const responseData: any = err?.response?.data;
+        let errorMessage: string = err?.message || "Unknown error";
+
+        if (typeof responseData === "string") {
+          errorMessage = responseData;
+        } else if (responseData?.message) {
+          errorMessage = responseData.message;
+        } else if (responseData) {
+          errorMessage = JSON.stringify(responseData);
+        }
 
         throw new Error(`Probe registration failed: ${errorMessage}`);
       }
-
-      logger.debug("Probe Registered");
-      logger.debug(result.data);
-
-      const probeId: string = result.data["_id"] as string;
 
       if (!probeId) {
         throw new Error("Probe registration succeeded but probe ID is missing");

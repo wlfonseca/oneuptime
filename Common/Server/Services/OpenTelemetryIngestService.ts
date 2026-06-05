@@ -6,8 +6,10 @@ import Metric, {
 } from "../../Models/AnalyticsModels/Metric";
 import Project from "../../Models/DatabaseModels/Project";
 import Service from "../../Models/DatabaseModels/Service";
+import Host from "../../Models/DatabaseModels/Host";
 import ProjectService from "../../Server/Services/ProjectService";
 import ServiceService from "../../Server/Services/ServiceService";
+import HostService from "../../Server/Services/HostService";
 import LabelService from "../../Server/Services/LabelService";
 import { DEFAULT_RETENTION_IN_DAYS } from "../../Models/DatabaseModels/TelemetryUsageBilling";
 import TelemetryUtil from "../../Server/Utils/Telemetry/Telemetry";
@@ -80,6 +82,26 @@ export default class OTelIngestService {
       );
     }
 
+    if (data.serviceName.startsWith("host/")) {
+      try {
+        const hostName: string = data.serviceName.replace("host/", "");
+        const host: Host | null = await HostService.findOneBy({
+          query: { projectId: data.projectId, name: hostName },
+          select: { _id: true },
+          props: { isRoot: true },
+        });
+        if (host) {
+          await HostService.updateLastSeen(host.id!);
+        }
+      } catch (err) {
+        logger.warn(
+          `telemetryServiceFromName host lastSeen update failed for "${data.serviceName}": ${
+            err instanceof Error ? err.message : String(err)
+          }`,
+        );
+      }
+    }
+
     /*
      * Promote `oneuptime.label.<dim>=<val>` resource attributes into
      * project labels and attach them to the discovered service. The
@@ -150,6 +172,18 @@ export default class OTelIngestService {
       },
     });
 
+    if (service && data.serviceName.startsWith("host/")) {
+      AutoMonitorService.createDefaultServerMonitorForService({
+        serviceId: service.id!,
+        serviceName: data.serviceName,
+        projectId: data.projectId,
+      }).catch((err: Error) => {
+        logger.warn(
+          `Failed to auto-create server monitor for existing host "${data.serviceName}": ${err.message}`,
+        );
+      });
+    }
+
     if (!service) {
       const projectDefaultRetention: number =
         await this.getProjectDefaultRetentionInDays(data.projectId);
@@ -176,6 +210,18 @@ export default class OTelIngestService {
             `Failed to auto-create log monitor for service "${data.serviceName}": ${err.message}`,
           );
         });
+
+        if (data.serviceName.startsWith("host/")) {
+          AutoMonitorService.createDefaultServerMonitorForService({
+            serviceId: createdService.id!,
+            serviceName: data.serviceName,
+            projectId: data.projectId,
+          }).catch((err: Error) => {
+            logger.warn(
+              `Failed to auto-create server monitor for host "${data.serviceName}": ${err.message}`,
+            );
+          });
+        }
 
         return {
           serviceId: createdService.id!,
