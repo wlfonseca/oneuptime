@@ -91,7 +91,8 @@ services:
     ports:
       - "8021:8021"
     volumes:
-      - ./FreeSwitch/event_socket.conf.xml:/etc/freeswitch/autoload_configs/event_socket.conf.xml
+      - ./FreeSwitch/event_socket.conf.xml:/usr/share/freeswitch/conf/vanilla/autoload_configs/event_socket.conf.xml
+      - ./FreeSwitch/acl.conf.xml:/usr/share/freeswitch/conf/vanilla/autoload_configs/acl.conf.xml
     cap_add:
       - NET_ADMIN
       - SYS_PTRACE
