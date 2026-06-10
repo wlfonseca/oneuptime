@@ -12,8 +12,7 @@ import {
 import FreeSwitchConfig from "Common/Types/CallAndSMS/FreeSwitchConfig";
 import BadDataException from "Common/Types/Exception/BadDataException";
 import logger from "Common/Server/Utils/Logger";
-import { exec } from "child_process";
-import { promisify } from "util";
+import net from "net";
 import http from "http";
 import fs from "fs";
 
@@ -127,52 +126,47 @@ export default class FreeSwitchCallProvider implements ICallProvider {
   }
 
   private async generateTtsAudio(message: string): Promise<string | null> {
-    const piperHost: string =
-      this.config.piperHost || "oneuptime-piper-tts";
+    const piperHost: string = this.config.piperHost || "oneuptime-piper-tts";
     const piperPort: number = this.config.piperPort || 5002;
     const audioPath: string = `/tmp/oneuptime_audio/call_${Date.now()}.wav`;
 
     try {
-      const audio: Buffer = await new Promise<Buffer>(
-        (resolve, reject) => {
-          const postData: string = JSON.stringify({ text: message });
-          const req: http.ClientRequest = http.request(
-            {
-              hostname: piperHost,
-              port: piperPort,
-              path: "/api/tts",
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                "Content-Length": Buffer.byteLength(postData),
-              },
-              timeout: 15000,
+      const audio: Buffer = await new Promise<Buffer>((resolve, reject) => {
+        const postData: string = JSON.stringify({ text: message });
+        const req: http.ClientRequest = http.request(
+          {
+            hostname: piperHost,
+            port: piperPort,
+            path: "/api/tts",
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Content-Length": Buffer.byteLength(postData),
             },
-            (res: http.IncomingMessage) => {
-              const chunks: Buffer[] = [];
-              res.on("data", (chunk: Buffer) => chunks.push(chunk));
-              res.on("end", () => {
-                if (res.statusCode === 200) {
-                  resolve(Buffer.concat(chunks));
-                } else {
-                  reject(
-                    new Error(
-                      `Piper HTTP ${res.statusCode}: ${chunks.join("")}`,
-                    ),
-                  );
-                }
-              });
-            },
-          );
-          req.on("error", (err: Error) => reject(err));
-          req.on("timeout", () => {
-            req.destroy();
-            reject(new Error("Piper request timeout"));
-          });
-          req.write(postData);
-          req.end();
-        },
-      );
+            timeout: 15000,
+          },
+          (res: http.IncomingMessage) => {
+            const chunks: Buffer[] = [];
+            res.on("data", (chunk: Buffer) => chunks.push(chunk));
+            res.on("end", () => {
+              if (res.statusCode === 200) {
+                resolve(Buffer.concat(chunks));
+              } else {
+                reject(
+                  new Error(`Piper HTTP ${res.statusCode}: ${chunks.join("")}`),
+                );
+              }
+            });
+          },
+        );
+        req.on("error", (err: Error) => reject(err));
+        req.on("timeout", () => {
+          req.destroy();
+          reject(new Error("Piper request timeout"));
+        });
+        req.write(postData);
+        req.end();
+      });
 
       fs.writeFileSync(audioPath, audio);
       logger.debug(`Piper TTS audio saved to ${audioPath}`, {
@@ -189,31 +183,110 @@ export default class FreeSwitchCallProvider implements ICallProvider {
   }
 
   private async sendFsCli(command: string): Promise<string> {
-    const execAsync = promisify(exec);
-    const escaped: string = command.replace(/"/g, '\\"');
-    const fsCli: string = this.config.fsCliPath || "fs_cli";
-    const password: string =
-      this.config.eventSocketPassword || "ClueCon";
     const host: string =
       this.config.eventSocketHost || "127.0.0.1";
-    const port: string | number =
-      this.config.eventSocketPort?.toString() || "8021";
-    const cmd: string = `${fsCli} -H ${host} -P ${port} -p ${password} -x "${escaped}"`;
+    const port: number =
+      this.config.eventSocketPort || 8021;
+    const password: string =
+      this.config.eventSocketPassword || "ClueCon";
 
-    try {
-      const { stdout } = await execAsync(cmd, { timeout: 30000 });
-      return stdout;
-    } catch (err: unknown) {
-      const error: Error = err as Error;
-      logger.error("FreeSwitch fs_cli error", {
-        cmd,
-        error: error.message,
-        service: "notification",
+    return new Promise<string>((resolve, reject) => {
+      const client: net.Socket = new net.Socket();
+      let buffer: string = "";
+      let authenticated: boolean = false;
+      let commandResolved: boolean = false;
+
+      const timeout: NodeJS.Timeout = setTimeout(() => {
+        if (!commandResolved) {
+          commandResolved = true;
+          client.destroy();
+          reject(
+            new BadDataException(
+              `FreeSwitch ESL command timed out: ${command}`,
+            ),
+          );
+        }
+      }, 30000);
+
+      client.connect(port, host, () => {
+        logger.debug(`Connected to FreeSwitch ESL at ${host}:${port}`, {
+          service: "notification",
+        });
       });
-      throw new BadDataException(
-        `FreeSwitch command failed: ${error.message}`,
-      );
-    }
+
+      client.on("data", (data: Buffer) => {
+        buffer += data.toString();
+
+        if (!authenticated && buffer.includes("Content-Type: auth/request")) {
+          authenticated = true;
+          buffer = "";
+          client.write(`auth ${password}\n\n`);
+          return;
+        }
+
+        if (
+          authenticated &&
+          !commandResolved &&
+          buffer.includes("Content-Type: command/reply")
+        ) {
+          commandResolved = true;
+          clearTimeout(timeout);
+
+          const bodyStart: number = buffer.indexOf("\n\n");
+          let body: string = "";
+          if (bodyStart !== -1) {
+            body = buffer.substring(bodyStart + 2).trim();
+          }
+
+          client.end();
+          resolve(body);
+        }
+      });
+
+      client.on("error", (err: Error) => {
+        if (!commandResolved) {
+          commandResolved = true;
+          clearTimeout(timeout);
+          logger.error("FreeSwitch ESL error", {
+            error: err.message,
+            command,
+            service: "notification",
+          });
+          reject(
+            new BadDataException(
+              `FreeSwitch command failed: ${err.message}`,
+            ),
+          );
+        }
+      });
+
+      client.on("connect", () => {
+        client.write("connect\n\n");
+      });
+
+      client.on("close", () => {
+        if (!commandResolved) {
+          commandResolved = true;
+          clearTimeout(timeout);
+          reject(
+            new BadDataException(
+              `FreeSwitch ESL connection closed before command completed: ${command}`,
+            ),
+          );
+        }
+      });
+
+      const checkAuthAndSend: () => void = () => {
+        if (authenticated && !commandResolved) {
+          client.write(`api ${command}\n\n`);
+        } else if (!commandResolved) {
+          setTimeout(checkAuthAndSend, 50);
+        }
+      };
+
+      setTimeout(checkAuthAndSend, 100);
+    });
+  }
   }
 
   private async sendCommand(command: string): Promise<string> {
@@ -271,8 +344,7 @@ export default class FreeSwitchCallProvider implements ICallProvider {
 
     await this.ensureGatewayConfigured();
 
-    const gatewayName: string =
-      this.config.gatewayName || "setevoip";
+    const gatewayName: string = this.config.gatewayName || "setevoip";
     const callerId: string =
       this.config.defaultCallerId?.toString() || from || "5511999999999";
     const timeout: number = timeoutSeconds || 30;
