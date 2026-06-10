@@ -183,12 +183,9 @@ export default class FreeSwitchCallProvider implements ICallProvider {
   }
 
   private async sendFsCli(command: string): Promise<string> {
-    const host: string =
-      this.config.eventSocketHost || "127.0.0.1";
-    const port: number =
-      this.config.eventSocketPort || 8021;
-    const password: string =
-      this.config.eventSocketPassword || "ClueCon";
+    const host: string = this.config.eventSocketHost || "127.0.0.1";
+    const port: number = this.config.eventSocketPort || 8021;
+    const password: string = this.config.eventSocketPassword || "ClueCon";
 
     return new Promise<string>((resolve, reject) => {
       const client: net.Socket = new net.Socket();
@@ -253,9 +250,7 @@ export default class FreeSwitchCallProvider implements ICallProvider {
             service: "notification",
           });
           reject(
-            new BadDataException(
-              `FreeSwitch command failed: ${err.message}`,
-            ),
+            new BadDataException(`FreeSwitch command failed: ${err.message}`),
           );
         }
       });
@@ -286,7 +281,6 @@ export default class FreeSwitchCallProvider implements ICallProvider {
 
       setTimeout(checkAuthAndSend, 100);
     });
-  }
   }
 
   private async sendCommand(command: string): Promise<string> {
