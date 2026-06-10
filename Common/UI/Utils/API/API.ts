@@ -33,6 +33,13 @@ class BaseAPI extends API {
     return new BaseAPI(url.protocol, url.hostname, url.route);
   }
 
+  public static override getDefaultHeaders(_props?: any): Headers {
+    return {
+      Accept: "application/json",
+      "Content-Type": "application/json;charset=UTF-8",
+    };
+  }
+
   protected static override async onResponseSuccessHeaders(
     headers: Dictionary<string>,
   ): Promise<Dictionary<string>> {
