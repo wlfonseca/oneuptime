@@ -75,6 +75,7 @@ services:
       - "traefik.http.services.oneuptime.loadbalancer.server.port=7849"
 
   ai-agent:
+    image: ghcr.io/oneuptime/ai-agent:${APP_TAG}
     extends:
       file: ./docker-compose.base.yml
       service: ai-agent

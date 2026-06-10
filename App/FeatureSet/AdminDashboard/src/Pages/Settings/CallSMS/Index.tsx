@@ -19,12 +19,277 @@ import API from "Common/UI/Utils/API/API";
 import URL from "Common/Types/API/URL";
 import { NOTIFICATION_URL } from "Common/UI/Config";
 import EmptyResponseData from "Common/Types/API/EmptyResponse";
+import Tabs from "Common/UI/Components/Tabs/Tabs";
+import type { Tab as TabType } from "Common/UI/Components/Tabs/Tab";
+import { GetReactElementFunction } from "Common/UI/Types/FunctionTypes";
 
 const Settings: FunctionComponent = (): ReactElement => {
   const { t } = useTranslation();
   const [showTestCallModal, setShowTestCallModal] = useState<boolean>(false);
   const [isTestCallLoading, setIsTestCallLoading] = useState<boolean>(false);
   const [testCallError, setTestCallError] = useState<string>("");
+
+  const [activeTab, setActiveTab] = useState<string>("freeswitch");
+
+  const tabs: Array<TabType> = [
+    {
+      name: "SIP Trunk (FreeSwitch)",
+      children: <></>,
+    },
+    {
+      name: "Twilio",
+      children: <></>,
+    },
+  ];
+
+  const getTestCallDescription: GetReactElementFunction = (): ReactElement => {
+    if (activeTab === "twilio") {
+      return (
+        <span>Send a test call via Twilio to verify the configuration.</span>
+      );
+    }
+    return (
+      <span>
+        Send a test call via FreeSwitch/SIP to verify the configuration.
+      </span>
+    );
+  };
+
+  const getTestCallMessage: GetReactElementFunction = (): string => {
+    if (activeTab === "twilio") {
+      return "This is a test call from OneUptime via Twilio.";
+    }
+    return "This is a test call from OneUptime using FreeSwitch.";
+  };
+
+  const isFreeSwitch: boolean = activeTab !== "twilio";
+
+  const formFields: Array<any> = [
+    {
+      field: { callProviderType: true },
+      title: "Call Provider",
+      fieldType: FormFieldSchemaType.Hidden,
+      required: false,
+      value: isFreeSwitch ? "freeswitch" : "twilio",
+    },
+  ];
+
+  if (isFreeSwitch) {
+    formFields.push(
+      {
+        field: { freeSwitchSipServer: true },
+        title: "SIP Trunk Server",
+        fieldType: FormFieldSchemaType.Text,
+        required: false,
+        description: "SIP trunk provider hostname or IP.",
+        placeholder: "sip.provedor.com.br",
+      },
+      {
+        field: { freeSwitchSipPort: true },
+        title: "SIP Trunk Port",
+        fieldType: FormFieldSchemaType.Number,
+        required: false,
+        description: "SIP trunk server port. Default: 5060",
+        placeholder: "5060",
+      },
+      {
+        field: { freeSwitchSipUser: true },
+        title: "SIP Trunk Username",
+        fieldType: FormFieldSchemaType.Text,
+        required: false,
+        description: "SIP account username.",
+        placeholder: "",
+      },
+      {
+        field: { freeSwitchSipPassword: true },
+        title: "SIP Trunk Password",
+        fieldType: FormFieldSchemaType.Password,
+        required: false,
+        description: "SIP account password.",
+        placeholder: "",
+      },
+      {
+        field: { freeSwitchGatewayName: true },
+        title: "SIP Gateway Name",
+        fieldType: FormFieldSchemaType.Text,
+        required: false,
+        description: "Gateway name configured in FreeSwitch SIP profile.",
+        placeholder: "setevoip",
+      },
+      {
+        field: { freeSwitchDefaultCallerId: true },
+        title: "Default Caller ID",
+        fieldType: FormFieldSchemaType.Phone,
+        required: false,
+        description: "Default caller ID number for outbound calls.",
+        placeholder: "+5511999999999",
+      },
+      {
+        field: { freeSwitchEventSocketHost: true },
+        title: "ESL Host",
+        fieldType: FormFieldSchemaType.Text,
+        required: false,
+        description: "FreeSwitch Event Socket host. Default: freeswitch",
+        placeholder: "freeswitch",
+      },
+      {
+        field: { freeSwitchEventSocketPort: true },
+        title: "ESL Port",
+        fieldType: FormFieldSchemaType.Number,
+        required: false,
+        description: "FreeSwitch Event Socket port. Default: 8021",
+        placeholder: "8021",
+      },
+      {
+        field: { freeSwitchEventSocketPassword: true },
+        title: "ESL Password",
+        fieldType: FormFieldSchemaType.Text,
+        required: false,
+        description: "FreeSwitch Event Socket password.",
+        placeholder: "ClueCon",
+      },
+      {
+        field: { freeSwitchTtsEngine: true },
+        title: "TTS Engine",
+        fieldType: FormFieldSchemaType.Dropdown,
+        required: false,
+        description: "Text-to-speech engine. Default: flite",
+        dropdownOptions: [
+          { label: "Flite", value: "flite" },
+          { label: "Pico", value: "pico" },
+          { label: "Say", value: "say" },
+        ],
+      },
+      {
+        field: { freeSwitchTtsVoice: true },
+        title: "TTS Voice",
+        fieldType: FormFieldSchemaType.Text,
+        required: false,
+        description:
+          "TTS voice name. For flite: slt (female), rms (male). Default: slt",
+        placeholder: "slt",
+      },
+    );
+  } else {
+    formFields.push(
+      {
+        field: { twilioAccountSID: true },
+        title: "Twilio Account SID",
+        fieldType: FormFieldSchemaType.Text,
+        required: false,
+        description: "Twilio Account SID.",
+        placeholder: "",
+      },
+      {
+        field: { twilioAuthToken: true },
+        title: "Twilio Auth Token",
+        fieldType: FormFieldSchemaType.Text,
+        required: false,
+        description: "Twilio Auth Token.",
+        placeholder: "",
+      },
+      {
+        field: { twilioPrimaryPhoneNumber: true },
+        title: "Twilio Primary Phone",
+        fieldType: FormFieldSchemaType.Phone,
+        required: false,
+        description: "Primary Twilio phone number.",
+        placeholder: "",
+      },
+      {
+        field: { twilioSecondaryPhoneNumbers: true },
+        title: "Twilio Secondary Phones",
+        fieldType: FormFieldSchemaType.LongText,
+        required: false,
+        description: "Additional Twilio phone numbers.",
+        placeholder: "+1234567890, +4444444444",
+      },
+    );
+  }
+
+  const detailFields: Array<any> = [
+    {
+      field: { callProviderType: true },
+      title: "Call Provider",
+      placeholder: isFreeSwitch ? "freeswitch" : "twilio",
+    },
+  ];
+
+  if (isFreeSwitch) {
+    detailFields.push(
+      {
+        field: { freeSwitchSipServer: true },
+        title: "SIP Server",
+        placeholder: t("common.none"),
+      },
+      {
+        field: { freeSwitchSipPort: true },
+        title: "SIP Port",
+        placeholder: t("common.none"),
+      },
+      {
+        field: { freeSwitchSipUser: true },
+        title: "SIP User",
+        placeholder: t("common.none"),
+      },
+      {
+        field: { freeSwitchSipPassword: true },
+        title: "SIP Password",
+        placeholder: "********",
+      },
+      {
+        field: { freeSwitchGatewayName: true },
+        title: "SIP Gateway",
+        placeholder: t("common.none"),
+      },
+      {
+        field: { freeSwitchDefaultCallerId: true },
+        title: "Caller ID",
+        fieldType: FieldType.Phone,
+        placeholder: t("common.none"),
+      },
+      {
+        field: { freeSwitchEventSocketHost: true },
+        title: "ESL Host",
+        placeholder: t("common.none"),
+      },
+      {
+        field: { freeSwitchEventSocketPort: true },
+        title: "ESL Port",
+        placeholder: t("common.none"),
+      },
+      {
+        field: { freeSwitchTtsEngine: true },
+        title: "TTS Engine",
+        placeholder: t("common.none"),
+      },
+      {
+        field: { freeSwitchTtsVoice: true },
+        title: "TTS Voice",
+        placeholder: t("common.none"),
+      },
+    );
+  } else {
+    detailFields.push(
+      {
+        field: { twilioAccountSID: true },
+        title: "Twilio Account SID",
+        placeholder: t("common.none"),
+      },
+      {
+        field: { twilioPrimaryPhoneNumber: true },
+        title: "Twilio Primary Phone",
+        fieldType: FieldType.Phone,
+        placeholder: t("common.none"),
+      },
+      {
+        field: { twilioSecondaryPhoneNumbers: true },
+        title: "Twilio Secondary Phones",
+        fieldType: FieldType.LongText,
+        placeholder: t("common.none"),
+      },
+    );
+  }
 
   return (
     <Page
@@ -49,11 +314,25 @@ const Settings: FunctionComponent = (): ReactElement => {
       ]}
       sideMenu={<DashboardSideMenu />}
     >
+      <div className="mb-4">
+        <Tabs
+          tabs={tabs}
+          onTabChange={(tab: TabType) => {
+            setActiveTab(tab.name === "Twilio" ? "twilio" : "freeswitch");
+          }}
+        />
+      </div>
+
       <CardModelDetail
-        name="Call and SMS Settings"
+        key={activeTab}
+        name={`Call and SMS Settings — ${isFreeSwitch ? "SIP Trunk (FreeSwitch)" : "Twilio"}`}
         cardProps={{
-          title: t("pages.settings.callSms.cardTitle"),
-          description: t("pages.settings.callSms.cardDescription"),
+          title: isFreeSwitch
+            ? "SIP Trunk (FreeSwitch) Settings"
+            : "Twilio Settings",
+          description: isFreeSwitch
+            ? "Configure SIP trunk provider and FreeSwitch connection."
+            : "Configure Twilio account and phone numbers.",
           buttons: [
             {
               title: "Test Call",
@@ -67,227 +346,11 @@ const Settings: FunctionComponent = (): ReactElement => {
         }}
         isEditable={true}
         editButtonText={t("pages.settings.callSms.editButton")}
-        formFields={[
-          {
-            field: {
-              callProviderType: true,
-            },
-            title: "Call Provider",
-            fieldType: FormFieldSchemaType.Dropdown,
-            required: false,
-            description: "Select your call provider: twilio or freeswitch.",
-            placeholder: "Select provider",
-            dropdownOptions: [
-              { label: "FreeSwitch (SIP)", value: "freeswitch" },
-              { label: "Twilio", value: "twilio" },
-            ],
-          },
-          // ─── FreeSwitch ───
-          {
-            field: { freeSwitchSipServer: true },
-            title: "SIP Trunk Server",
-            fieldType: FormFieldSchemaType.Text,
-            required: false,
-            description: "SIP trunk provider hostname or IP.",
-            placeholder: "sip.provedor.com.br",
-          },
-          {
-            field: { freeSwitchSipPort: true },
-            title: "SIP Trunk Port",
-            fieldType: FormFieldSchemaType.Number,
-            required: false,
-            description: "SIP trunk server port. Default: 5060",
-            placeholder: "5060",
-          },
-          {
-            field: { freeSwitchSipUser: true },
-            title: "SIP Trunk Username",
-            fieldType: FormFieldSchemaType.Text,
-            required: false,
-            description: "SIP account username.",
-            placeholder: "",
-          },
-          {
-            field: { freeSwitchSipPassword: true },
-            title: "SIP Trunk Password",
-            fieldType: FormFieldSchemaType.Password,
-            required: false,
-            description: "SIP account password.",
-            placeholder: "",
-          },
-          {
-            field: { freeSwitchGatewayName: true },
-            title: "SIP Gateway Name",
-            fieldType: FormFieldSchemaType.Text,
-            required: false,
-            description: "Gateway name configured in FreeSwitch SIP profile.",
-            placeholder: "setevoip",
-          },
-          {
-            field: { freeSwitchDefaultCallerId: true },
-            title: "Default Caller ID",
-            fieldType: FormFieldSchemaType.Phone,
-            required: false,
-            description: "Default caller ID number for outbound calls.",
-            placeholder: "+5511999999999",
-          },
-          {
-            field: { freeSwitchEventSocketHost: true },
-            title: "ESL Host",
-            fieldType: FormFieldSchemaType.Text,
-            required: false,
-            description: "FreeSwitch Event Socket host. Default: freeswitch",
-            placeholder: "freeswitch",
-          },
-          {
-            field: { freeSwitchEventSocketPort: true },
-            title: "ESL Port",
-            fieldType: FormFieldSchemaType.Number,
-            required: false,
-            description: "FreeSwitch Event Socket port. Default: 8021",
-            placeholder: "8021",
-          },
-          {
-            field: { freeSwitchEventSocketPassword: true },
-            title: "ESL Password",
-            fieldType: FormFieldSchemaType.Text,
-            required: false,
-            description: "FreeSwitch Event Socket password.",
-            placeholder: "ClueCon",
-          },
-          {
-            field: { freeSwitchTtsEngine: true },
-            title: "TTS Engine",
-            fieldType: FormFieldSchemaType.Dropdown,
-            required: false,
-            description: "Text-to-speech engine. Default: flite",
-            dropdownOptions: [
-              { label: "Flite", value: "flite" },
-              { label: "Pico", value: "pico" },
-              { label: "Say", value: "say" },
-            ],
-          },
-          {
-            field: { freeSwitchTtsVoice: true },
-            title: "TTS Voice",
-            fieldType: FormFieldSchemaType.Text,
-            required: false,
-            description:
-              "TTS voice name. For flite: slt (female), rms (male). Default: slt",
-            placeholder: "slt",
-          },
-          // ─── Twilio ───
-          {
-            field: { twilioAccountSID: true },
-            title: "Twilio Account SID",
-            fieldType: FormFieldSchemaType.Text,
-            required: false,
-            description: "Twilio Account SID.",
-            placeholder: "",
-          },
-          {
-            field: { twilioAuthToken: true },
-            title: "Twilio Auth Token",
-            fieldType: FormFieldSchemaType.Text,
-            required: false,
-            description: "Twilio Auth Token.",
-            placeholder: "",
-          },
-          {
-            field: { twilioPrimaryPhoneNumber: true },
-            title: "Twilio Primary Phone",
-            fieldType: FormFieldSchemaType.Phone,
-            required: false,
-            description: "Primary Twilio phone number.",
-            placeholder: "",
-          },
-          {
-            field: { twilioSecondaryPhoneNumbers: true },
-            title: "Twilio Secondary Phones",
-            fieldType: FormFieldSchemaType.LongText,
-            required: false,
-            description: "Additional Twilio phone numbers.",
-            placeholder: "+1234567890, +4444444444",
-          },
-        ]}
+        formFields={formFields}
         modelDetailProps={{
           modelType: GlobalConfig,
           id: "model-detail-global-config",
-          fields: [
-            {
-              field: { callProviderType: true },
-              title: "Call Provider",
-              placeholder: "freeswitch",
-            },
-            {
-              field: { freeSwitchSipServer: true },
-              title: "SIP Server",
-              placeholder: t("common.none"),
-            },
-            {
-              field: { freeSwitchSipPort: true },
-              title: "SIP Port",
-              placeholder: t("common.none"),
-            },
-            {
-              field: { freeSwitchSipUser: true },
-              title: "SIP User",
-              placeholder: t("common.none"),
-            },
-            {
-              field: { freeSwitchSipPassword: true },
-              title: "SIP Password",
-              placeholder: "********",
-            },
-            {
-              field: { freeSwitchGatewayName: true },
-              title: "SIP Gateway",
-              placeholder: t("common.none"),
-            },
-            {
-              field: { freeSwitchDefaultCallerId: true },
-              title: "Caller ID",
-              fieldType: FieldType.Phone,
-              placeholder: t("common.none"),
-            },
-            {
-              field: { freeSwitchEventSocketHost: true },
-              title: "ESL Host",
-              placeholder: t("common.none"),
-            },
-            {
-              field: { freeSwitchEventSocketPort: true },
-              title: "ESL Port",
-              placeholder: t("common.none"),
-            },
-            {
-              field: { freeSwitchTtsEngine: true },
-              title: "TTS Engine",
-              placeholder: t("common.none"),
-            },
-            {
-              field: { freeSwitchTtsVoice: true },
-              title: "TTS Voice",
-              placeholder: t("common.none"),
-            },
-            {
-              field: { twilioAccountSID: true },
-              title: "Twilio Account SID",
-              placeholder: t("common.none"),
-            },
-            {
-              field: { twilioPrimaryPhoneNumber: true },
-              title: "Twilio Primary Phone",
-              fieldType: FieldType.Phone,
-              placeholder: t("common.none"),
-            },
-            {
-              field: { twilioSecondaryPhoneNumbers: true },
-              title: "Twilio Secondary Phones",
-              fieldType: FieldType.LongText,
-              placeholder: t("common.none"),
-            },
-          ],
+          fields: detailFields,
           modelId: ObjectID.getZeroObjectID(),
         }}
       />
@@ -295,7 +358,7 @@ const Settings: FunctionComponent = (): ReactElement => {
       {showTestCallModal ? (
         <BasicFormModal
           title="Send Test Call"
-          description="Send a test call via FreeSwitch to verify the configuration."
+          description={getTestCallDescription()}
           formProps={{
             error: testCallError,
             fields: [
@@ -330,6 +393,7 @@ const Settings: FunctionComponent = (): ReactElement => {
                 ),
                 data: {
                   toPhone: values["toPhone"],
+                  callMessage: getTestCallMessage(),
                 },
               });
 

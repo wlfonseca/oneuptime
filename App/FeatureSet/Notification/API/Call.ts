@@ -188,10 +188,14 @@ router.post(
         );
       }
 
+      const callMessage: string =
+        (body["callMessage"] as string) ||
+        "This is a test call from OneUptime.";
+
       const testCallRequest: CallRequest = {
         data: [
           {
-            sayMessage: "This is a test call from OneUptime using FreeSwitch.",
+            sayMessage: callMessage,
           },
         ],
         to: toPhone,
