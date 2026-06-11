@@ -190,7 +190,7 @@ export default class FreeSwitchCallProvider implements ICallProvider {
     return new Promise<string>((resolve, reject) => {
       const client: net.Socket = new net.Socket();
       let buffer: string = "";
-      let authenticated: boolean = false;
+      let authReplyReceived: boolean = false;
       let commandResolved: boolean = false;
 
       const timeout: NodeJS.Timeout = setTimeout(() => {
@@ -205,26 +205,39 @@ export default class FreeSwitchCallProvider implements ICallProvider {
         }
       }, 30000);
 
-      client.connect(port, host, () => {
-        logger.debug(`Connected to FreeSwitch ESL at ${host}:${port}`, {
-          service: "notification",
-        });
-      });
+      client.connect(port, host);
 
       client.on("data", (data: Buffer) => {
         buffer += data.toString();
 
-        if (!authenticated && buffer.includes("Content-Type: auth/request")) {
-          authenticated = true;
+        // Step 1: Wait for auth request, then send password
+        if (
+          !authReplyReceived &&
+          buffer.includes("Content-Type: auth/request")
+        ) {
           buffer = "";
           client.write(`auth ${password}\n\n`);
           return;
         }
 
+        // Step 2: Auth reply received, now send the command
         if (
-          authenticated &&
-          !commandResolved &&
+          !authReplyReceived &&
           buffer.includes("Content-Type: command/reply")
+        ) {
+          authReplyReceived = true;
+          buffer = "";
+
+          // Send the actual command
+          client.write(`api ${command}\n\n`);
+          return;
+        }
+
+        // Step 3: Command response received
+        if (
+          authReplyReceived &&
+          !commandResolved &&
+          buffer.includes("Content-Type: api/response")
         ) {
           commandResolved = true;
           clearTimeout(timeout);
@@ -255,10 +268,6 @@ export default class FreeSwitchCallProvider implements ICallProvider {
         }
       });
 
-      client.on("connect", () => {
-        client.write("connect\n\n");
-      });
-
       client.on("close", () => {
         if (!commandResolved) {
           commandResolved = true;
@@ -270,16 +279,6 @@ export default class FreeSwitchCallProvider implements ICallProvider {
           );
         }
       });
-
-      const checkAuthAndSend: () => void = () => {
-        if (authenticated && !commandResolved) {
-          client.write(`api ${command}\n\n`);
-        } else if (!commandResolved) {
-          setTimeout(checkAuthAndSend, 50);
-        }
-      };
-
-      setTimeout(checkAuthAndSend, 100);
     });
   }
 
