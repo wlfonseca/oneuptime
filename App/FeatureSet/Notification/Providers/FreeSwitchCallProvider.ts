@@ -295,35 +295,15 @@ export default class FreeSwitchCallProvider implements ICallProvider {
       return;
     }
 
-    const gwList: string = await this.sendCommand(
-      `sofia profile external gw list`,
-    );
+    const gwList: string = await this.sendCommand(`sofia status`);
 
     if (gwList.includes(gatewayName)) {
       return;
     }
 
-    await this.sendCommand(
-      `sofia profile external gw add ${gatewayName} sip:${this.config.sipProviderHost}`,
-    );
-
-    if (this.config.sipProviderUsername) {
-      await this.sendCommand(
-        `sofia profile external gw set ${gatewayName} auth-username ${this.config.sipProviderUsername}`,
-      );
-    }
-
-    if (this.config.sipProviderPassword) {
-      await this.sendCommand(
-        `sofia profile external gw set ${gatewayName} auth-password ${this.config.sipProviderPassword}`,
-      );
-    }
-
-    await this.sendCommand(
-      `sofia profile external gw set ${gatewayName} register true`,
-    );
-
-    await this.sendCommand(`sofia profile external restart`);
+    // Gateway not found in running config — trigger profile rescan
+    // (gateways are configured via XML files mounted as volumes)
+    await this.sendCommand(`sofia profile external rescan`);
   }
 
   public async makeCall(
