@@ -305,6 +305,20 @@ export default class FreeSwitchCallProvider implements ICallProvider {
     await this.sendCommand(`sofia profile external rescan`);
   }
 
+  private toE164(phone: string): string {
+    if (!phone) {
+      return phone;
+    }
+
+    let cleaned: string = phone.replace(/[^0-9+]/g, "");
+
+    if (!cleaned.startsWith("+")) {
+      cleaned = "+" + cleaned;
+    }
+
+    return cleaned;
+  }
+
   public async makeCall(
     to: string,
     from: string,
@@ -318,16 +332,18 @@ export default class FreeSwitchCallProvider implements ICallProvider {
     await this.ensureGatewayConfigured();
 
     const gatewayName: string = this.config.gatewayName || "setevoip";
-    const callerId: string =
-      this.config.defaultCallerId?.toString() || from || "5511999999999";
+    const callerId: string = this.toE164(
+      this.config.defaultCallerId?.toString() || from,
+    );
+    const destination: string = this.toE164(to);
     const timeout: number = timeoutSeconds || 30;
 
     let originateCmd: string;
 
     if (audioPath) {
-      originateCmd = `bgapi originate {origination_caller_id_number=${callerId},originate_timeout=${timeout},ignore_early_media=true}sofia/gateway/${gatewayName}/${to} &playback(${audioPath})`;
+      originateCmd = `bgapi originate {origination_caller_id_number=${callerId},originate_timeout=${timeout},ignore_early_media=true}sofia/gateway/${gatewayName}/${destination} &playback(${audioPath})`;
     } else {
-      originateCmd = `bgapi originate {origination_caller_id_number=${callerId},originate_timeout=${timeout},ignore_early_media=true}sofia/gateway/${gatewayName}/${to} &say(text="${message}")`;
+      originateCmd = `bgapi originate {origination_caller_id_number=${callerId},originate_timeout=${timeout},ignore_early_media=true}sofia/gateway/${gatewayName}/${destination} &say(text="${message}")`;
     }
 
     logger.debug(`FreeSwitch originate: ${originateCmd}`, {
