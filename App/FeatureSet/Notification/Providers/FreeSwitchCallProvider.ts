@@ -233,11 +233,13 @@ export default class FreeSwitchCallProvider implements ICallProvider {
           return;
         }
 
-        // Step 3: Command response received
+        // Step 3: Command response received (api/response for regular api,
+        // command/reply for bgapi)
         if (
           authReplyReceived &&
           !commandResolved &&
-          buffer.includes("Content-Type: api/response")
+          (buffer.includes("Content-Type: api/response") ||
+            buffer.includes("Content-Type: command/reply"))
         ) {
           commandResolved = true;
           clearTimeout(timeout);
