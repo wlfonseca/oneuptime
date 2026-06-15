@@ -383,9 +383,9 @@ export default class FreeSwitchCallProvider implements ICallProvider {
     let originateCmd: string;
 
     if (audioPath) {
-      originateCmd = `bgapi originate {origination_caller_id_number=${callerId},originate_timeout=${timeout},ignore_early_media=true}sofia/gateway/${gatewayName}/${destination} '&playback(${audioPath}) &sleep(5000)'`;
+      originateCmd = `bgapi originate {origination_caller_id_number=${callerId},originate_timeout=${timeout},ignore_early_media=true}sofia/gateway/${gatewayName}/${destination} '&playback(${audioPath})'`;
     } else {
-      originateCmd = `bgapi originate {origination_caller_id_number=${callerId},originate_timeout=${timeout},ignore_early_media=true}sofia/gateway/${gatewayName}/${destination} '&say(text="${message}") &sleep(5000)'`;
+      originateCmd = `bgapi originate {origination_caller_id_number=${callerId},originate_timeout=${timeout},ignore_early_media=true}sofia/gateway/${gatewayName}/${destination} '&say(text="${message}")'`;
     }
 
     logger.debug(`FreeSwitch originate: ${originateCmd}`, {
