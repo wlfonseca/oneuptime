@@ -15,6 +15,8 @@ import logger from "Common/Server/Utils/Logger";
 import net from "net";
 import http from "http";
 import fs from "fs";
+import { exec } from "child_process";
+import { promisify } from "util";
 
 export default class FreeSwitchCallProvider implements ICallProvider {
   private config: FreeSwitchConfig;
@@ -128,8 +130,16 @@ export default class FreeSwitchCallProvider implements ICallProvider {
   private async generateTtsAudio(message: string): Promise<string | null> {
     const piperHost: string = this.config.piperHost || "oneuptime-piper-tts";
     const piperPort: number = this.config.piperPort || 5002;
-    const audioPath: string = `/tmp/oneuptime_audio/call_${Date.now()}.wav`;
+    const audioDir: string = "/tmp/oneuptime_audio";
+    const audioPath: string = `${audioDir}/call_${Date.now()}.wav`;
 
+    try {
+      fs.mkdirSync(audioDir, { recursive: true });
+    } catch {
+      // ignore
+    }
+
+    // Try Piper TTS first
     try {
       const audio: Buffer = await new Promise<Buffer>((resolve, reject) => {
         const postData: string = JSON.stringify({ text: message });
@@ -152,9 +162,7 @@ export default class FreeSwitchCallProvider implements ICallProvider {
               if (res.statusCode === 200) {
                 resolve(Buffer.concat(chunks));
               } else {
-                reject(
-                  new Error(`Piper HTTP ${res.statusCode}: ${chunks.join("")}`),
-                );
+                reject(new Error(`Piper HTTP ${res.statusCode}`));
               }
             });
           },
@@ -173,13 +181,45 @@ export default class FreeSwitchCallProvider implements ICallProvider {
         service: "notification",
       });
       return audioPath;
-    } catch (err) {
-      logger.error("Piper TTS failed", {
-        error: (err as Error).message,
+    } catch (_piperErr) {
+      logger.debug("Piper TTS unavailable, trying espeak fallback", {
         service: "notification",
       });
-      return null;
     }
+
+    // Fallback: espeak
+    try {
+      const execAsync = promisify(exec);
+      const ttsEngine: string = this.config.ttsEngine || "default";
+      let voiceFlag: string = "";
+
+      if (ttsEngine === "flite") {
+        const voice: string = this.config.ttsVoice || "slt";
+        voiceFlag = `-v ${voice}`;
+      } else {
+        // espeak with pt-BR voice
+        voiceFlag = "-v pt";
+      }
+
+      const escaped: string = message.replace(/"/g, '\\"');
+      await execAsync(`espeak ${voiceFlag} -w "${audioPath}" "${escaped}"`, {
+        timeout: 15000,
+      });
+
+      if (fs.existsSync(audioPath)) {
+        logger.debug(`espeak TTS audio saved to ${audioPath}`, {
+          service: "notification",
+        });
+        return audioPath;
+      }
+    } catch (_espeakErr) {
+      logger.error("espeak TTS failed", {
+        error: (_espeakErr as Error).message,
+        service: "notification",
+      });
+    }
+
+    return null;
   }
 
   private async sendFsCli(command: string): Promise<string> {
