@@ -91,6 +91,7 @@ services:
       - ./FreeSwitch/event_socket.conf.xml:/usr/share/freeswitch/conf/vanilla/autoload_configs/event_socket.conf.xml
       - ./FreeSwitch/acl.conf.xml:/usr/share/freeswitch/conf/vanilla/autoload_configs/acl.conf.xml
       - ./FreeSwitch/sip_profiles/external:/etc/freeswitch/sip_profiles/external
+      - ./FreeSwitch/modules.conf.xml:/etc/freeswitch/autoload_configs/modules.conf.xml
     cap_add:
       - NET_ADMIN
       - SYS_PTRACE
