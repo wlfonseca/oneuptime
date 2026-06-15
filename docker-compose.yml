@@ -24,6 +24,8 @@ services:
     extends:
       file: ./docker-compose.base.yml
       service: app
+    volumes:
+      - tts_audio:/tmp/oneuptime_audio
     extra_hosts: *common-extra-hosts
     depends_on:
       <<: *common-depends-on
@@ -92,6 +94,7 @@ services:
       - ./FreeSwitch/acl.conf.xml:/usr/share/freeswitch/conf/vanilla/autoload_configs/acl.conf.xml
       - ./FreeSwitch/sip_profiles/external:/etc/freeswitch/sip_profiles/external
       - ./FreeSwitch/modules.conf.xml:/etc/freeswitch/autoload_configs/modules.conf.xml
+      - tts_audio:/tmp/oneuptime_audio
     cap_add:
       - NET_ADMIN
       - SYS_PTRACE
@@ -129,6 +132,7 @@ services:
       - backups:/backups
 
 volumes:
+  tts_audio:
   clickhouse:
   backups:
 
