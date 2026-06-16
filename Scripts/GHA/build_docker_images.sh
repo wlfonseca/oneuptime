@@ -118,13 +118,15 @@ build_variant() {
 		--cache-to "type=registry,ref=ghcr.io/oneuptime/${IMAGE}:cache-${cache_scope},mode=max"
 	)
 
-	args+=(
-		--tag "oneuptime/${IMAGE}:${variant_prefix}${sanitized_version}${ARCH_SUFFIX}"
-		--tag "ghcr.io/oneuptime/${IMAGE}:${variant_prefix}${sanitized_version}${ARCH_SUFFIX}"
-	)
+	if [[ "${SKIP_DOCKERHUB:-}" != "true" ]]; then
+		args+=(--tag "oneuptime/${IMAGE}:${variant_prefix}${sanitized_version}${ARCH_SUFFIX}")
+	fi
+	args+=(--tag "ghcr.io/oneuptime/${IMAGE}:${variant_prefix}${sanitized_version}${ARCH_SUFFIX}")
 
 	for tag_suffix in "${extra_tags_ref[@]}"; do
-		args+=(--tag "oneuptime/${IMAGE}:${tag_suffix}${ARCH_SUFFIX}")
+		if [[ "${SKIP_DOCKERHUB:-}" != "true" ]]; then
+			args+=(--tag "oneuptime/${IMAGE}:${tag_suffix}${ARCH_SUFFIX}")
+		fi
 		args+=(--tag "ghcr.io/oneuptime/${IMAGE}:${tag_suffix}${ARCH_SUFFIX}")
 	done
 

@@ -83,9 +83,9 @@ const Push: () => JSX.Element = (): ReactElement => {
         return;
       }
 
-      // Register service worker
+      // Register service worker at root scope
       const swRegistration: ServiceWorkerRegistration =
-        await navigator.serviceWorker.register("/dashboard/sw.js");
+        await navigator.serviceWorker.register("/sw.js", { scope: "/" });
 
       // Wait for service worker to be ready
       await navigator.serviceWorker.ready;

@@ -9,6 +9,7 @@ import {
   SearchNumberOptions,
   WebhookRequest,
 } from "Common/Types/Call/CallProvider";
+import { CallRequestMessage, GatherInput, Say } from "Common/Types/Call/CallRequest";
 import FreeSwitchConfig from "Common/Types/CallAndSMS/FreeSwitchConfig";
 import BadDataException from "Common/Types/Exception/BadDataException";
 import logger from "Common/Server/Utils/Logger";
@@ -361,31 +362,106 @@ export default class FreeSwitchCallProvider implements ICallProvider {
     return cleaned;
   }
 
+  private translateToPortuguese(text: string): string {
+    return text
+      .replace(/This is a call from OneUptime/gi, "Esta é uma ligação do OneUptime")
+      .replace(/This is a message from OneUptime/gi, "Esta é uma mensagem do OneUptime")
+      .replace(/A new incident has been created/gi, "Um novo incidente foi criado")
+      .replace(/A new alert has been created/gi, "Um novo alerta foi criado")
+      .replace(/To acknowledge this incident press 1/gi, "Para reconhecer este incidente pressione 1")
+      .replace(/To acknowledge this alert press 1/gi, "Para reconhecer este alerta pressione 1")
+      .replace(/You have acknowledged this (incident|alert)/gi, "Você reconheceu este $1")
+      .replace(/You have not entered any input/gi, "Nenhuma entrada detectada")
+      .replace(/Invalid input/gi, "Entrada inválida")
+      .replace(/Good bye/gi, "Até logo")
+      .replace(/Incident number/gi, "Incidente número")
+      .replace(/Alert number/gi, "Alerta número")
+      .replace(/You are now on-call for/gi, "Você está agora de plantão para")
+      .replace(/You are no longer on-call for/gi, "Você não está mais de plantão para")
+      .replace(/You are next on-call for/gi, "Você é o próximo de plantão para")
+      .replace(/because your on-call roster on schedule/gi, "porque sua escala no agendamento")
+      .replace(/just ended/gi, "acabou")
+      .replace(/will start when the next handoff happens/gi, "vai começar na próxima troca")
+      .replace(/To unsubscribe from this notification go to User Settings in OneUptime Dashboard/gi, "Para cancelar esta notificação vá em Configurações do Usuário no painel do OneUptime");
+  }
+
   public async makeCall(
     to: string,
     from: string,
     message: string,
     timeoutSeconds: number,
     statusCallbackUrl: string,
+    callRequest?: CallRequestMessage | undefined,
   ): Promise<void> {
-    // Generate TTS audio via Piper
-    const audioPath: string | null = await this.generateTtsAudio(message);
-
     await this.ensureGatewayConfigured();
 
-    const gatewayName: string = this.config.gatewayName || "setevoip";
+    const gatewayName: string = this.config.gatewayName || "zadarma";
     const callerId: string = this.toE164(
       this.config.defaultCallerId?.toString() || from,
     );
     const destination: string = this.toE164(to);
     const timeout: number = timeoutSeconds || 30;
 
+    // Build the dialplan commands from callRequest if available
+    let gatherInput: GatherInput | null = null;
+    let sayMessages: string[] = [];
+
+    if (callRequest && callRequest.data) {
+      for (const item of callRequest.data) {
+        if ((item as Say).sayMessage) {
+          sayMessages.push(this.translateToPortuguese((item as Say).sayMessage));
+        }
+        if ((item as GatherInput).numDigits > 0) {
+          gatherInput = item as GatherInput;
+        }
+      }
+    }
+
+    if (sayMessages.length === 0) {
+      sayMessages = [this.translateToPortuguese(message)];
+    }
+
+    // Generate TTS for the main message
+    const mainMessage: string = sayMessages.join(". ");
+    const audioPath: string | null = await this.generateTtsAudio(mainMessage);
+
+    // Generate TTS for gather intro if needed
+    let gatherAudioPath: string | null = null;
+    if (gatherInput) {
+      const gatherText: string = this.translateToPortuguese(gatherInput.introMessage);
+      gatherAudioPath = await this.generateTtsAudio(gatherText);
+    }
+
+    // Build originate command with inline dialplan
+    let appString: string;
+
+    if (gatherInput && gatherAudioPath) {
+      // Play main message, then use read (play_and_get_digits) for DTMF
+      const mainPlay: string = audioPath
+        ? `playback(${audioPath})`
+        : `speak(flite|slt|${mainMessage.replace(/'/g, "")})`;
+
+      // read: min_digits, max_digits, tries, timeout_ms, terminators, file, variable, digit_timeout, regex
+      const gatherPlay: string = gatherAudioPath;
+      appString = `'${mainPlay},sleep(500),read(1 1 3 5000 # ${gatherPlay} input_digit 5000 .)'`;
+    } else if (audioPath) {
+      // Just play audio twice
+      appString = `'&playback(${audioPath}),sleep(2000),playback(${audioPath}),sleep(5000)'`;
+    } else {
+      const escaped: string = mainMessage.replace(/'/g, "");
+      appString = `'&speak(flite|slt|${escaped})'`;
+    }
+
     let originateCmd: string;
 
-    if (audioPath) {
-      originateCmd = `bgapi originate {origination_caller_id_number=${callerId},originate_timeout=${timeout},ignore_early_media=true}sofia/gateway/${gatewayName}/${destination} '&playback(${audioPath})'`;
+    if (gatherInput) {
+      // Use inline dialplan for gather flow
+      const mainFile: string = audioPath || "";
+      const gatherFile: string = gatherAudioPath || "";
+      // Execute via ESL: originate, answer, playback, read, then post result
+      originateCmd = `originate {origination_caller_id_number=${callerId},originate_timeout=${timeout},ignore_early_media=true}sofia/gateway/${gatewayName}/${destination} &lua(outbound_gather.lua ${mainFile} ${gatherFile} ${gatherInput.numDigits} ${gatherInput.timeoutInSeconds || 10} ${gatherInput.responseUrl ? gatherInput.responseUrl.toString() : ""})`;
     } else {
-      originateCmd = `bgapi originate {origination_caller_id_number=${callerId},originate_timeout=${timeout},ignore_early_media=true}sofia/gateway/${gatewayName}/${destination} '&say(text="${message}")'`;
+      originateCmd = `originate {origination_caller_id_number=${callerId},originate_timeout=${timeout},ignore_early_media=true}sofia/gateway/${gatewayName}/${destination} ${appString}`;
     }
 
     logger.debug(`FreeSwitch originate: ${originateCmd}`, {

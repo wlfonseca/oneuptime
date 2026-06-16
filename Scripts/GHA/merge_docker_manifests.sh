@@ -60,11 +60,18 @@ for tag in "${TAG_LIST[@]}"; do
 
 	# Use GHCR as the source for arch-specific images (no rate limits in GHA)
 	# and push the merged manifest to both registries
-	docker buildx imagetools create \
-		--tag "${GHCR}/${IMAGE}:${tag}" \
-		--tag "${DOCKER_HUB}/${IMAGE}:${tag}" \
-		"${GHCR}/${IMAGE}:${tag}-amd64" \
+	create_args=(
+		docker buildx imagetools create
+		--tag "${GHCR}/${IMAGE}:${tag}"
+	)
+	if [[ "${SKIP_DOCKERHUB:-}" != "true" ]]; then
+		create_args+=(--tag "${DOCKER_HUB}/${IMAGE}:${tag}")
+	fi
+	create_args+=(
+		"${GHCR}/${IMAGE}:${tag}-amd64"
 		"${GHCR}/${IMAGE}:${tag}-arm64"
+	)
+	"${create_args[@]}"
 
 	echo "✅ Pushed multi-arch manifest for ${IMAGE}:${tag}"
 done

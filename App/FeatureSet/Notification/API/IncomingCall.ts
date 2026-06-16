@@ -803,4 +803,262 @@ async function dialNextUser(
   return res.send(twiml);
 }
 
+// ─── FreeSwitch Inbound Call Routing ─────────────────────────────────────────
+
+// Store active inbound call state (in-memory, keyed by caller+destination)
+const activeInboundCalls: Map<
+  string,
+  { policyId: ObjectID; currentRuleOrder: number; callLogId: ObjectID }
+> = new Map();
+
+router.get(
+  "/freeswitch/route",
+  async (req: ExpressRequest, res: ExpressResponse, next: NextFunction) => {
+    try {
+      const caller: string = (req.query["caller"] as string) || "";
+      const destination: string = (req.query["destination"] as string) || "";
+
+      logger.debug(
+        `FreeSwitch inbound route request: caller=${caller} destination=${destination}`,
+      );
+
+      // Find policy by routing phone number (try with various formats)
+      let policy: IncomingCallPolicy | null = null;
+
+      for (const phoneFormat of [
+        destination,
+        `+${destination}`,
+        `+55${destination}`,
+      ]) {
+        try {
+          policy = await IncomingCallPolicyService.findOneBy({
+            query: {
+              routingPhoneNumber: new Phone(phoneFormat),
+              isEnabled: true,
+            },
+            select: {
+              _id: true,
+              projectId: true,
+              greetingMessage: true,
+              noOneAvailableMessage: true,
+            },
+            props: { isRoot: true },
+          });
+          if (policy) {
+            break;
+          }
+        } catch {
+          // Phone format invalid, try next
+        }
+      }
+
+      if (!policy) {
+        // No policy found — try first enabled policy as fallback
+        policy = await IncomingCallPolicyService.findOneBy({
+          query: { isEnabled: true },
+          select: {
+            _id: true,
+            projectId: true,
+            greetingMessage: true,
+            noOneAvailableMessage: true,
+          },
+          props: { isRoot: true },
+        });
+      }
+
+      if (!policy) {
+        return res.json({
+          greeting:
+            "Desculpe, nenhuma política de chamada configurada.",
+          destination: null,
+        });
+      }
+
+      // Get first escalation rule
+      const rule: IncomingCallPolicyEscalationRule | null =
+        await IncomingCallPolicyEscalationRuleService.findOneBy({
+          query: {
+            incomingCallPolicyId: policy.id!,
+            order: 1,
+          },
+          select: {
+            _id: true,
+            escalateAfterSeconds: true,
+            onCallDutyPolicyScheduleId: true,
+            userId: true,
+          },
+          props: { isRoot: true },
+        });
+
+      if (!rule) {
+        return res.json({
+          greeting:
+            policy.noOneAvailableMessage ||
+            "Desculpe, nenhum engenheiro disponível no momento.",
+          destination: null,
+        });
+      }
+
+      // Get user to call
+      const userToCall: UserToCall | null = await getUserToCall(
+        rule,
+        policy.projectId!,
+      );
+
+      if (!userToCall) {
+        return res.json({
+          greeting:
+            policy.noOneAvailableMessage ||
+            "Desculpe, nenhum engenheiro disponível no momento.",
+          destination: null,
+        });
+      }
+
+      // Create call log
+      const callLog: IncomingCallLog = new IncomingCallLog();
+      callLog.projectId = policy.projectId!;
+      callLog.incomingCallPolicyId = policy.id!;
+      try {
+        callLog.callerPhoneNumber = new Phone(caller || "+0000000000");
+      } catch {
+        callLog.callerPhoneNumber = new Phone("+0000000000");
+      }
+      callLog.status = IncomingCallStatus.Initiated;
+      callLog.startedAt = new Date();
+      callLog.currentEscalationRuleOrder = 1;
+      callLog.repeatCount = 0;
+
+      const createdLog: IncomingCallLog =
+        await IncomingCallLogService.create({
+          data: callLog,
+          props: { isRoot: true },
+        });
+
+      // Store state for escalation
+      const callKey: string = `${caller}-${destination}`;
+      activeInboundCalls.set(callKey, {
+        policyId: policy.id!,
+        currentRuleOrder: 1,
+        callLogId: createdLog.id!,
+      });
+
+      // Generate TTS greeting
+      const greeting: string =
+        policy.greetingMessage ||
+        "Aguarde enquanto conectamos você ao engenheiro de plantão.";
+
+      return res.json({
+        greeting,
+        destination: userToCall.phoneNumber.toString(),
+      });
+    } catch (err) {
+      logger.error(err, getLogAttributesFromRequest(req as RequestLike));
+      return next(err);
+    }
+  },
+);
+
+router.get(
+  "/freeswitch/escalate",
+  async (req: ExpressRequest, res: ExpressResponse, next: NextFunction) => {
+    try {
+      const caller: string = (req.query["caller"] as string) || "";
+      const destination: string = (req.query["destination"] as string) || "";
+
+      const callKey: string = `${caller}-${destination}`;
+      const state = activeInboundCalls.get(callKey);
+
+      if (!state) {
+        return res.json({
+          message: "Nenhum engenheiro disponível.",
+          destination: null,
+        });
+      }
+
+      // Get next rule
+      const nextOrder: number = state.currentRuleOrder + 1;
+      const nextRule: IncomingCallPolicyEscalationRule | null =
+        await IncomingCallPolicyEscalationRuleService.findOneBy({
+          query: {
+            incomingCallPolicyId: state.policyId,
+            order: nextOrder,
+          },
+          select: {
+            _id: true,
+            escalateAfterSeconds: true,
+            onCallDutyPolicyScheduleId: true,
+            userId: true,
+          },
+          props: { isRoot: true },
+        });
+
+      if (!nextRule) {
+        // No more rules
+        activeInboundCalls.delete(callKey);
+
+        await IncomingCallLogService.updateOneById({
+          id: state.callLogId,
+          data: {
+            status: IncomingCallStatus.NoAnswer,
+            endedAt: new Date(),
+          },
+          props: { isRoot: true },
+        });
+
+        return res.json({
+          message: "Nenhum engenheiro atendeu. Tente novamente mais tarde.",
+          destination: null,
+        });
+      }
+
+      // Get policy projectId
+      const policy: IncomingCallPolicy | null =
+        await IncomingCallPolicyService.findOneById({
+          id: state.policyId,
+          select: { projectId: true },
+          props: { isRoot: true },
+        });
+
+      if (!policy) {
+        activeInboundCalls.delete(callKey);
+        return res.json({ message: "Erro interno.", destination: null });
+      }
+
+      const userToCall: UserToCall | null = await getUserToCall(
+        nextRule,
+        policy.projectId!,
+      );
+
+      if (!userToCall) {
+        activeInboundCalls.delete(callKey);
+        return res.json({
+          message: "Nenhum engenheiro disponível.",
+          destination: null,
+        });
+      }
+
+      // Update state
+      state.currentRuleOrder = nextOrder;
+      activeInboundCalls.set(callKey, state);
+
+      await IncomingCallLogService.updateOneById({
+        id: state.callLogId,
+        data: {
+          currentEscalationRuleOrder: nextOrder,
+          status: IncomingCallStatus.Escalated,
+        },
+        props: { isRoot: true },
+      });
+
+      return res.json({
+        message: "Conectando ao próximo engenheiro.",
+        destination: userToCall.phoneNumber.toString(),
+      });
+    } catch (err) {
+      logger.error(err, getLogAttributesFromRequest(req as RequestLike));
+      return next(err);
+    }
+  },
+);
+
 export default router;

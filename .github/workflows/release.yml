@@ -197,7 +197,16 @@ jobs:
         run: npm run prerun
 
       - name: Login to Docker Hub
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
         run: |
+          if [ -n "$DOCKERHUB_USERNAME" ] && [ -n "$DOCKERHUB_TOKEN" ]; then
+            echo "$DOCKERHUB_TOKEN" | docker login --username "$DOCKERHUB_USERNAME" --password-stdin
+          else
+            echo "No Docker Hub credentials, skipping"
+            echo "SKIP_DOCKERHUB=true" >> "$GITHUB_ENV"
+          fi
 
       - name: Login to GitHub Container Registry
         run: |
@@ -225,7 +234,16 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Login to Docker Hub
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
         run: |
+          if [ -n "$DOCKERHUB_USERNAME" ] && [ -n "$DOCKERHUB_TOKEN" ]; then
+            echo "$DOCKERHUB_TOKEN" | docker login --username "$DOCKERHUB_USERNAME" --password-stdin
+          else
+            echo "No Docker Hub credentials, skipping"
+            echo "SKIP_DOCKERHUB=true" >> "$GITHUB_ENV"
+          fi
 
       - name: Login to GitHub Container Registry
         run: |
@@ -277,7 +295,16 @@ jobs:
         run: npm run prerun
 
       - name: Login to Docker Hub
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
         run: |
+          if [ -n "$DOCKERHUB_USERNAME" ] && [ -n "$DOCKERHUB_TOKEN" ]; then
+            echo "$DOCKERHUB_TOKEN" | docker login --username "$DOCKERHUB_USERNAME" --password-stdin
+          else
+            echo "No Docker Hub credentials, skipping"
+            echo "SKIP_DOCKERHUB=true" >> "$GITHUB_ENV"
+          fi
 
       - name: Login to GitHub Container Registry
         run: |
@@ -305,7 +332,16 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Login to Docker Hub
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
         run: |
+          if [ -n "$DOCKERHUB_USERNAME" ] && [ -n "$DOCKERHUB_TOKEN" ]; then
+            echo "$DOCKERHUB_TOKEN" | docker login --username "$DOCKERHUB_USERNAME" --password-stdin
+          else
+            echo "No Docker Hub credentials, skipping"
+            echo "SKIP_DOCKERHUB=true" >> "$GITHUB_ENV"
+          fi
 
       - name: Login to GitHub Container Registry
         run: |
@@ -357,7 +393,16 @@ jobs:
         run: npm run prerun
 
       - name: Login to Docker Hub
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
         run: |
+          if [ -n "$DOCKERHUB_USERNAME" ] && [ -n "$DOCKERHUB_TOKEN" ]; then
+            echo "$DOCKERHUB_TOKEN" | docker login --username "$DOCKERHUB_USERNAME" --password-stdin
+          else
+            echo "No Docker Hub credentials, skipping"
+            echo "SKIP_DOCKERHUB=true" >> "$GITHUB_ENV"
+          fi
 
       - name: Login to GitHub Container Registry
         run: |
@@ -385,7 +430,16 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Login to Docker Hub
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
         run: |
+          if [ -n "$DOCKERHUB_USERNAME" ] && [ -n "$DOCKERHUB_TOKEN" ]; then
+            echo "$DOCKERHUB_TOKEN" | docker login --username "$DOCKERHUB_USERNAME" --password-stdin
+          else
+            echo "No Docker Hub credentials, skipping"
+            echo "SKIP_DOCKERHUB=true" >> "$GITHUB_ENV"
+          fi
 
       - name: Login to GitHub Container Registry
         run: |
@@ -437,7 +491,16 @@ jobs:
         run: npm run prerun
 
       - name: Login to Docker Hub
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
         run: |
+          if [ -n "$DOCKERHUB_USERNAME" ] && [ -n "$DOCKERHUB_TOKEN" ]; then
+            echo "$DOCKERHUB_TOKEN" | docker login --username "$DOCKERHUB_USERNAME" --password-stdin
+          else
+            echo "No Docker Hub credentials, skipping"
+            echo "SKIP_DOCKERHUB=true" >> "$GITHUB_ENV"
+          fi
 
       - name: Login to GitHub Container Registry
         run: |
@@ -465,7 +528,16 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Login to Docker Hub
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
         run: |
+          if [ -n "$DOCKERHUB_USERNAME" ] && [ -n "$DOCKERHUB_TOKEN" ]; then
+            echo "$DOCKERHUB_TOKEN" | docker login --username "$DOCKERHUB_USERNAME" --password-stdin
+          else
+            echo "No Docker Hub credentials, skipping"
+            echo "SKIP_DOCKERHUB=true" >> "$GITHUB_ENV"
+          fi
 
       - name: Login to GitHub Container Registry
         run: |
@@ -517,7 +589,16 @@ jobs:
         run: npm run prerun
 
       - name: Login to Docker Hub
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
         run: |
+          if [ -n "$DOCKERHUB_USERNAME" ] && [ -n "$DOCKERHUB_TOKEN" ]; then
+            echo "$DOCKERHUB_TOKEN" | docker login --username "$DOCKERHUB_USERNAME" --password-stdin
+          else
+            echo "No Docker Hub credentials, skipping"
+            echo "SKIP_DOCKERHUB=true" >> "$GITHUB_ENV"
+          fi
 
       - name: Login to GitHub Container Registry
         run: |
@@ -545,7 +626,16 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Login to Docker Hub
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
         run: |
+          if [ -n "$DOCKERHUB_USERNAME" ] && [ -n "$DOCKERHUB_TOKEN" ]; then
+            echo "$DOCKERHUB_TOKEN" | docker login --username "$DOCKERHUB_USERNAME" --password-stdin
+          else
+            echo "No Docker Hub credentials, skipping"
+            echo "SKIP_DOCKERHUB=true" >> "$GITHUB_ENV"
+          fi
 
       - name: Login to GitHub Container Registry
         run: |
@@ -597,7 +687,16 @@ jobs:
         run: npm run prerun
 
       - name: Login to Docker Hub
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
         run: |
+          if [ -n "$DOCKERHUB_USERNAME" ] && [ -n "$DOCKERHUB_TOKEN" ]; then
+            echo "$DOCKERHUB_TOKEN" | docker login --username "$DOCKERHUB_USERNAME" --password-stdin
+          else
+            echo "No Docker Hub credentials, skipping"
+            echo "SKIP_DOCKERHUB=true" >> "$GITHUB_ENV"
+          fi
 
       - name: Login to GitHub Container Registry
         run: |
@@ -625,7 +724,16 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Login to Docker Hub
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
         run: |
+          if [ -n "$DOCKERHUB_USERNAME" ] && [ -n "$DOCKERHUB_TOKEN" ]; then
+            echo "$DOCKERHUB_TOKEN" | docker login --username "$DOCKERHUB_USERNAME" --password-stdin
+          else
+            echo "No Docker Hub credentials, skipping"
+            echo "SKIP_DOCKERHUB=true" >> "$GITHUB_ENV"
+          fi
 
       - name: Login to GitHub Container Registry
         run: |
@@ -677,7 +785,16 @@ jobs:
         run: npm run prerun
 
       - name: Login to Docker Hub
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
         run: |
+          if [ -n "$DOCKERHUB_USERNAME" ] && [ -n "$DOCKERHUB_TOKEN" ]; then
+            echo "$DOCKERHUB_TOKEN" | docker login --username "$DOCKERHUB_USERNAME" --password-stdin
+          else
+            echo "No Docker Hub credentials, skipping"
+            echo "SKIP_DOCKERHUB=true" >> "$GITHUB_ENV"
+          fi
 
       - name: Login to GitHub Container Registry
         run: |
@@ -705,7 +822,16 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Login to Docker Hub
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
         run: |
+          if [ -n "$DOCKERHUB_USERNAME" ] && [ -n "$DOCKERHUB_TOKEN" ]; then
+            echo "$DOCKERHUB_TOKEN" | docker login --username "$DOCKERHUB_USERNAME" --password-stdin
+          else
+            echo "No Docker Hub credentials, skipping"
+            echo "SKIP_DOCKERHUB=true" >> "$GITHUB_ENV"
+          fi
 
       - name: Login to GitHub Container Registry
         run: |
@@ -757,7 +883,16 @@ jobs:
         run: npm run prerun
 
       - name: Login to Docker Hub
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
         run: |
+          if [ -n "$DOCKERHUB_USERNAME" ] && [ -n "$DOCKERHUB_TOKEN" ]; then
+            echo "$DOCKERHUB_TOKEN" | docker login --username "$DOCKERHUB_USERNAME" --password-stdin
+          else
+            echo "No Docker Hub credentials, skipping"
+            echo "SKIP_DOCKERHUB=true" >> "$GITHUB_ENV"
+          fi
 
       - name: Login to GitHub Container Registry
         run: |
@@ -787,7 +922,16 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Login to Docker Hub
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
         run: |
+          if [ -n "$DOCKERHUB_USERNAME" ] && [ -n "$DOCKERHUB_TOKEN" ]; then
+            echo "$DOCKERHUB_TOKEN" | docker login --username "$DOCKERHUB_USERNAME" --password-stdin
+          else
+            echo "No Docker Hub credentials, skipping"
+            echo "SKIP_DOCKERHUB=true" >> "$GITHUB_ENV"
+          fi
 
       - name: Login to GitHub Container Registry
         run: |
@@ -839,7 +983,16 @@ jobs:
         run: npm run prerun
 
       - name: Login to Docker Hub
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
         run: |
+          if [ -n "$DOCKERHUB_USERNAME" ] && [ -n "$DOCKERHUB_TOKEN" ]; then
+            echo "$DOCKERHUB_TOKEN" | docker login --username "$DOCKERHUB_USERNAME" --password-stdin
+          else
+            echo "No Docker Hub credentials, skipping"
+            echo "SKIP_DOCKERHUB=true" >> "$GITHUB_ENV"
+          fi
 
       - name: Login to GitHub Container Registry
         run: |
@@ -869,7 +1022,16 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Login to Docker Hub
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
         run: |
+          if [ -n "$DOCKERHUB_USERNAME" ] && [ -n "$DOCKERHUB_TOKEN" ]; then
+            echo "$DOCKERHUB_TOKEN" | docker login --username "$DOCKERHUB_USERNAME" --password-stdin
+          else
+            echo "No Docker Hub credentials, skipping"
+            echo "SKIP_DOCKERHUB=true" >> "$GITHUB_ENV"
+          fi
 
       - name: Login to GitHub Container Registry
         run: |
@@ -921,7 +1083,16 @@ jobs:
         run: npm run prerun
 
       - name: Login to Docker Hub
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
         run: |
+          if [ -n "$DOCKERHUB_USERNAME" ] && [ -n "$DOCKERHUB_TOKEN" ]; then
+            echo "$DOCKERHUB_TOKEN" | docker login --username "$DOCKERHUB_USERNAME" --password-stdin
+          else
+            echo "No Docker Hub credentials, skipping"
+            echo "SKIP_DOCKERHUB=true" >> "$GITHUB_ENV"
+          fi
 
       - name: Login to GitHub Container Registry
         run: |
@@ -949,7 +1120,16 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Login to Docker Hub
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
         run: |
+          if [ -n "$DOCKERHUB_USERNAME" ] && [ -n "$DOCKERHUB_TOKEN" ]; then
+            echo "$DOCKERHUB_TOKEN" | docker login --username "$DOCKERHUB_USERNAME" --password-stdin
+          else
+            echo "No Docker Hub credentials, skipping"
+            echo "SKIP_DOCKERHUB=true" >> "$GITHUB_ENV"
+          fi
 
       - name: Login to GitHub Container Registry
         run: |
@@ -1001,7 +1181,16 @@ jobs:
         run: npm run prerun
 
       - name: Login to Docker Hub
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
         run: |
+          if [ -n "$DOCKERHUB_USERNAME" ] && [ -n "$DOCKERHUB_TOKEN" ]; then
+            echo "$DOCKERHUB_TOKEN" | docker login --username "$DOCKERHUB_USERNAME" --password-stdin
+          else
+            echo "No Docker Hub credentials, skipping"
+            echo "SKIP_DOCKERHUB=true" >> "$GITHUB_ENV"
+          fi
 
       - name: Login to GitHub Container Registry
         run: |
@@ -1029,7 +1218,16 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Login to Docker Hub
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
         run: |
+          if [ -n "$DOCKERHUB_USERNAME" ] && [ -n "$DOCKERHUB_TOKEN" ]; then
+            echo "$DOCKERHUB_TOKEN" | docker login --username "$DOCKERHUB_USERNAME" --password-stdin
+          else
+            echo "No Docker Hub credentials, skipping"
+            echo "SKIP_DOCKERHUB=true" >> "$GITHUB_ENV"
+          fi
 
       - name: Login to GitHub Container Registry
         run: |
@@ -1164,13 +1362,23 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Login to Docker Hub
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
         run: |
+          if [ -n "$DOCKERHUB_USERNAME" ] && [ -n "$DOCKERHUB_TOKEN" ]; then
+            echo "$DOCKERHUB_TOKEN" | docker login --username "$DOCKERHUB_USERNAME" --password-stdin
+          else
+            echo "No Docker Hub credentials, skipping"
+            echo "SKIP_DOCKERHUB=true" >> "$GITHUB_ENV"
+          fi
 
       - name: Login to GitHub Container Registry
         run: |
           echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io --username "${{ github.repository_owner }}" --password-stdin
 
       - name: Create Docker Hub release tag from version
+        if: env.SKIP_DOCKERHUB != 'true'
         run: |
           VERSION="${{needs.read-version.outputs.major_minor}}"
           docker buildx imagetools create \
@@ -1185,6 +1393,7 @@ jobs:
             ghcr.io/oneuptime/${{ matrix.image }}:${VERSION}
 
       - name: Create Docker Hub enterprise release tag from version
+        if: env.SKIP_DOCKERHUB != 'true'
         run: |
           VERSION="${{needs.read-version.outputs.major_minor}}"
           docker buildx imagetools create \

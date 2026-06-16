@@ -1,4 +1,5 @@
 import { JSONObject } from "../JSON";
+import { CallRequestMessage } from "./CallRequest";
 
 // Phone number from provider search
 export interface AvailablePhoneNumber {
@@ -104,5 +105,6 @@ export interface ICallProvider {
     message: string,
     timeoutSeconds: number,
     statusCallbackUrl: string,
+    callRequest?: CallRequestMessage | undefined,
   ): Promise<void>;
 }
