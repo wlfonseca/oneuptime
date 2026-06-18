@@ -24,22 +24,24 @@ import { OTLPMetricExporter } from "@opentelemetry/exporter-metrics-otlp-proto";
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-proto";
 import { AWSXRayIdGenerator } from "@opentelemetry/id-generator-aws-xray";
 import { CompressionAlgorithm } from "@opentelemetry/otlp-exporter-base";
-import { Resource } from "@opentelemetry/resources";
+import { Resource, resourceFromAttributes } from "@opentelemetry/resources";
 import {
   BatchLogRecordProcessor,
   LoggerProvider,
   LogRecordProcessor,
   type LoggerProviderConfig,
 } from "@opentelemetry/sdk-logs";
-import type { Resource as LogsResource } from "@opentelemetry/sdk-logs/node_modules/@opentelemetry/resources/build/src/Resource";
 import {
-  Aggregation,
   MeterProvider,
   PeriodicExportingMetricReader,
 } from "@opentelemetry/sdk-metrics";
 import type { PushMetricExporter } from "@opentelemetry/sdk-metrics/build/src/export/MetricExporter";
 import * as opentelemetry from "@opentelemetry/sdk-node";
-import { SpanExporter } from "@opentelemetry/sdk-trace-base";
+import {
+  BatchSpanProcessor,
+  SpanExporter,
+  SpanProcessor,
+} from "@opentelemetry/sdk-trace-base";
 import {
   ATTR_SERVICE_NAME,
   ATTR_SERVICE_VERSION,
@@ -48,9 +50,11 @@ import URL from "../../Types/API/URL";
 import Dictionary from "../../Types/Dictionary";
 import { AppVersion, Env, DisableTelemetry } from "../EnvironmentConfig";
 import logger from "./Logger";
+import GracefulShutdown, { ShutdownPriority } from "./GracefulShutdown";
+import ContextSpanProcessor from "./Telemetry/ContextSpanProcessor";
 import RuntimeMetrics from "./Telemetry/RuntimeMetrics";
 
-type ResourceWithRawAttributes = LogsResource & {
+type ResourceWithRawAttributes = Resource & {
   getRawAttributes?: () => Array<[string, AttributeValue | undefined]>;
 };
 
@@ -159,7 +163,7 @@ export default class Telemetry {
   }
 
   public static getResource(data: { serviceName: string }): Resource {
-    return new Resource({
+    return resourceFromAttributes({
       [ATTR_SERVICE_NAME]: data.serviceName,
       [ATTR_SERVICE_VERSION]: AppVersion,
       ["deployment.environment"]: Env,
@@ -197,20 +201,11 @@ export default class Telemetry {
           compression: CompressionAlgorithm.GZIP,
         }) as unknown as PushMetricExporter;
 
-        // Force an SDK-side aggregation selector that matches the modern metrics API.
-        if (
-          typeof (metricExporter as { selectAggregation?: unknown })
-            .selectAggregation === "function"
-        ) {
-          (
-            metricExporter as unknown as {
-              selectAggregation: (..._args: Array<unknown>) => Aggregation;
-            }
-          ).selectAggregation = () => {
-            return Aggregation.Default();
-          };
-        }
-
+        /*
+         * No aggregation-selector shim is needed anymore: the OTLP metric
+         * exporter and the sdk-metrics package now come from the same release
+         * line, so the exporter's default selector already matches the SDK.
+         */
         this.metricReader = new PeriodicExportingMetricReader({
           exporter: metricExporter,
         });
@@ -268,9 +263,20 @@ export default class Telemetry {
           autoDetectResources: true,
         };
 
+      /*
+       * Always run the ContextSpanProcessor so the ambient TelemetryContext
+       * attributes (projectId, userId, monitorId, incidentId, requestId, ...)
+       * are stamped onto every span at creation. The BatchSpanProcessor that
+       * actually exports spans is added after it, and only when an exporter is
+       * configured. (traceExporter is deprecated in favour of spanProcessors.)
+       */
+      const spanProcessors: Array<SpanProcessor> = [new ContextSpanProcessor()];
+
       if (traceExporter) {
-        nodeSdkConfiguration.traceExporter = traceExporter;
+        spanProcessors.push(new BatchSpanProcessor(traceExporter));
       }
+
+      nodeSdkConfiguration.spanProcessors = spanProcessors;
 
       /*
        * We will skip this becasue we're attachng this metric reader to the meter provider later.
@@ -294,11 +300,20 @@ export default class Telemetry {
       this.getMeterProvider();
       this.getMeter();
 
-      process.on("SIGTERM", () => {
-        sdk.shutdown().finally(() => {
-          return process.exit(0);
-        });
-      });
+      /*
+       * Flush traces / metrics / logs last (Telemetry tier) so spans and logs
+       * emitted by the rest of the shutdown still get exported. GracefulShutdown
+       * owns process.exit now — this handler must NOT call it itself, or it
+       * would race the other tiers and abandon the datastore pools (the exact
+       * bug this replaced).
+       */
+      GracefulShutdown.registerHandler(
+        "Telemetry",
+        ShutdownPriority.Telemetry,
+        () => {
+          return sdk.shutdown();
+        },
+      );
 
       sdk.start();
 

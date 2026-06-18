@@ -44,7 +44,6 @@ export enum CheckOn {
 
   // Log monitors.
   LogCount = "Log Count",
-  LogBodyMatch = "Is Log Body Match",
 
   // Trace monitors.
   SpanCount = "Span Count",
@@ -84,6 +83,14 @@ export enum CheckOn {
   DomainNameServer = "Domain Name Server",
   DomainStatusCode = "Domain Status Code",
   DomainIsExpired = "Domain Is Expired",
+
+  // DNSSEC monitors.
+  DnssecChainValid = "DNSSEC Chain Is Valid",
+  DnssecDnskeyExists = "DNSSEC DNSKEY Record Exists",
+  DnssecDsExists = "DNSSEC DS Record Exists At Parent",
+  DnssecSignatureExpiresInDays = "DNSSEC Signature Expires In Days",
+  DnssecResolverConsensus = "DNSSEC Resolver Consensus (AD Flag)",
+  DnssecNameserverConsistent = "DNSSEC Nameservers Are Consistent",
 
   // External Status Page monitors.
   ExternalStatusPageIsOnline = "External Status Page Is Online",
@@ -280,8 +287,12 @@ export class CriteriaFilterUtil {
       checkOn === CheckOn.SnmpIsOnline ||
       checkOn === CheckOn.DnsIsOnline ||
       checkOn === CheckOn.DomainIsExpired ||
-      checkOn === CheckOn.ExternalStatusPageIsOnline ||
-      checkOn === CheckOn.LogBodyMatch
+      checkOn === CheckOn.DnssecChainValid ||
+      checkOn === CheckOn.DnssecDnskeyExists ||
+      checkOn === CheckOn.DnssecDsExists ||
+      checkOn === CheckOn.DnssecResolverConsensus ||
+      checkOn === CheckOn.DnssecNameserverConsistent ||
+      checkOn === CheckOn.ExternalStatusPageIsOnline
     ) {
       return false;
     }

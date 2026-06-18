@@ -93,6 +93,9 @@ import AlertCustomFieldService, {
 import AlertInternalNoteAPI from "Common/Server/API/AlertInternalNoteAPI";
 import TelemetryExceptionAPI from "Common/Server/API/TelemetryExceptionAPI";
 import KubernetesResourceAPI from "Common/Server/API/KubernetesResourceAPI";
+import ProxmoxResourceAPI from "Common/Server/API/ProxmoxResourceAPI";
+import DockerSwarmResourceAPI from "Common/Server/API/DockerSwarmResourceAPI";
+import CephResourceAPI from "Common/Server/API/CephResourceAPI";
 import KubernetesContainer from "Common/Models/DatabaseModels/KubernetesContainer";
 import KubernetesContainerService, {
   Service as KubernetesContainerServiceType,
@@ -121,6 +124,14 @@ import AlertStateService, {
 import AlertStateTimelineService, {
   Service as AlertStateTimelineServiceType,
 } from "Common/Server/Services/AlertStateTimelineService";
+import TelemetryEntity from "Common/Models/DatabaseModels/TelemetryEntity";
+import TelemetryEntityServiceInstance, {
+  TelemetryEntityService as TelemetryEntityServiceType,
+} from "Common/Server/Services/TelemetryEntityService";
+import TelemetryEntityRelationship from "Common/Models/DatabaseModels/TelemetryEntityRelationship";
+import TelemetryEntityRelationshipServiceInstance, {
+  TelemetryEntityRelationshipService as TelemetryEntityRelationshipServiceType,
+} from "Common/Server/Services/TelemetryEntityRelationshipService";
 
 // AlertEpisode Services
 import AlertEpisodeService, {
@@ -266,6 +277,14 @@ import DockerHostLabelRuleService, {
   Service as DockerHostLabelRuleServiceType,
 } from "Common/Server/Services/DockerHostLabelRuleService";
 
+import PodmanHostOwnerRuleService, {
+  Service as PodmanHostOwnerRuleServiceType,
+} from "Common/Server/Services/PodmanHostOwnerRuleService";
+
+import PodmanHostLabelRuleService, {
+  Service as PodmanHostLabelRuleServiceType,
+} from "Common/Server/Services/PodmanHostLabelRuleService";
+
 import KubernetesClusterOwnerRuleService, {
   Service as KubernetesClusterOwnerRuleServiceType,
 } from "Common/Server/Services/KubernetesClusterOwnerRuleService";
@@ -273,6 +292,28 @@ import KubernetesClusterOwnerRuleService, {
 import KubernetesClusterLabelRuleService, {
   Service as KubernetesClusterLabelRuleServiceType,
 } from "Common/Server/Services/KubernetesClusterLabelRuleService";
+
+import ProxmoxClusterOwnerRuleService, {
+  Service as ProxmoxClusterOwnerRuleServiceType,
+} from "Common/Server/Services/ProxmoxClusterOwnerRuleService";
+import DockerSwarmClusterOwnerRuleService, {
+  Service as DockerSwarmClusterOwnerRuleServiceType,
+} from "Common/Server/Services/DockerSwarmClusterOwnerRuleService";
+
+import ProxmoxClusterLabelRuleService, {
+  Service as ProxmoxClusterLabelRuleServiceType,
+} from "Common/Server/Services/ProxmoxClusterLabelRuleService";
+import DockerSwarmClusterLabelRuleService, {
+  Service as DockerSwarmClusterLabelRuleServiceType,
+} from "Common/Server/Services/DockerSwarmClusterLabelRuleService";
+
+import CephClusterOwnerRuleService, {
+  Service as CephClusterOwnerRuleServiceType,
+} from "Common/Server/Services/CephClusterOwnerRuleService";
+
+import CephClusterLabelRuleService, {
+  Service as CephClusterLabelRuleServiceType,
+} from "Common/Server/Services/CephClusterLabelRuleService";
 
 import RunbookOwnerRuleService, {
   Service as RunbookOwnerRuleServiceType,
@@ -329,6 +370,12 @@ import TableViewService, {
 import LogSavedViewService, {
   Service as LogSavedViewServiceType,
 } from "Common/Server/Services/LogSavedViewService";
+import MetricSavedViewService, {
+  Service as MetricSavedViewServiceType,
+} from "Common/Server/Services/MetricSavedViewService";
+import TraceSavedViewService, {
+  Service as TraceSavedViewServiceType,
+} from "Common/Server/Services/TraceSavedViewService";
 import LogPipelineService, {
   Service as LogPipelineServiceType,
 } from "Common/Server/Services/LogPipelineService";
@@ -404,6 +451,60 @@ import KubernetesClusterOwnerTeamService, {
 import KubernetesClusterOwnerUserService, {
   Service as KubernetesClusterOwnerUserServiceType,
 } from "Common/Server/Services/KubernetesClusterOwnerUserService";
+import ServerlessFunctionService, {
+  Service as ServerlessFunctionServiceType,
+} from "Common/Server/Services/ServerlessFunctionService";
+import ServerlessFunctionOwnerTeamService, {
+  Service as ServerlessFunctionOwnerTeamServiceType,
+} from "Common/Server/Services/ServerlessFunctionOwnerTeamService";
+import ServerlessFunctionOwnerUserService, {
+  Service as ServerlessFunctionOwnerUserServiceType,
+} from "Common/Server/Services/ServerlessFunctionOwnerUserService";
+import ServerlessFunctionLabelRuleService, {
+  Service as ServerlessFunctionLabelRuleServiceType,
+} from "Common/Server/Services/ServerlessFunctionLabelRuleService";
+import ServerlessFunctionOwnerRuleService, {
+  Service as ServerlessFunctionOwnerRuleServiceType,
+} from "Common/Server/Services/ServerlessFunctionOwnerRuleService";
+import CloudResourceService, {
+  Service as CloudResourceServiceType,
+} from "Common/Server/Services/CloudResourceService";
+import CloudResourceOwnerTeamService, {
+  Service as CloudResourceOwnerTeamServiceType,
+} from "Common/Server/Services/CloudResourceOwnerTeamService";
+import CloudResourceOwnerUserService, {
+  Service as CloudResourceOwnerUserServiceType,
+} from "Common/Server/Services/CloudResourceOwnerUserService";
+import CloudResourceLabelRuleService, {
+  Service as CloudResourceLabelRuleServiceType,
+} from "Common/Server/Services/CloudResourceLabelRuleService";
+import CloudResourceOwnerRuleService, {
+  Service as CloudResourceOwnerRuleServiceType,
+} from "Common/Server/Services/CloudResourceOwnerRuleService";
+import RumApplicationService, {
+  Service as RumApplicationServiceType,
+} from "Common/Server/Services/RumApplicationService";
+import RumApplicationOwnerTeamService, {
+  Service as RumApplicationOwnerTeamServiceType,
+} from "Common/Server/Services/RumApplicationOwnerTeamService";
+import RumApplicationOwnerUserService, {
+  Service as RumApplicationOwnerUserServiceType,
+} from "Common/Server/Services/RumApplicationOwnerUserService";
+import RumApplicationLabelRuleService, {
+  Service as RumApplicationLabelRuleServiceType,
+} from "Common/Server/Services/RumApplicationLabelRuleService";
+import RumApplicationOwnerRuleService, {
+  Service as RumApplicationOwnerRuleServiceType,
+} from "Common/Server/Services/RumApplicationOwnerRuleService";
+import ServerlessFunctionInstanceService, {
+  Service as ServerlessFunctionInstanceServiceType,
+} from "Common/Server/Services/ServerlessFunctionInstanceService";
+import CloudResourceInstanceService, {
+  Service as CloudResourceInstanceServiceType,
+} from "Common/Server/Services/CloudResourceInstanceService";
+import RumApplicationClientService, {
+  Service as RumApplicationClientServiceType,
+} from "Common/Server/Services/RumApplicationClientService";
 import DockerHostService, {
   Service as DockerHostServiceType,
 } from "Common/Server/Services/DockerHostService";
@@ -413,6 +514,48 @@ import DockerHostOwnerTeamService, {
 import DockerHostOwnerUserService, {
   Service as DockerHostOwnerUserServiceType,
 } from "Common/Server/Services/DockerHostOwnerUserService";
+import DockerResourceService, {
+  Service as DockerResourceServiceType,
+} from "Common/Server/Services/DockerResourceService";
+import PodmanHostService, {
+  Service as PodmanHostServiceType,
+} from "Common/Server/Services/PodmanHostService";
+import PodmanHostOwnerTeamService, {
+  Service as PodmanHostOwnerTeamServiceType,
+} from "Common/Server/Services/PodmanHostOwnerTeamService";
+import PodmanHostOwnerUserService, {
+  Service as PodmanHostOwnerUserServiceType,
+} from "Common/Server/Services/PodmanHostOwnerUserService";
+import PodmanResourceService, {
+  Service as PodmanResourceServiceType,
+} from "Common/Server/Services/PodmanResourceService";
+import ProxmoxClusterService, {
+  Service as ProxmoxClusterServiceType,
+} from "Common/Server/Services/ProxmoxClusterService";
+import DockerSwarmClusterService, {
+  Service as DockerSwarmClusterServiceType,
+} from "Common/Server/Services/DockerSwarmClusterService";
+import CephClusterService, {
+  Service as CephClusterServiceType,
+} from "Common/Server/Services/CephClusterService";
+import ProxmoxClusterOwnerTeamService, {
+  Service as ProxmoxClusterOwnerTeamServiceType,
+} from "Common/Server/Services/ProxmoxClusterOwnerTeamService";
+import DockerSwarmClusterOwnerTeamService, {
+  Service as DockerSwarmClusterOwnerTeamServiceType,
+} from "Common/Server/Services/DockerSwarmClusterOwnerTeamService";
+import ProxmoxClusterOwnerUserService, {
+  Service as ProxmoxClusterOwnerUserServiceType,
+} from "Common/Server/Services/ProxmoxClusterOwnerUserService";
+import DockerSwarmClusterOwnerUserService, {
+  Service as DockerSwarmClusterOwnerUserServiceType,
+} from "Common/Server/Services/DockerSwarmClusterOwnerUserService";
+import CephClusterOwnerTeamService, {
+  Service as CephClusterOwnerTeamServiceType,
+} from "Common/Server/Services/CephClusterOwnerTeamService";
+import CephClusterOwnerUserService, {
+  Service as CephClusterOwnerUserServiceType,
+} from "Common/Server/Services/CephClusterOwnerUserService";
 import HostService, {
   Service as HostServiceType,
 } from "Common/Server/Services/HostService";
@@ -437,6 +580,9 @@ import MetricAPI from "Common/Server/API/MetricAPI";
 import MonitorCustomFieldService, {
   Service as MonitorCustomFieldServiceType,
 } from "Common/Server/Services/MonitorCustomFieldService";
+import TeamCustomFieldService, {
+  Service as TeamCustomFieldServiceType,
+} from "Common/Server/Services/TeamCustomFieldService";
 import MonitorGroupOwnerTeamService, {
   Service as MonitorGroupOwnerTeamServiceType,
 } from "Common/Server/Services/MonitorGroupOwnerTeamService";
@@ -559,13 +705,6 @@ import ServiceOwnerUserService, {
 import ServiceService, {
   Service as ServiceServiceType,
 } from "Common/Server/Services/ServiceService";
-import ServiceDependencyService, {
-  Service as ServiceDependencyServiceType,
-} from "Common/Server/Services/ServiceDependencyService";
-import ServiceMonitor from "Common/Models/DatabaseModels/ServiceMonitor";
-import ServiceMonitorService, {
-  Service as ServiceMonitorServiceType,
-} from "Common/Server/Services/ServiceMonitorService";
 
 import ServiceCodeRepository from "Common/Models/DatabaseModels/ServiceCodeRepository";
 import ServiceCodeRepositoryService, {
@@ -779,8 +918,16 @@ import ServiceOwnerRule from "Common/Models/DatabaseModels/ServiceOwnerRule";
 import ServiceLabelRule from "Common/Models/DatabaseModels/ServiceLabelRule";
 import DockerHostOwnerRule from "Common/Models/DatabaseModels/DockerHostOwnerRule";
 import DockerHostLabelRule from "Common/Models/DatabaseModels/DockerHostLabelRule";
+import PodmanHostOwnerRule from "Common/Models/DatabaseModels/PodmanHostOwnerRule";
+import PodmanHostLabelRule from "Common/Models/DatabaseModels/PodmanHostLabelRule";
 import KubernetesClusterOwnerRule from "Common/Models/DatabaseModels/KubernetesClusterOwnerRule";
 import KubernetesClusterLabelRule from "Common/Models/DatabaseModels/KubernetesClusterLabelRule";
+import ProxmoxClusterOwnerRule from "Common/Models/DatabaseModels/ProxmoxClusterOwnerRule";
+import DockerSwarmClusterOwnerRule from "Common/Models/DatabaseModels/DockerSwarmClusterOwnerRule";
+import ProxmoxClusterLabelRule from "Common/Models/DatabaseModels/ProxmoxClusterLabelRule";
+import DockerSwarmClusterLabelRule from "Common/Models/DatabaseModels/DockerSwarmClusterLabelRule";
+import CephClusterOwnerRule from "Common/Models/DatabaseModels/CephClusterOwnerRule";
+import CephClusterLabelRule from "Common/Models/DatabaseModels/CephClusterLabelRule";
 import RunbookOwnerRule from "Common/Models/DatabaseModels/RunbookOwnerRule";
 import RunbookLabelRule from "Common/Models/DatabaseModels/RunbookLabelRule";
 import ScheduledMaintenanceOwnerRule from "Common/Models/DatabaseModels/ScheduledMaintenanceOwnerRule";
@@ -818,14 +965,47 @@ import IncidentTemplateOwnerUser from "Common/Models/DatabaseModels/IncidentTemp
 import KubernetesCluster from "Common/Models/DatabaseModels/KubernetesCluster";
 import KubernetesClusterOwnerTeam from "Common/Models/DatabaseModels/KubernetesClusterOwnerTeam";
 import KubernetesClusterOwnerUser from "Common/Models/DatabaseModels/KubernetesClusterOwnerUser";
+import ServerlessFunction from "Common/Models/DatabaseModels/ServerlessFunction";
+import ServerlessFunctionOwnerTeam from "Common/Models/DatabaseModels/ServerlessFunctionOwnerTeam";
+import ServerlessFunctionOwnerUser from "Common/Models/DatabaseModels/ServerlessFunctionOwnerUser";
+import ServerlessFunctionLabelRule from "Common/Models/DatabaseModels/ServerlessFunctionLabelRule";
+import ServerlessFunctionOwnerRule from "Common/Models/DatabaseModels/ServerlessFunctionOwnerRule";
+import CloudResource from "Common/Models/DatabaseModels/CloudResource";
+import CloudResourceOwnerTeam from "Common/Models/DatabaseModels/CloudResourceOwnerTeam";
+import CloudResourceOwnerUser from "Common/Models/DatabaseModels/CloudResourceOwnerUser";
+import CloudResourceLabelRule from "Common/Models/DatabaseModels/CloudResourceLabelRule";
+import CloudResourceOwnerRule from "Common/Models/DatabaseModels/CloudResourceOwnerRule";
+import RumApplication from "Common/Models/DatabaseModels/RumApplication";
+import RumApplicationOwnerTeam from "Common/Models/DatabaseModels/RumApplicationOwnerTeam";
+import RumApplicationOwnerUser from "Common/Models/DatabaseModels/RumApplicationOwnerUser";
+import RumApplicationLabelRule from "Common/Models/DatabaseModels/RumApplicationLabelRule";
+import RumApplicationOwnerRule from "Common/Models/DatabaseModels/RumApplicationOwnerRule";
+import ServerlessFunctionInstance from "Common/Models/DatabaseModels/ServerlessFunctionInstance";
+import CloudResourceInstance from "Common/Models/DatabaseModels/CloudResourceInstance";
+import RumApplicationClient from "Common/Models/DatabaseModels/RumApplicationClient";
 import DockerHost from "Common/Models/DatabaseModels/DockerHost";
 import DockerHostOwnerTeam from "Common/Models/DatabaseModels/DockerHostOwnerTeam";
 import DockerHostOwnerUser from "Common/Models/DatabaseModels/DockerHostOwnerUser";
+import DockerResource from "Common/Models/DatabaseModels/DockerResource";
+import PodmanHost from "Common/Models/DatabaseModels/PodmanHost";
+import PodmanHostOwnerTeam from "Common/Models/DatabaseModels/PodmanHostOwnerTeam";
+import PodmanHostOwnerUser from "Common/Models/DatabaseModels/PodmanHostOwnerUser";
+import PodmanResource from "Common/Models/DatabaseModels/PodmanResource";
+import ProxmoxCluster from "Common/Models/DatabaseModels/ProxmoxCluster";
+import DockerSwarmCluster from "Common/Models/DatabaseModels/DockerSwarmCluster";
+import ProxmoxClusterOwnerTeam from "Common/Models/DatabaseModels/ProxmoxClusterOwnerTeam";
+import DockerSwarmClusterOwnerTeam from "Common/Models/DatabaseModels/DockerSwarmClusterOwnerTeam";
+import ProxmoxClusterOwnerUser from "Common/Models/DatabaseModels/ProxmoxClusterOwnerUser";
+import DockerSwarmClusterOwnerUser from "Common/Models/DatabaseModels/DockerSwarmClusterOwnerUser";
+import CephCluster from "Common/Models/DatabaseModels/CephCluster";
+import CephClusterOwnerTeam from "Common/Models/DatabaseModels/CephClusterOwnerTeam";
+import CephClusterOwnerUser from "Common/Models/DatabaseModels/CephClusterOwnerUser";
 import Host from "Common/Models/DatabaseModels/Host";
 import HostOwnerTeam from "Common/Models/DatabaseModels/HostOwnerTeam";
 import HostOwnerUser from "Common/Models/DatabaseModels/HostOwnerUser";
 import Label from "Common/Models/DatabaseModels/Label";
 import MonitorCustomField from "Common/Models/DatabaseModels/MonitorCustomField";
+import TeamCustomField from "Common/Models/DatabaseModels/TeamCustomField";
 import MonitorGroupOwnerTeam from "Common/Models/DatabaseModels/MonitorGroupOwnerTeam";
 import MonitorGroupOwnerUser from "Common/Models/DatabaseModels/MonitorGroupOwnerUser";
 import MonitorGroupResource from "Common/Models/DatabaseModels/MonitorGroupResource";
@@ -907,7 +1087,6 @@ import ProbeOwnerUser from "Common/Models/DatabaseModels/ProbeOwnerUser";
 import AIAgentOwnerTeam from "Common/Models/DatabaseModels/AIAgentOwnerTeam";
 import AIAgentOwnerUser from "Common/Models/DatabaseModels/AIAgentOwnerUser";
 import LlmLog from "Common/Models/DatabaseModels/LlmLog";
-import ServiceDependency from "Common/Models/DatabaseModels/ServiceDependency";
 import ExceptionInstance from "Common/Models/AnalyticsModels/ExceptionInstance";
 import WorkspaceNotificationLogService, {
   Service as WorkspaceNotificationLogServiceType,
@@ -928,6 +1107,8 @@ import ScheduledMaintenanceTemplateOwnerUserService, {
 } from "Common/Server/Services/ScheduledMaintenanceTemplateOwnerUserService";
 import TableView from "Common/Models/DatabaseModels/TableView";
 import LogSavedView from "Common/Models/DatabaseModels/LogSavedView";
+import MetricSavedView from "Common/Models/DatabaseModels/MetricSavedView";
+import TraceSavedView from "Common/Models/DatabaseModels/TraceSavedView";
 import LogPipeline from "Common/Models/DatabaseModels/LogPipeline";
 import LogPipelineProcessor from "Common/Models/DatabaseModels/LogPipelineProcessor";
 import LogDropFilter from "Common/Models/DatabaseModels/LogDropFilter";
@@ -1124,6 +1305,26 @@ const BaseAPIFeatureSet: FeatureSet = {
       new BaseAPI<AlertState, AlertStateServiceType>(
         AlertState,
         AlertStateService,
+      ).getRouter(),
+    );
+
+    // Telemetry entity registry + topology graph (read/list for the entity explorer).
+    app.use(
+      `/${APP_NAME.toLocaleLowerCase()}`,
+      new BaseAPI<TelemetryEntity, TelemetryEntityServiceType>(
+        TelemetryEntity,
+        TelemetryEntityServiceInstance,
+      ).getRouter(),
+    );
+
+    app.use(
+      `/${APP_NAME.toLocaleLowerCase()}`,
+      new BaseAPI<
+        TelemetryEntityRelationship,
+        TelemetryEntityRelationshipServiceType
+      >(
+        TelemetryEntityRelationship,
+        TelemetryEntityRelationshipServiceInstance,
       ).getRouter(),
     );
 
@@ -1836,6 +2037,22 @@ const BaseAPIFeatureSet: FeatureSet = {
 
     app.use(
       `/${APP_NAME.toLocaleLowerCase()}`,
+      new BaseAPI<PodmanHostOwnerRule, PodmanHostOwnerRuleServiceType>(
+        PodmanHostOwnerRule,
+        PodmanHostOwnerRuleService,
+      ).getRouter(),
+    );
+
+    app.use(
+      `/${APP_NAME.toLocaleLowerCase()}`,
+      new BaseAPI<PodmanHostLabelRule, PodmanHostLabelRuleServiceType>(
+        PodmanHostLabelRule,
+        PodmanHostLabelRuleService,
+      ).getRouter(),
+    );
+
+    app.use(
+      `/${APP_NAME.toLocaleLowerCase()}`,
       new BaseAPI<
         KubernetesClusterOwnerRule,
         KubernetesClusterOwnerRuleServiceType
@@ -1853,6 +2070,60 @@ const BaseAPIFeatureSet: FeatureSet = {
       >(
         KubernetesClusterLabelRule,
         KubernetesClusterLabelRuleService,
+      ).getRouter(),
+    );
+
+    app.use(
+      `/${APP_NAME.toLocaleLowerCase()}`,
+      new BaseAPI<ProxmoxClusterOwnerRule, ProxmoxClusterOwnerRuleServiceType>(
+        ProxmoxClusterOwnerRule,
+        ProxmoxClusterOwnerRuleService,
+      ).getRouter(),
+    );
+
+    app.use(
+      `/${APP_NAME.toLocaleLowerCase()}`,
+      new BaseAPI<
+        DockerSwarmClusterOwnerRule,
+        DockerSwarmClusterOwnerRuleServiceType
+      >(
+        DockerSwarmClusterOwnerRule,
+        DockerSwarmClusterOwnerRuleService,
+      ).getRouter(),
+    );
+
+    app.use(
+      `/${APP_NAME.toLocaleLowerCase()}`,
+      new BaseAPI<ProxmoxClusterLabelRule, ProxmoxClusterLabelRuleServiceType>(
+        ProxmoxClusterLabelRule,
+        ProxmoxClusterLabelRuleService,
+      ).getRouter(),
+    );
+
+    app.use(
+      `/${APP_NAME.toLocaleLowerCase()}`,
+      new BaseAPI<
+        DockerSwarmClusterLabelRule,
+        DockerSwarmClusterLabelRuleServiceType
+      >(
+        DockerSwarmClusterLabelRule,
+        DockerSwarmClusterLabelRuleService,
+      ).getRouter(),
+    );
+
+    app.use(
+      `/${APP_NAME.toLocaleLowerCase()}`,
+      new BaseAPI<CephClusterOwnerRule, CephClusterOwnerRuleServiceType>(
+        CephClusterOwnerRule,
+        CephClusterOwnerRuleService,
+      ).getRouter(),
+    );
+
+    app.use(
+      `/${APP_NAME.toLocaleLowerCase()}`,
+      new BaseAPI<CephClusterLabelRule, CephClusterLabelRuleServiceType>(
+        CephClusterLabelRule,
+        CephClusterLabelRuleService,
       ).getRouter(),
     );
 
@@ -1944,6 +2215,21 @@ const BaseAPIFeatureSet: FeatureSet = {
     app.use(
       `/${APP_NAME.toLocaleLowerCase()}`,
       new KubernetesResourceAPI().getRouter(),
+    );
+
+    app.use(
+      `/${APP_NAME.toLocaleLowerCase()}`,
+      new ProxmoxResourceAPI().getRouter(),
+    );
+
+    app.use(
+      `/${APP_NAME.toLocaleLowerCase()}`,
+      new DockerSwarmResourceAPI().getRouter(),
+    );
+
+    app.use(
+      `/${APP_NAME.toLocaleLowerCase()}`,
+      new CephResourceAPI().getRouter(),
     );
 
     app.use(
@@ -2064,28 +2350,12 @@ const BaseAPIFeatureSet: FeatureSet = {
 
     app.use(
       `/${APP_NAME.toLocaleLowerCase()}`,
-      new BaseAPI<ServiceDependency, ServiceDependencyServiceType>(
-        ServiceDependency,
-        ServiceDependencyService,
-      ).getRouter(),
-    );
-
-    app.use(
-      `/${APP_NAME.toLocaleLowerCase()}`,
       new BaseAPI<
         StatusPageHistoryChartBarColorRule,
         StatusPageHistoryChartBarColorRuleServiceType
       >(
         StatusPageHistoryChartBarColorRule,
         StatusPageHistoryChartBarColorRuleService,
-      ).getRouter(),
-    );
-
-    app.use(
-      `/${APP_NAME.toLocaleLowerCase()}`,
-      new BaseAPI<ServiceMonitor, ServiceMonitorServiceType>(
-        ServiceMonitor,
-        ServiceMonitorService,
       ).getRouter(),
     );
 
@@ -2283,6 +2553,22 @@ const BaseAPIFeatureSet: FeatureSet = {
       new BaseAPI<LogSavedView, LogSavedViewServiceType>(
         LogSavedView,
         LogSavedViewService,
+      ).getRouter(),
+    );
+
+    app.use(
+      `/${APP_NAME.toLocaleLowerCase()}`,
+      new BaseAPI<MetricSavedView, MetricSavedViewServiceType>(
+        MetricSavedView,
+        MetricSavedViewService,
+      ).getRouter(),
+    );
+
+    app.use(
+      `/${APP_NAME.toLocaleLowerCase()}`,
+      new BaseAPI<TraceSavedView, TraceSavedViewServiceType>(
+        TraceSavedView,
+        TraceSavedViewService,
       ).getRouter(),
     );
 
@@ -2796,6 +3082,165 @@ const BaseAPIFeatureSet: FeatureSet = {
 
     app.use(
       `/${APP_NAME.toLocaleLowerCase()}`,
+      new BaseAPI<ServerlessFunction, ServerlessFunctionServiceType>(
+        ServerlessFunction,
+        ServerlessFunctionService,
+      ).getRouter(),
+    );
+
+    app.use(
+      `/${APP_NAME.toLocaleLowerCase()}`,
+      new BaseAPI<
+        ServerlessFunctionOwnerTeam,
+        ServerlessFunctionOwnerTeamServiceType
+      >(
+        ServerlessFunctionOwnerTeam,
+        ServerlessFunctionOwnerTeamService,
+      ).getRouter(),
+    );
+
+    app.use(
+      `/${APP_NAME.toLocaleLowerCase()}`,
+      new BaseAPI<
+        ServerlessFunctionOwnerUser,
+        ServerlessFunctionOwnerUserServiceType
+      >(
+        ServerlessFunctionOwnerUser,
+        ServerlessFunctionOwnerUserService,
+      ).getRouter(),
+    );
+
+    app.use(
+      `/${APP_NAME.toLocaleLowerCase()}`,
+      new BaseAPI<
+        ServerlessFunctionLabelRule,
+        ServerlessFunctionLabelRuleServiceType
+      >(
+        ServerlessFunctionLabelRule,
+        ServerlessFunctionLabelRuleService,
+      ).getRouter(),
+    );
+
+    app.use(
+      `/${APP_NAME.toLocaleLowerCase()}`,
+      new BaseAPI<
+        ServerlessFunctionOwnerRule,
+        ServerlessFunctionOwnerRuleServiceType
+      >(
+        ServerlessFunctionOwnerRule,
+        ServerlessFunctionOwnerRuleService,
+      ).getRouter(),
+    );
+
+    app.use(
+      `/${APP_NAME.toLocaleLowerCase()}`,
+      new BaseAPI<CloudResource, CloudResourceServiceType>(
+        CloudResource,
+        CloudResourceService,
+      ).getRouter(),
+    );
+
+    app.use(
+      `/${APP_NAME.toLocaleLowerCase()}`,
+      new BaseAPI<CloudResourceOwnerTeam, CloudResourceOwnerTeamServiceType>(
+        CloudResourceOwnerTeam,
+        CloudResourceOwnerTeamService,
+      ).getRouter(),
+    );
+
+    app.use(
+      `/${APP_NAME.toLocaleLowerCase()}`,
+      new BaseAPI<CloudResourceOwnerUser, CloudResourceOwnerUserServiceType>(
+        CloudResourceOwnerUser,
+        CloudResourceOwnerUserService,
+      ).getRouter(),
+    );
+
+    app.use(
+      `/${APP_NAME.toLocaleLowerCase()}`,
+      new BaseAPI<CloudResourceLabelRule, CloudResourceLabelRuleServiceType>(
+        CloudResourceLabelRule,
+        CloudResourceLabelRuleService,
+      ).getRouter(),
+    );
+
+    app.use(
+      `/${APP_NAME.toLocaleLowerCase()}`,
+      new BaseAPI<CloudResourceOwnerRule, CloudResourceOwnerRuleServiceType>(
+        CloudResourceOwnerRule,
+        CloudResourceOwnerRuleService,
+      ).getRouter(),
+    );
+
+    app.use(
+      `/${APP_NAME.toLocaleLowerCase()}`,
+      new BaseAPI<RumApplication, RumApplicationServiceType>(
+        RumApplication,
+        RumApplicationService,
+      ).getRouter(),
+    );
+
+    app.use(
+      `/${APP_NAME.toLocaleLowerCase()}`,
+      new BaseAPI<RumApplicationOwnerTeam, RumApplicationOwnerTeamServiceType>(
+        RumApplicationOwnerTeam,
+        RumApplicationOwnerTeamService,
+      ).getRouter(),
+    );
+
+    app.use(
+      `/${APP_NAME.toLocaleLowerCase()}`,
+      new BaseAPI<RumApplicationOwnerUser, RumApplicationOwnerUserServiceType>(
+        RumApplicationOwnerUser,
+        RumApplicationOwnerUserService,
+      ).getRouter(),
+    );
+
+    app.use(
+      `/${APP_NAME.toLocaleLowerCase()}`,
+      new BaseAPI<RumApplicationLabelRule, RumApplicationLabelRuleServiceType>(
+        RumApplicationLabelRule,
+        RumApplicationLabelRuleService,
+      ).getRouter(),
+    );
+
+    app.use(
+      `/${APP_NAME.toLocaleLowerCase()}`,
+      new BaseAPI<RumApplicationOwnerRule, RumApplicationOwnerRuleServiceType>(
+        RumApplicationOwnerRule,
+        RumApplicationOwnerRuleService,
+      ).getRouter(),
+    );
+
+    app.use(
+      `/${APP_NAME.toLocaleLowerCase()}`,
+      new BaseAPI<
+        ServerlessFunctionInstance,
+        ServerlessFunctionInstanceServiceType
+      >(
+        ServerlessFunctionInstance,
+        ServerlessFunctionInstanceService,
+      ).getRouter(),
+    );
+
+    app.use(
+      `/${APP_NAME.toLocaleLowerCase()}`,
+      new BaseAPI<CloudResourceInstance, CloudResourceInstanceServiceType>(
+        CloudResourceInstance,
+        CloudResourceInstanceService,
+      ).getRouter(),
+    );
+
+    app.use(
+      `/${APP_NAME.toLocaleLowerCase()}`,
+      new BaseAPI<RumApplicationClient, RumApplicationClientServiceType>(
+        RumApplicationClient,
+        RumApplicationClientService,
+      ).getRouter(),
+    );
+
+    app.use(
+      `/${APP_NAME.toLocaleLowerCase()}`,
       new BaseAPI<DockerHost, DockerHostServiceType>(
         DockerHost,
         DockerHostService,
@@ -2815,6 +3260,124 @@ const BaseAPIFeatureSet: FeatureSet = {
       new BaseAPI<DockerHostOwnerUser, DockerHostOwnerUserServiceType>(
         DockerHostOwnerUser,
         DockerHostOwnerUserService,
+      ).getRouter(),
+    );
+
+    app.use(
+      `/${APP_NAME.toLocaleLowerCase()}`,
+      new BaseAPI<DockerResource, DockerResourceServiceType>(
+        DockerResource,
+        DockerResourceService,
+      ).getRouter(),
+    );
+
+    app.use(
+      `/${APP_NAME.toLocaleLowerCase()}`,
+      new BaseAPI<PodmanHost, PodmanHostServiceType>(
+        PodmanHost,
+        PodmanHostService,
+      ).getRouter(),
+    );
+
+    app.use(
+      `/${APP_NAME.toLocaleLowerCase()}`,
+      new BaseAPI<PodmanHostOwnerTeam, PodmanHostOwnerTeamServiceType>(
+        PodmanHostOwnerTeam,
+        PodmanHostOwnerTeamService,
+      ).getRouter(),
+    );
+
+    app.use(
+      `/${APP_NAME.toLocaleLowerCase()}`,
+      new BaseAPI<PodmanHostOwnerUser, PodmanHostOwnerUserServiceType>(
+        PodmanHostOwnerUser,
+        PodmanHostOwnerUserService,
+      ).getRouter(),
+    );
+
+    app.use(
+      `/${APP_NAME.toLocaleLowerCase()}`,
+      new BaseAPI<PodmanResource, PodmanResourceServiceType>(
+        PodmanResource,
+        PodmanResourceService,
+      ).getRouter(),
+    );
+
+    app.use(
+      `/${APP_NAME.toLocaleLowerCase()}`,
+      new BaseAPI<ProxmoxCluster, ProxmoxClusterServiceType>(
+        ProxmoxCluster,
+        ProxmoxClusterService,
+      ).getRouter(),
+    );
+
+    app.use(
+      `/${APP_NAME.toLocaleLowerCase()}`,
+      new BaseAPI<DockerSwarmCluster, DockerSwarmClusterServiceType>(
+        DockerSwarmCluster,
+        DockerSwarmClusterService,
+      ).getRouter(),
+    );
+
+    app.use(
+      `/${APP_NAME.toLocaleLowerCase()}`,
+      new BaseAPI<ProxmoxClusterOwnerTeam, ProxmoxClusterOwnerTeamServiceType>(
+        ProxmoxClusterOwnerTeam,
+        ProxmoxClusterOwnerTeamService,
+      ).getRouter(),
+    );
+
+    app.use(
+      `/${APP_NAME.toLocaleLowerCase()}`,
+      new BaseAPI<
+        DockerSwarmClusterOwnerTeam,
+        DockerSwarmClusterOwnerTeamServiceType
+      >(
+        DockerSwarmClusterOwnerTeam,
+        DockerSwarmClusterOwnerTeamService,
+      ).getRouter(),
+    );
+
+    app.use(
+      `/${APP_NAME.toLocaleLowerCase()}`,
+      new BaseAPI<ProxmoxClusterOwnerUser, ProxmoxClusterOwnerUserServiceType>(
+        ProxmoxClusterOwnerUser,
+        ProxmoxClusterOwnerUserService,
+      ).getRouter(),
+    );
+
+    app.use(
+      `/${APP_NAME.toLocaleLowerCase()}`,
+      new BaseAPI<
+        DockerSwarmClusterOwnerUser,
+        DockerSwarmClusterOwnerUserServiceType
+      >(
+        DockerSwarmClusterOwnerUser,
+        DockerSwarmClusterOwnerUserService,
+      ).getRouter(),
+    );
+
+    app.use(
+      `/${APP_NAME.toLocaleLowerCase()}`,
+      new BaseAPI<CephCluster, CephClusterServiceType>(
+        CephCluster,
+        CephClusterService,
+      ).getRouter(),
+    );
+
+    app.use(
+      `/${APP_NAME.toLocaleLowerCase()}`,
+      new BaseAPI<CephClusterOwnerTeam, CephClusterOwnerTeamServiceType>(
+        CephClusterOwnerTeam,
+        CephClusterOwnerTeamService,
+      ).getRouter(),
+    );
+
+    app.use(
+      `/${APP_NAME.toLocaleLowerCase()}`,
+      new BaseAPI<CephClusterOwnerUser, CephClusterOwnerUserServiceType>(
+        CephClusterOwnerUser,
+        CephClusterOwnerUserService,
       ).getRouter(),
     );
 
@@ -3339,6 +3902,14 @@ const BaseAPIFeatureSet: FeatureSet = {
       new BaseAPI<MonitorCustomField, MonitorCustomFieldServiceType>(
         MonitorCustomField,
         MonitorCustomFieldService,
+      ).getRouter(),
+    );
+
+    app.use(
+      `/${APP_NAME.toLocaleLowerCase()}`,
+      new BaseAPI<TeamCustomField, TeamCustomFieldServiceType>(
+        TeamCustomField,
+        TeamCustomFieldService,
       ).getRouter(),
     );
 

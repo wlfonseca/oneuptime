@@ -5,6 +5,7 @@ import DashboardComponentType from "./DashboardComponentType";
 import DashboardChartType from "./Chart/ChartType";
 import ObjectID from "../ObjectID";
 import DashboardBaseComponent from "./DashboardComponents/DashboardBaseComponent";
+import DashboardVariable, { DashboardVariableType } from "./DashboardVariable";
 import IconProp from "../Icon/IconProp";
 import MetricsAggregationType from "../Metrics/MetricsAggregationType";
 import IncidentMetricType from "../Incident/IncidentMetricType";
@@ -14,17 +15,20 @@ import { DashboardValueTrendDirection } from "./DashboardComponents/DashboardVal
 
 /*
  * Trace / Exception / Profiles entries are intentionally not in this
- * enum: their metric catalogs (SpanMetricType, ExceptionMetricType,
- * ProfileMetricType) define names that are not emitted anywhere in the
- * codebase, so the templates only ever rendered empty widgets. Reach
- * for the Logs / Traces / Exceptions pages directly until those metrics
- * exist.
+ * enum: their metric catalogs (e.g. SpanMetricType, ExceptionMetricType)
+ * define names that are not emitted anywhere in the codebase, so the
+ * templates only ever rendered empty widgets. Reach for the Logs /
+ * Traces / Exceptions pages directly until those metrics exist.
  */
 export enum DashboardTemplateType {
   Blank = "Blank",
   Monitor = "Monitor",
   Incident = "Incident",
   Kubernetes = "Kubernetes",
+  Host = "Host",
+  Proxmox = "Proxmox",
+  Ceph = "Ceph",
+  DockerSwarm = "DockerSwarm",
   Metrics = "Metrics",
 }
 
@@ -64,6 +68,34 @@ export const DashboardTemplates: Array<DashboardTemplate> = [
     icon: IconProp.Kubernetes,
   },
   {
+    type: DashboardTemplateType.Host,
+    name: "Hosts Dashboard",
+    description:
+      "Per-host CPU, memory, disk and network charts, a live host inventory, CPU utilization gauge, process counts, and recent logs.",
+    icon: IconProp.Server,
+  },
+  {
+    type: DashboardTemplateType.Proxmox,
+    name: "Proxmox Dashboard",
+    description:
+      "Live node and guest inventories with status, CPU/memory trends, network throughput, and cluster logs.",
+    icon: IconProp.ServerStack,
+  },
+  {
+    type: DashboardTemplateType.Ceph,
+    name: "Ceph Dashboard",
+    description:
+      "OSD wall and pool capacity lists, health and capacity stats, degraded-PG trends, client throughput, and cluster logs.",
+    icon: IconProp.Database,
+  },
+  {
+    type: DashboardTemplateType.DockerSwarm,
+    name: "Docker Swarm Dashboard",
+    description:
+      "Live node and service inventories with role/status, container CPU and memory trends, PID counts, and cluster logs.",
+    icon: IconProp.Cube,
+  },
+  {
     type: DashboardTemplateType.Metrics,
     name: "Metrics Dashboard",
     description:
@@ -79,6 +111,19 @@ interface MetricConfig {
   aggregationType: MetricsAggregationType;
   legend?: string;
   legendUnit?: string;
+  /*
+   * OpenTelemetry attribute keys to fan the query out across (e.g.
+   * ["host.name"] for one series per host). When set, the chart renders
+   * one series per unique value combination.
+   */
+  groupByAttributeKeys?: Array<string>;
+  /*
+   * Plot the per-second rate of change instead of the raw cumulative
+   * counter. Required for OTel cumulative counters such as
+   * `system.disk.io` and `system.network.io` so the chart shows I/O rate
+   * rather than bytes-since-boot.
+   */
+  transformAsRate?: boolean;
 }
 
 function buildMetricQueryConfig(config: MetricConfig): Record<string, unknown> {
@@ -95,8 +140,10 @@ function buildMetricQueryConfig(config: MetricConfig): Record<string, unknown> {
         metricName: config.metricName,
         aggegationType: config.aggregationType,
       },
-      groupBy: undefined,
+      groupBy: config.groupByAttributeKeys ? { attributes: true } : undefined,
+      groupByAttributeKeys: config.groupByAttributeKeys,
     },
+    transformAsRate: config.transformAsRate,
   };
 }
 
@@ -374,6 +421,229 @@ function createKubernetesNodeListComponent(data: {
   };
 }
 
+/*
+ * Template variables are pre-built TelemetryAttribute variables that
+ * ship with the template — the toolbar renders a "Cluster" /
+ * "Namespace" / "Host" picker without the user having to open the
+ * Variables modal. Resource attributes from the OTel collector are
+ * stored in ClickHouse under the `resource.` prefix (see the comment
+ * in MonitorAlert.ts), so the binding keys here mirror what the
+ * Kubernetes / Host detail pages already filter on.
+ */
+function createTelemetryAttributeVariable(data: {
+  name: string;
+  label: string;
+  attributeKey: string;
+  isMultiSelect?: boolean;
+}): DashboardVariable {
+  return {
+    id: ObjectID.generate().toString(),
+    name: data.name,
+    label: data.label,
+    type: DashboardVariableType.TelemetryAttribute,
+    attributeKey: data.attributeKey,
+    isMultiSelect: data.isMultiSelect ?? false,
+  };
+}
+
+function createHostListComponent(data: {
+  title: string;
+  top: number;
+  left: number;
+  width: number;
+  height: number;
+  maxRows?: number;
+  statusFilter?: string;
+  osTypeFilter?: string;
+}): DashboardBaseComponent {
+  return {
+    _type: ObjectType.DashboardComponent,
+    componentType: DashboardComponentType.HostList,
+    componentId: ObjectID.generate(),
+    topInDashboardUnits: data.top,
+    leftInDashboardUnits: data.left,
+    widthInDashboardUnits: data.width,
+    heightInDashboardUnits: data.height,
+    minHeightInDashboardUnits: 3,
+    minWidthInDashboardUnits: 6,
+    arguments: {
+      title: data.title,
+      maxRows: data.maxRows ?? 25,
+      statusFilter: data.statusFilter,
+      osTypeFilter: data.osTypeFilter,
+    },
+  };
+}
+
+function createProxmoxNodeListComponent(data: {
+  title: string;
+  top: number;
+  left: number;
+  width: number;
+  height: number;
+  maxRows?: number;
+  statusFilter?: string;
+}): DashboardBaseComponent {
+  return {
+    _type: ObjectType.DashboardComponent,
+    componentType: DashboardComponentType.ProxmoxNodeList,
+    componentId: ObjectID.generate(),
+    topInDashboardUnits: data.top,
+    leftInDashboardUnits: data.left,
+    widthInDashboardUnits: data.width,
+    heightInDashboardUnits: data.height,
+    minHeightInDashboardUnits: 3,
+    minWidthInDashboardUnits: 4,
+    arguments: {
+      title: data.title,
+      maxRows: data.maxRows ?? 20,
+      statusFilter: data.statusFilter,
+    },
+  };
+}
+
+function createProxmoxGuestListComponent(data: {
+  title: string;
+  top: number;
+  left: number;
+  width: number;
+  height: number;
+  maxRows?: number;
+  guestTypeFilter?: string;
+  statusFilter?: string;
+}): DashboardBaseComponent {
+  return {
+    _type: ObjectType.DashboardComponent,
+    componentType: DashboardComponentType.ProxmoxGuestList,
+    componentId: ObjectID.generate(),
+    topInDashboardUnits: data.top,
+    leftInDashboardUnits: data.left,
+    widthInDashboardUnits: data.width,
+    heightInDashboardUnits: data.height,
+    minHeightInDashboardUnits: 3,
+    minWidthInDashboardUnits: 4,
+    arguments: {
+      title: data.title,
+      maxRows: data.maxRows ?? 20,
+      guestTypeFilter: data.guestTypeFilter,
+      statusFilter: data.statusFilter,
+    },
+  };
+}
+
+function createDockerSwarmNodeListComponent(data: {
+  title: string;
+  top: number;
+  left: number;
+  width: number;
+  height: number;
+  maxRows?: number;
+  roleFilter?: string;
+  statusFilter?: string;
+}): DashboardBaseComponent {
+  return {
+    _type: ObjectType.DashboardComponent,
+    componentType: DashboardComponentType.DockerSwarmNodeList,
+    componentId: ObjectID.generate(),
+    topInDashboardUnits: data.top,
+    leftInDashboardUnits: data.left,
+    widthInDashboardUnits: data.width,
+    heightInDashboardUnits: data.height,
+    minHeightInDashboardUnits: 3,
+    minWidthInDashboardUnits: 4,
+    arguments: {
+      title: data.title,
+      maxRows: data.maxRows ?? 20,
+      roleFilter: data.roleFilter,
+      statusFilter: data.statusFilter,
+    },
+  };
+}
+
+function createDockerSwarmServiceListComponent(data: {
+  title: string;
+  top: number;
+  left: number;
+  width: number;
+  height: number;
+  maxRows?: number;
+  serviceModeFilter?: string;
+  statusFilter?: string;
+}): DashboardBaseComponent {
+  return {
+    _type: ObjectType.DashboardComponent,
+    componentType: DashboardComponentType.DockerSwarmServiceList,
+    componentId: ObjectID.generate(),
+    topInDashboardUnits: data.top,
+    leftInDashboardUnits: data.left,
+    widthInDashboardUnits: data.width,
+    heightInDashboardUnits: data.height,
+    minHeightInDashboardUnits: 3,
+    minWidthInDashboardUnits: 4,
+    arguments: {
+      title: data.title,
+      maxRows: data.maxRows ?? 20,
+      serviceModeFilter: data.serviceModeFilter,
+      statusFilter: data.statusFilter,
+    },
+  };
+}
+
+function createCephOsdListComponent(data: {
+  title: string;
+  top: number;
+  left: number;
+  width: number;
+  height: number;
+  maxRows?: number;
+  viewMode?: string;
+  stateFilter?: string;
+}): DashboardBaseComponent {
+  return {
+    _type: ObjectType.DashboardComponent,
+    componentType: DashboardComponentType.CephOsdList,
+    componentId: ObjectID.generate(),
+    topInDashboardUnits: data.top,
+    leftInDashboardUnits: data.left,
+    widthInDashboardUnits: data.width,
+    heightInDashboardUnits: data.height,
+    minHeightInDashboardUnits: 3,
+    minWidthInDashboardUnits: 4,
+    arguments: {
+      title: data.title,
+      maxRows: data.maxRows ?? 50,
+      // The OSD wall — honeycomb is the view operators expect.
+      viewMode: data.viewMode ?? "honeycomb",
+      stateFilter: data.stateFilter,
+    },
+  };
+}
+
+function createCephPoolListComponent(data: {
+  title: string;
+  top: number;
+  left: number;
+  width: number;
+  height: number;
+  maxRows?: number;
+}): DashboardBaseComponent {
+  return {
+    _type: ObjectType.DashboardComponent,
+    componentType: DashboardComponentType.CephPoolList,
+    componentId: ObjectID.generate(),
+    topInDashboardUnits: data.top,
+    leftInDashboardUnits: data.left,
+    widthInDashboardUnits: data.width,
+    heightInDashboardUnits: data.height,
+    minHeightInDashboardUnits: 3,
+    minWidthInDashboardUnits: 4,
+    arguments: {
+      title: data.title,
+      maxRows: data.maxRows ?? 20,
+    },
+  };
+}
+
 // -- Dashboard configs --
 
 function createMonitorDashboardConfig(): DashboardViewConfig {
@@ -565,9 +835,25 @@ function createMonitorDashboardConfig(): DashboardViewConfig {
     }),
   ];
 
+  /*
+   * Monitor metrics are stored with bare attribute keys (`monitorName`,
+   * `probeName`) rather than the OTel `resource.*` prefix — see
+   * MonitorMetricUtil.buildAttributes — so the variable binds to the
+   * bare key. Multi-select lets users pin a small group of monitors.
+   */
+  const variables: Array<DashboardVariable> = [
+    createTelemetryAttributeVariable({
+      name: "monitor",
+      label: "Monitor",
+      attributeKey: "monitorName",
+      isMultiSelect: true,
+    }),
+  ];
+
   return {
     _type: ObjectType.DashboardViewConfig,
     components,
+    variables,
     heightInDashboardUnits: Math.max(DashboardSize.heightInDashboardUnits, 13),
   };
 }
@@ -839,12 +1125,13 @@ function createKubernetesDashboardConfig(): DashboardViewConfig {
    *   first-class percent metric we replace it with a Value widget that
    *   renders the absolute usage via ValueFormatter (e.g. "8.3 GB").
    *
-   * - CPU widgets use OTel's k8s.*.cpu.utilization, which the collector
-   *   emits as a [0, 1] ratio with unit "1". DashboardValueComponent /
-   *   DashboardGaugeComponent now scale that to a percent at render time
-   *   when the metric name carries the `.utilization` suffix, so "0.05"
-   *   reads as "5.00%" and gauge thresholds in the natural 0-100 scale work
-   *   as expected.
+   * - CPU widgets show cores, not a percent. OTel's k8s.*.cpu.utilization
+   *   is a misnamed cores gauge (cores in use, NOT a [0, 1] ratio), and
+   *   this templated dashboard's renderer can't divide by per-node
+   *   allocatable CPU to form a true percentage. So we use the `.usage`
+   *   metrics and label them in cores ("2.3 cores"). The Kubernetes
+   *   cluster overview page — which fetches `k8s.node.allocatable_cpu` —
+   *   is where CPU is shown as a real "% of capacity".
    */
   const components: Array<DashboardBaseComponent> = [
     // Row 0: Title
@@ -859,16 +1146,16 @@ function createKubernetesDashboardConfig(): DashboardViewConfig {
 
     /*
      * Row 1: Key cluster metrics — averages render with proper units via
-     * ValueFormatter (CPU utilization → "%", memory.usage → "MB"/"GB").
+     * ValueFormatter (CPU usage → cores, memory.usage → "MB"/"GB").
      * All four are "higher = worse" (closer to capacity = bad).
      */
     createValueComponent({
-      title: "Pod CPU (avg)",
+      title: "Pod CPU (cores, avg)",
       top: 1,
       left: 0,
       width: 3,
       metricConfig: {
-        metricName: "k8s.pod.cpu.utilization",
+        metricName: "k8s.pod.cpu.usage",
         aggregationType: MetricsAggregationType.Avg,
       },
       trendDirection: DashboardValueTrendDirection.HigherIsWorse,
@@ -885,12 +1172,12 @@ function createKubernetesDashboardConfig(): DashboardViewConfig {
       trendDirection: DashboardValueTrendDirection.HigherIsWorse,
     }),
     createValueComponent({
-      title: "Node CPU (avg)",
+      title: "Node CPU (cores, avg)",
       top: 1,
       left: 6,
       width: 3,
       metricConfig: {
-        metricName: "k8s.node.cpu.utilization",
+        metricName: "k8s.node.cpu.usage",
         aggregationType: MetricsAggregationType.Avg,
       },
       trendDirection: DashboardValueTrendDirection.HigherIsWorse,
@@ -909,16 +1196,16 @@ function createKubernetesDashboardConfig(): DashboardViewConfig {
 
     // Row 2-4: Resource usage charts
     createChartComponent({
-      title: "CPU Usage Over Time",
+      title: "Pod CPU Cores Over Time",
       chartType: DashboardChartType.Line,
       top: 2,
       left: 0,
       width: 6,
       height: 3,
       metricConfig: {
-        metricName: "k8s.pod.cpu.utilization",
+        metricName: "k8s.pod.cpu.usage",
         aggregationType: MetricsAggregationType.Avg,
-        legend: "CPU Utilization",
+        legend: "CPU Cores",
       },
     }),
     createChartComponent({
@@ -978,24 +1265,24 @@ function createKubernetesDashboardConfig(): DashboardViewConfig {
     }),
 
     /*
-     * Row 11-13: CPU gauge (auto-scaled from [0,1] to percent), and the
-     * network throughput chart. The old "Memory Utilization" gauge over
-     * raw bytes is gone — see top-of-function comment.
+     * Row 11-13: cluster CPU cores tile and the network throughput
+     * chart. This was a 0-100 CPU gauge, but the cores-valued
+     * `k8s.node.cpu.utilization` pinned it to nonsense (e.g. 711%) and
+     * the templated renderer can't divide by allocatable CPU to make a
+     * real percentage — so we show total cores in use instead. The old
+     * "Memory Utilization" gauge over raw bytes is gone — see
+     * top-of-function comment.
      */
-    createGaugeComponent({
-      title: "Cluster CPU Utilization",
+    createValueComponent({
+      title: "Cluster CPU (cores in use)",
       top: 11,
       left: 0,
       width: 4,
-      height: 3,
-      minValue: 0,
-      maxValue: 100,
-      warningThreshold: 70,
-      criticalThreshold: 90,
       metricConfig: {
-        metricName: "k8s.node.cpu.utilization",
-        aggregationType: MetricsAggregationType.Avg,
+        metricName: "k8s.node.cpu.usage",
+        aggregationType: MetricsAggregationType.Sum,
       },
+      trendDirection: DashboardValueTrendDirection.HigherIsWorse,
     }),
     createChartComponent({
       title: "Network I/O",
@@ -1057,9 +1344,31 @@ function createKubernetesDashboardConfig(): DashboardViewConfig {
     }),
   ];
 
+  /*
+   * Pre-built variables let the user scope every widget on the dashboard
+   * to a single cluster / namespace from the toolbar. Multi-select is on
+   * for namespace so users can pick a couple of namespaces at once;
+   * cluster stays single-select since the typical "compare two clusters"
+   * workflow lives on the Compare page.
+   */
+  const variables: Array<DashboardVariable> = [
+    createTelemetryAttributeVariable({
+      name: "cluster",
+      label: "Cluster",
+      attributeKey: "resource.k8s.cluster.name",
+    }),
+    createTelemetryAttributeVariable({
+      name: "namespace",
+      label: "Namespace",
+      attributeKey: "resource.k8s.namespace.name",
+      isMultiSelect: true,
+    }),
+  ];
+
   return {
     _type: ObjectType.DashboardViewConfig,
     components,
+    variables,
     heightInDashboardUnits: Math.max(DashboardSize.heightInDashboardUnits, 21),
   };
 }
@@ -1377,10 +1686,736 @@ function createMetricsDashboardConfig(): DashboardViewConfig {
     }),
   ];
 
+  /*
+   * Most HTTP / runtime metrics on this dashboard carry the standard
+   * OTel `resource.service.name` attribute, so scoping by service is
+   * the most useful default. Multi-select keeps the cross-service view
+   * available — e.g. compare API and worker on one chart.
+   */
+  const variables: Array<DashboardVariable> = [
+    createTelemetryAttributeVariable({
+      name: "service",
+      label: "Service",
+      attributeKey: "resource.service.name",
+      isMultiSelect: true,
+    }),
+  ];
+
   return {
     _type: ObjectType.DashboardViewConfig,
     components,
+    variables,
     heightInDashboardUnits: Math.max(DashboardSize.heightInDashboardUnits, 24),
+  };
+}
+
+function createHostDashboardConfig(): DashboardViewConfig {
+  /*
+   * Layout notes:
+   *
+   * - Per-host charts fan out via `groupByAttributeKeys: ["host.name"]`
+   *   so a single chart renders one series per host. The OTel host
+   *   receiver emits `system.cpu.utilization` as a [0, 1] ratio, which
+   *   Value/Gauge widgets auto-scale to percent at render time (see
+   *   splitFormattedValue / isFractionScale).
+   *
+   * - The Value widget for "Avg Memory" uses `system.memory.usage`
+   *   (bytes) and is auto-formatted to MB/GB by ValueFormatter, since
+   *   `system.memory.utilization` is not always emitted by default OTel
+   *   host metrics.
+   *
+   * - Disk and Network I/O charts set `transformAsRate: true` so the
+   *   cumulative byte counters render as per-second rates rather than
+   *   bytes-since-boot. The matching Value tiles in row 1 keep the
+   *   unrated Sum so users see an absolute byte figure over the window.
+   */
+  const components: Array<DashboardBaseComponent> = [
+    // Row 0: Title
+    createTextComponent({
+      text: "Hosts Dashboard",
+      top: 0,
+      left: 0,
+      width: 12,
+      height: 1,
+      isBold: true,
+    }),
+
+    // Row 1: Key host metrics
+    createValueComponent({
+      title: "Avg CPU",
+      top: 1,
+      left: 0,
+      width: 3,
+      metricConfig: {
+        metricName: MetricDashboardMetricType.SystemCpuUtilization,
+        aggregationType: MetricsAggregationType.Avg,
+      },
+      trendDirection: DashboardValueTrendDirection.HigherIsWorse,
+    }),
+    createValueComponent({
+      title: "Avg Memory",
+      top: 1,
+      left: 3,
+      width: 3,
+      metricConfig: {
+        metricName: MetricDashboardMetricType.SystemMemoryUsage,
+        aggregationType: MetricsAggregationType.Avg,
+      },
+      trendDirection: DashboardValueTrendDirection.HigherIsWorse,
+    }),
+    createValueComponent({
+      title: "Disk I/O",
+      top: 1,
+      left: 6,
+      width: 3,
+      metricConfig: {
+        metricName: MetricDashboardMetricType.SystemDiskIo,
+        aggregationType: MetricsAggregationType.Sum,
+      },
+      trendDirection: DashboardValueTrendDirection.HigherIsBetter,
+    }),
+    createValueComponent({
+      title: "Network I/O",
+      top: 1,
+      left: 9,
+      width: 3,
+      metricConfig: {
+        metricName: MetricDashboardMetricType.SystemNetworkIo,
+        aggregationType: MetricsAggregationType.Sum,
+      },
+      trendDirection: DashboardValueTrendDirection.HigherIsBetter,
+    }),
+
+    // Row 2-4: Per-host CPU and Memory charts
+    createChartComponent({
+      title: "CPU Utilization by Host",
+      chartType: DashboardChartType.Line,
+      top: 2,
+      left: 0,
+      width: 6,
+      height: 3,
+      metricConfig: {
+        metricName: MetricDashboardMetricType.SystemCpuUtilization,
+        aggregationType: MetricsAggregationType.Avg,
+        groupByAttributeKeys: ["host.name"],
+      },
+    }),
+    createChartComponent({
+      title: "Memory Usage by Host",
+      chartType: DashboardChartType.Line,
+      top: 2,
+      left: 6,
+      width: 6,
+      height: 3,
+      metricConfig: {
+        metricName: MetricDashboardMetricType.SystemMemoryUsage,
+        aggregationType: MetricsAggregationType.Avg,
+        groupByAttributeKeys: ["host.name"],
+      },
+    }),
+
+    // Row 5: Section header
+    createTextComponent({
+      text: "Hosts",
+      top: 5,
+      left: 0,
+      width: 12,
+      height: 1,
+      isBold: true,
+    }),
+
+    /*
+     * Row 6-9: Live host inventory. The widget reads the Postgres host
+     * snapshot, so the header shows the true current count and rows
+     * link to per-host detail pages.
+     */
+    createHostListComponent({
+      title: "All Hosts",
+      top: 6,
+      left: 0,
+      width: 12,
+      height: 4,
+      maxRows: 25,
+    }),
+
+    // Row 10: Section header
+    createTextComponent({
+      text: "Resource Health",
+      top: 10,
+      left: 0,
+      width: 12,
+      height: 1,
+      isBold: true,
+    }),
+
+    /*
+     * Row 11-13: CPU gauge (auto-scaled from [0,1] ratio to percent),
+     * alongside the filesystem-usage chart so capacity pressure is
+     * visible per host.
+     */
+    createGaugeComponent({
+      title: "Avg CPU Utilization",
+      top: 11,
+      left: 0,
+      width: 4,
+      height: 3,
+      minValue: 0,
+      maxValue: 100,
+      warningThreshold: 70,
+      criticalThreshold: 90,
+      metricConfig: {
+        metricName: MetricDashboardMetricType.SystemCpuUtilization,
+        aggregationType: MetricsAggregationType.Avg,
+      },
+    }),
+    createChartComponent({
+      title: "Filesystem Usage by Host",
+      chartType: DashboardChartType.Line,
+      top: 11,
+      left: 4,
+      width: 8,
+      height: 3,
+      metricConfig: {
+        metricName: "system.filesystem.usage",
+        aggregationType: MetricsAggregationType.Avg,
+        groupByAttributeKeys: ["host.name"],
+      },
+    }),
+
+    // Row 14: Section header
+    createTextComponent({
+      text: "I/O Activity",
+      top: 14,
+      left: 0,
+      width: 12,
+      height: 1,
+      isBold: true,
+    }),
+
+    // Row 15-17: Disk and network I/O rates per host
+    createChartComponent({
+      title: "Disk I/O by Host",
+      chartType: DashboardChartType.Line,
+      top: 15,
+      left: 0,
+      width: 6,
+      height: 3,
+      metricConfig: {
+        metricName: MetricDashboardMetricType.SystemDiskIo,
+        aggregationType: MetricsAggregationType.Sum,
+        groupByAttributeKeys: ["host.name"],
+        transformAsRate: true,
+      },
+    }),
+    createChartComponent({
+      title: "Network I/O by Host",
+      chartType: DashboardChartType.Line,
+      top: 15,
+      left: 6,
+      width: 6,
+      height: 3,
+      metricConfig: {
+        metricName: MetricDashboardMetricType.SystemNetworkIo,
+        aggregationType: MetricsAggregationType.Sum,
+        groupByAttributeKeys: ["host.name"],
+        transformAsRate: true,
+      },
+    }),
+
+    // Row 18: Section header
+    createTextComponent({
+      text: "Processes & Logs",
+      top: 18,
+      left: 0,
+      width: 12,
+      height: 1,
+      isBold: true,
+    }),
+
+    // Row 19-21: Process count chart and recent logs
+    createChartComponent({
+      title: "Process Count by Host",
+      chartType: DashboardChartType.Line,
+      top: 19,
+      left: 0,
+      width: 6,
+      height: 3,
+      metricConfig: {
+        metricName: "system.processes.count",
+        aggregationType: MetricsAggregationType.Avg,
+        groupByAttributeKeys: ["host.name"],
+      },
+    }),
+    createLogStreamComponent({
+      title: "Recent Logs",
+      top: 19,
+      left: 6,
+      width: 6,
+      height: 3,
+    }),
+  ];
+
+  /*
+   * Per-host scoping: the variable defaults to multi-select because the
+   * dashboard's by-host charts already split rendering per host; the
+   * selector lets users narrow to a subset (e.g. just two prod hosts)
+   * without losing the per-host breakdown.
+   */
+  const variables: Array<DashboardVariable> = [
+    createTelemetryAttributeVariable({
+      name: "host",
+      label: "Host",
+      attributeKey: "resource.host.name",
+      isMultiSelect: true,
+    }),
+  ];
+
+  return {
+    _type: ObjectType.DashboardViewConfig,
+    components,
+    variables,
+    heightInDashboardUnits: Math.max(DashboardSize.heightInDashboardUnits, 22),
+  };
+}
+
+function createProxmoxDashboardConfig(): DashboardViewConfig {
+  /*
+   * Layout notes:
+   *
+   * - Node / guest counts come from the Postgres inventory list widgets,
+   *   never from Sum-of-gauge Value widgets — pve_up re-emits 1 on every
+   *   scrape, so summing it across the dashboard window multiplies
+   *   (resources x scrapes), the exact failure the Kubernetes template
+   *   documents. The list-widget headers show the true current counts.
+   *
+   * - Template metric widgets cannot filter on datapoint attributes, so
+   *   the CPU / memory charts average across every PVE object that
+   *   reports the metric (nodes AND guests — pve-exporter emits
+   *   pve_cpu_usage_ratio / pve_memory_usage_bytes for both scopes).
+   *   That is a useful temperature signal for a wall dashboard; the
+   *   per-scope, capacity-weighted versions live on the cluster
+   *   Overview page.
+   *
+   * - pve_network_*_bytes are cumulative counters, so the throughput
+   *   charts use transformAsRate.
+   */
+  const components: Array<DashboardBaseComponent> = [
+    // Row 0: Title
+    createTextComponent({
+      text: "Proxmox Dashboard",
+      top: 0,
+      left: 0,
+      width: 12,
+      height: 1,
+      isBold: true,
+    }),
+
+    // Rows 1-4: Live inventory from the Postgres snapshot
+    createProxmoxNodeListComponent({
+      title: "Nodes",
+      top: 1,
+      left: 0,
+      width: 6,
+      height: 4,
+      maxRows: 25,
+    }),
+    createProxmoxGuestListComponent({
+      title: "Guests",
+      top: 1,
+      left: 6,
+      width: 6,
+      height: 4,
+      maxRows: 25,
+    }),
+
+    // Row 5: Section header
+    createTextComponent({
+      text: "Resource Usage",
+      top: 5,
+      left: 0,
+      width: 12,
+      height: 1,
+      isBold: true,
+    }),
+
+    // Rows 6-8: CPU and memory trends
+    createChartComponent({
+      title: "CPU Usage Ratio (avg across nodes & guests)",
+      chartType: DashboardChartType.Line,
+      top: 6,
+      left: 0,
+      width: 6,
+      height: 3,
+      metricConfig: {
+        metricName: "pve_cpu_usage_ratio",
+        aggregationType: MetricsAggregationType.Avg,
+        legend: "CPU ratio",
+      },
+    }),
+    createChartComponent({
+      title: "Memory Usage (avg across nodes & guests)",
+      chartType: DashboardChartType.Area,
+      top: 6,
+      left: 6,
+      width: 6,
+      height: 3,
+      metricConfig: {
+        metricName: "pve_memory_usage_bytes",
+        aggregationType: MetricsAggregationType.Avg,
+        legend: "Memory used",
+      },
+    }),
+
+    // Rows 9-11: Network throughput (cumulative counters -> rate)
+    createChartComponent({
+      title: "Network Receive Throughput",
+      chartType: DashboardChartType.Area,
+      top: 9,
+      left: 0,
+      width: 6,
+      height: 3,
+      metricConfig: {
+        metricName: "pve_network_receive_bytes",
+        aggregationType: MetricsAggregationType.Sum,
+        legend: "RX bytes/sec",
+        transformAsRate: true,
+      },
+    }),
+    createChartComponent({
+      title: "Network Transmit Throughput",
+      chartType: DashboardChartType.Area,
+      top: 9,
+      left: 6,
+      width: 6,
+      height: 3,
+      metricConfig: {
+        metricName: "pve_network_transmit_bytes",
+        aggregationType: MetricsAggregationType.Sum,
+        legend: "TX bytes/sec",
+        transformAsRate: true,
+      },
+    }),
+
+    // Rows 12-14: Logs
+    createLogStreamComponent({
+      title: "Cluster Logs",
+      top: 12,
+      left: 0,
+      width: 12,
+      height: 3,
+    }),
+  ];
+
+  const variables: Array<DashboardVariable> = [
+    createTelemetryAttributeVariable({
+      name: "cluster",
+      label: "Cluster",
+      attributeKey: "resource.proxmox.cluster.name",
+    }),
+  ];
+
+  return {
+    _type: ObjectType.DashboardViewConfig,
+    components,
+    variables,
+    heightInDashboardUnits: Math.max(DashboardSize.heightInDashboardUnits, 15),
+  };
+}
+
+function createDockerSwarmDashboardConfig(): DashboardViewConfig {
+  /*
+   * Layout notes:
+   *
+   * - Node / service counts come from the Postgres inventory list widgets
+   *   (DockerSwarmResource), never from Sum-of-gauge Value widgets — the
+   *   same multiply-by-scrapes failure the Kubernetes/Proxmox templates
+   *   document. The list-widget headers show the true current counts.
+   *
+   * - The only metrics that actually arrive are the docker_stats
+   *   receiver's per-container metrics (container.cpu.utilization,
+   *   container.memory.usage.total, container.pids.count, …). There are
+   *   NO docker_swarm_* / pve_* metrics, so the charts average those
+   *   per-container metrics across every task that reports them — a
+   *   useful temperature signal for a wall dashboard. container.cpu
+   *   .utilization is a ratio (0..1 per core); the chart leaves it raw.
+   *
+   * - The cluster variable scopes telemetry by the only resource
+   *   attribute the agent stamps: resource.docker.swarm.cluster.name.
+   */
+  const components: Array<DashboardBaseComponent> = [
+    // Row 0: Title
+    createTextComponent({
+      text: "Docker Swarm Dashboard",
+      top: 0,
+      left: 0,
+      width: 12,
+      height: 1,
+      isBold: true,
+    }),
+
+    // Rows 1-4: Live inventory from the Postgres snapshot
+    createDockerSwarmNodeListComponent({
+      title: "Nodes",
+      top: 1,
+      left: 0,
+      width: 6,
+      height: 4,
+      maxRows: 25,
+    }),
+    createDockerSwarmServiceListComponent({
+      title: "Services",
+      top: 1,
+      left: 6,
+      width: 6,
+      height: 4,
+      maxRows: 25,
+    }),
+
+    // Row 5: Section header
+    createTextComponent({
+      text: "Container Resource Usage",
+      top: 5,
+      left: 0,
+      width: 12,
+      height: 1,
+      isBold: true,
+    }),
+
+    // Rows 6-8: CPU and memory trends (docker_stats per-container metrics)
+    createChartComponent({
+      title: "CPU Utilization (avg across containers)",
+      chartType: DashboardChartType.Line,
+      top: 6,
+      left: 0,
+      width: 6,
+      height: 3,
+      metricConfig: {
+        metricName: "container.cpu.utilization",
+        aggregationType: MetricsAggregationType.Avg,
+        legend: "CPU utilization",
+      },
+    }),
+    createChartComponent({
+      title: "Memory Usage (avg across containers)",
+      chartType: DashboardChartType.Area,
+      top: 6,
+      left: 6,
+      width: 6,
+      height: 3,
+      metricConfig: {
+        metricName: "container.memory.usage.total",
+        aggregationType: MetricsAggregationType.Avg,
+        legend: "Memory used",
+      },
+    }),
+
+    // Rows 9-11: PID counts + logs
+    createChartComponent({
+      title: "Process Count (sum across containers)",
+      chartType: DashboardChartType.Line,
+      top: 9,
+      left: 0,
+      width: 6,
+      height: 3,
+      metricConfig: {
+        metricName: "container.pids.count",
+        aggregationType: MetricsAggregationType.Sum,
+        legend: "PIDs",
+      },
+    }),
+    createLogStreamComponent({
+      title: "Cluster Logs",
+      top: 9,
+      left: 6,
+      width: 6,
+      height: 3,
+    }),
+  ];
+
+  const variables: Array<DashboardVariable> = [
+    createTelemetryAttributeVariable({
+      name: "cluster",
+      label: "Cluster",
+      attributeKey: "resource.docker.swarm.cluster.name",
+    }),
+  ];
+
+  return {
+    _type: ObjectType.DashboardViewConfig,
+    components,
+    variables,
+    heightInDashboardUnits: Math.max(DashboardSize.heightInDashboardUnits, 12),
+  };
+}
+
+function createCephDashboardConfig(): DashboardViewConfig {
+  /*
+   * Layout notes:
+   *
+   * - The OSD wall (honeycomb) and pool capacity list read the Postgres
+   *   inventory, so their headers show true current counts — same
+   *   Sum-of-gauge reasoning as the Kubernetes / Proxmox templates.
+   *
+   * - ceph_health_status is a single per-cluster gauge (0 OK / 1 WARN /
+   *   2 ERR), so a Max Value widget renders it correctly.
+   *
+   * - ceph_pool_rd_bytes / ceph_pool_wr_bytes are cumulative counters,
+   *   so the client-throughput charts use transformAsRate.
+   */
+  const components: Array<DashboardBaseComponent> = [
+    // Row 0: Title
+    createTextComponent({
+      text: "Ceph Dashboard",
+      top: 0,
+      left: 0,
+      width: 12,
+      height: 1,
+      isBold: true,
+    }),
+
+    // Rows 1-4: Live inventory from the Postgres snapshot
+    createCephOsdListComponent({
+      title: "OSDs",
+      top: 1,
+      left: 0,
+      width: 6,
+      height: 4,
+      maxRows: 100,
+    }),
+    createCephPoolListComponent({
+      title: "Pools",
+      top: 1,
+      left: 6,
+      width: 6,
+      height: 4,
+      maxRows: 25,
+    }),
+
+    // Row 5: Section header
+    createTextComponent({
+      text: "Health & Capacity",
+      top: 5,
+      left: 0,
+      width: 12,
+      height: 1,
+      isBold: true,
+    }),
+
+    // Row 6: Health and capacity stats
+    createValueComponent({
+      title: "Health (0 OK / 1 WARN / 2 ERR)",
+      top: 6,
+      left: 0,
+      width: 4,
+      metricConfig: {
+        metricName: "ceph_health_status",
+        aggregationType: MetricsAggregationType.Max,
+      },
+      trendDirection: DashboardValueTrendDirection.HigherIsWorse,
+    }),
+    createValueComponent({
+      title: "Capacity Used",
+      top: 6,
+      left: 4,
+      width: 4,
+      metricConfig: {
+        metricName: "ceph_cluster_total_used_bytes",
+        aggregationType: MetricsAggregationType.Avg,
+      },
+      trendDirection: DashboardValueTrendDirection.HigherIsWorse,
+    }),
+    createValueComponent({
+      title: "Capacity Total",
+      top: 6,
+      left: 8,
+      width: 4,
+      metricConfig: {
+        metricName: "ceph_cluster_total_bytes",
+        aggregationType: MetricsAggregationType.Avg,
+      },
+    }),
+
+    // Rows 7-9: Capacity growth and PG health
+    createChartComponent({
+      title: "Capacity Used Over Time",
+      chartType: DashboardChartType.Area,
+      top: 7,
+      left: 0,
+      width: 6,
+      height: 3,
+      metricConfig: {
+        metricName: "ceph_cluster_total_used_bytes",
+        aggregationType: MetricsAggregationType.Avg,
+        legend: "Used bytes",
+      },
+    }),
+    createChartComponent({
+      title: "Degraded PGs",
+      chartType: DashboardChartType.Line,
+      top: 7,
+      left: 6,
+      width: 6,
+      height: 3,
+      metricConfig: {
+        metricName: "ceph_pg_degraded",
+        aggregationType: MetricsAggregationType.Max,
+        legend: "Degraded PGs",
+      },
+    }),
+
+    // Rows 10-12: Client throughput (cumulative counters -> rate)
+    createChartComponent({
+      title: "Client Read Throughput",
+      chartType: DashboardChartType.Area,
+      top: 10,
+      left: 0,
+      width: 6,
+      height: 3,
+      metricConfig: {
+        metricName: "ceph_pool_rd_bytes",
+        aggregationType: MetricsAggregationType.Sum,
+        legend: "Read bytes/sec",
+        transformAsRate: true,
+      },
+    }),
+    createChartComponent({
+      title: "Client Write Throughput",
+      chartType: DashboardChartType.Area,
+      top: 10,
+      left: 6,
+      width: 6,
+      height: 3,
+      metricConfig: {
+        metricName: "ceph_pool_wr_bytes",
+        aggregationType: MetricsAggregationType.Sum,
+        legend: "Write bytes/sec",
+        transformAsRate: true,
+      },
+    }),
+
+    // Rows 13-15: Logs (the agent's filelog receiver ships ceph.log)
+    createLogStreamComponent({
+      title: "Cluster Logs",
+      top: 13,
+      left: 0,
+      width: 12,
+      height: 3,
+    }),
+  ];
+
+  const variables: Array<DashboardVariable> = [
+    createTelemetryAttributeVariable({
+      name: "cluster",
+      label: "Cluster",
+      attributeKey: "resource.ceph.cluster.name",
+    }),
+  ];
+
+  return {
+    _type: ObjectType.DashboardViewConfig,
+    components,
+    variables,
+    heightInDashboardUnits: Math.max(DashboardSize.heightInDashboardUnits, 16),
   };
 }
 
@@ -1394,6 +2429,14 @@ export function getTemplateConfig(
       return createIncidentDashboardConfig();
     case DashboardTemplateType.Kubernetes:
       return createKubernetesDashboardConfig();
+    case DashboardTemplateType.Host:
+      return createHostDashboardConfig();
+    case DashboardTemplateType.Proxmox:
+      return createProxmoxDashboardConfig();
+    case DashboardTemplateType.Ceph:
+      return createCephDashboardConfig();
+    case DashboardTemplateType.DockerSwarm:
+      return createDockerSwarmDashboardConfig();
     case DashboardTemplateType.Metrics:
       return createMetricsDashboardConfig();
     case DashboardTemplateType.Blank:

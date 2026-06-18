@@ -307,6 +307,16 @@ export class TelemetryAttributeService {
       );
     }
 
+    /*
+     * Cap runtime below the ClickHouse client's 58s request_timeout so a
+     * slow scan on a large project can't hold a pool connection for the
+     * full timeout. 'break' returns partial keys, which is fine for an
+     * attribute-key picker (matches the findBy / aggregation read paths).
+     */
+    statement.append(
+      " SETTINGS max_execution_time = 45, timeout_overflow_mode = 'break'",
+    );
+
     return statement;
   }
 
@@ -364,6 +374,7 @@ export class TelemetryAttributeService {
     telemetryType: TelemetryType;
     metricName?: string | undefined;
     attributeKey: string;
+    searchText?: string | undefined;
   }): Promise<string[]> {
     const source: TelemetrySource | null = this.getTelemetrySource(
       data.telemetryType,
@@ -378,15 +389,17 @@ export class TelemetryAttributeService {
       source,
       metricName: data.metricName,
       attributeKey: data.attributeKey,
+      searchText: data.searchText,
     });
   }
 
-  private static async fetchAttributeValuesFromDatabase(data: {
+  private static buildAttributeValuesStatement(data: {
     projectId: ObjectID;
     source: TelemetrySource;
     metricName?: string | undefined;
     attributeKey: string;
-  }): Promise<Array<string>> {
+    searchText?: string | undefined;
+  }): Statement {
     const lookbackStartDate: Date =
       TelemetryAttributeService.getLookbackStartDate();
 
@@ -419,6 +432,26 @@ export class TelemetryAttributeService {
       );
     }
 
+    /*
+     * Case-insensitive substring filter so the value autocomplete keeps
+     * narrowing server-side as the user types. Without it only the first
+     * ATTRIBUTE_VALUES_LIMIT values (alphabetically) are ever reachable,
+     * which hides matches on high-cardinality keys (host.name, url, ...).
+     * Mirrors the ILIKE idiom used for bodySearchText / nameSearchText.
+     */
+    if (data.searchText && data.searchText.trim().length > 0) {
+      statement.append(
+        SQL`
+        AND ${data.source.attributesColumn}[${{
+          type: TableColumnType.Text,
+          value: data.attributeKey,
+        }}] ILIKE ${{
+          type: TableColumnType.Text,
+          value: `%${data.searchText.trim()}%`,
+        }}`,
+      );
+    }
+
     statement.append(
       SQL`
       ORDER BY attributeValue ASC
@@ -427,6 +460,29 @@ export class TelemetryAttributeService {
         value: TelemetryAttributeService.ATTRIBUTE_VALUES_LIMIT,
       }}`,
     );
+
+    /*
+     * Cap runtime below the client's 58s request_timeout. This value
+     * autocomplete runs per keystroke and scans a Map subscript, so a
+     * pathological key/project must not hold a pool connection; 'break'
+     * returns partial values, acceptable for autocomplete.
+     */
+    statement.append(
+      " SETTINGS max_execution_time = 45, timeout_overflow_mode = 'break'",
+    );
+
+    return statement;
+  }
+
+  private static async fetchAttributeValuesFromDatabase(data: {
+    projectId: ObjectID;
+    source: TelemetrySource;
+    metricName?: string | undefined;
+    attributeKey: string;
+    searchText?: string | undefined;
+  }): Promise<Array<string>> {
+    const statement: Statement =
+      TelemetryAttributeService.buildAttributeValuesStatement(data);
 
     const dbResult: Results = await data.source.service.executeQuery(statement);
     const response: DbJSONResponse = await dbResult.json<{

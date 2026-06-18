@@ -12,6 +12,7 @@ import UserOverrideUtil, {
 import StartAndEndTime from "Common/Types/Time/StartAndEndTime";
 import SortOrder from "Common/Types/BaseDatabase/SortOrder";
 import GreaterThanOrEqual from "Common/Types/BaseDatabase/GreaterThanOrEqual";
+import IsNull from "Common/Types/BaseDatabase/IsNull";
 import LessThanOrEqual from "Common/Types/BaseDatabase/LessThanOrEqual";
 import { LIMIT_PER_PROJECT } from "Common/Types/Database/LimitMax";
 import Calendar from "Common/UI/Components/Calendar/Calendar";
@@ -88,11 +89,19 @@ const formatUserLabel: (info: UserInfo | undefined) => string = (
 const LayersPreview: FunctionComponent<ComponentProps> = (
   props: ComponentProps,
 ): ReactElement => {
+  /*
+   * Seed the visible range to the current week so the initial render generates
+   * events for the whole week the calendar actually shows. The calendar below
+   * uses react-big-calendar's default "week" view, but react-big-calendar does
+   * not fire onRangeChange on initial mount (only on navigation / view switch).
+   * Initializing to a single day made the calendar show just one occurrence
+   * until a view was toggled. https://github.com/OneUptime/oneuptime/issues/2466
+   */
   const [startTime, setStartTime] = useState<Date>(
-    OneUptimeDate.getStartOfDay(OneUptimeDate.getCurrentDate()),
+    OneUptimeDate.getStartOfTheWeek(OneUptimeDate.getCurrentDate()),
   );
   const [endTime, setEndTime] = useState<Date>(
-    OneUptimeDate.getEndOfDay(OneUptimeDate.getCurrentDate()),
+    OneUptimeDate.getEndOfTheWeek(OneUptimeDate.getCurrentDate()),
   );
 
   const [calendarEvents, setCalendarEvents] = useState<Array<CalendarEvent>>(
@@ -133,6 +142,12 @@ const LayersPreview: FunctionComponent<ComponentProps> = (
   /*
    * Fetch user overrides that touch this calendar window and apply to any
    * user already present in this schedule. Refetches when the range changes.
+   *
+   * The schedule preview has no policy context (a schedule can be referenced
+   * by many policies via escalation rules), so only global overrides are
+   * shown here. Policy-scoped overrides are intentionally excluded — surfacing
+   * them in a policy-less view would misrepresent how they actually apply
+   * during alert dispatch.
    */
   useEffect(() => {
     const projectId: string =
@@ -154,6 +169,7 @@ const LayersPreview: FunctionComponent<ComponentProps> = (
               projectId: ProjectUtil.getCurrentProjectId()!,
               startsAt: new LessThanOrEqual<Date>(endTime),
               endsAt: new GreaterThanOrEqual<Date>(startTime),
+              onCallDutyPolicyId: new IsNull(),
             },
             limit: LIMIT_PER_PROJECT,
             skip: 0,

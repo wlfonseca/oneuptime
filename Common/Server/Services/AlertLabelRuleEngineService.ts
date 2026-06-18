@@ -1,13 +1,23 @@
 import Alert from "../../Models/DatabaseModels/Alert";
 import AlertLabelRule from "../../Models/DatabaseModels/AlertLabelRule";
 import AlertSeverity from "../../Models/DatabaseModels/AlertSeverity";
+import DockerHost from "../../Models/DatabaseModels/DockerHost";
+import Host from "../../Models/DatabaseModels/Host";
+import KubernetesCluster from "../../Models/DatabaseModels/KubernetesCluster";
 import Label from "../../Models/DatabaseModels/Label";
 import Monitor from "../../Models/DatabaseModels/Monitor";
+import PodmanHost from "../../Models/DatabaseModels/PodmanHost";
+import Service from "../../Models/DatabaseModels/Service";
 import AlertFeedService from "./AlertFeedService";
 import AlertLabelRuleService from "./AlertLabelRuleService";
 import AlertService from "./AlertService";
+import DockerHostService from "./DockerHostService";
+import PodmanHostService from "./PodmanHostService";
+import HostService from "./HostService";
+import KubernetesClusterService from "./KubernetesClusterService";
 import LabelService from "./LabelService";
 import MonitorService from "./MonitorService";
+import ServiceService from "./ServiceService";
 import { AlertFeedEventType } from "../../Models/DatabaseModels/AlertFeed";
 import { Indigo500 } from "../../Types/BrandColors";
 import ObjectID from "../../Types/ObjectID";
@@ -22,6 +32,11 @@ class AlertLabelRuleEngineServiceClass {
    * labels to the alert. Each matched rule contributes:
    *   - labels listed on `labelsToAdd`
    *   - all labels of the alert's monitor when `inheritLabelsFromMonitors`
+   *   - all labels of the alert's hosts when `inheritLabelsFromHosts`
+   *   - all labels of the alert's Kubernetes clusters when `inheritLabelsFromKubernetesClusters`
+   *   - all labels of the alert's Docker hosts when `inheritLabelsFromDockerHosts`
+   *   - all labels of the alert's Podman hosts when `inheritLabelsFromPodmanHosts`
+   *   - all labels of the alert's services when `inheritLabelsFromServices`
    * The union is deduped against labels already on the alert before insert
    * to avoid PK conflicts on the AlertLabel join table.
    */
@@ -51,6 +66,11 @@ class AlertLabelRuleEngineServiceClass {
           monitorDescriptionPattern: true,
           labelsToAdd: { _id: true },
           inheritLabelsFromMonitors: true,
+          inheritLabelsFromHosts: true,
+          inheritLabelsFromKubernetesClusters: true,
+          inheritLabelsFromDockerHosts: true,
+          inheritLabelsFromPodmanHosts: true,
+          inheritLabelsFromServices: true,
         },
         limit: 100,
         skip: 0,
@@ -62,6 +82,11 @@ class AlertLabelRuleEngineServiceClass {
 
       const labelIdsToAdd: Set<string> = new Set();
       let inheritFromMonitors: boolean = false;
+      let inheritFromHosts: boolean = false;
+      let inheritFromKubernetesClusters: boolean = false;
+      let inheritFromDockerHosts: boolean = false;
+      let inheritFromPodmanHosts: boolean = false;
+      let inheritFromServices: boolean = false;
       const matchedRules: Array<AlertLabelRule> = [];
 
       for (const rule of rules) {
@@ -78,6 +103,43 @@ class AlertLabelRuleEngineServiceClass {
         if (rule.inheritLabelsFromMonitors) {
           inheritFromMonitors = true;
         }
+        if (rule.inheritLabelsFromHosts) {
+          inheritFromHosts = true;
+        }
+        if (rule.inheritLabelsFromKubernetesClusters) {
+          inheritFromKubernetesClusters = true;
+        }
+        if (rule.inheritLabelsFromDockerHosts) {
+          inheritFromDockerHosts = true;
+        }
+        if (rule.inheritLabelsFromPodmanHosts) {
+          inheritFromPodmanHosts = true;
+        }
+        if (rule.inheritLabelsFromServices) {
+          inheritFromServices = true;
+        }
+      }
+
+      const needsRelatedResources: boolean =
+        inheritFromHosts ||
+        inheritFromKubernetesClusters ||
+        inheritFromDockerHosts ||
+        inheritFromPodmanHosts ||
+        inheritFromServices;
+
+      let alertWithResources: Alert | null = null;
+      if (needsRelatedResources) {
+        alertWithResources = await AlertService.findOneById({
+          id: alert.id,
+          select: {
+            hosts: { _id: true },
+            kubernetesClusters: { _id: true },
+            dockerHosts: { _id: true },
+            podmanHosts: { _id: true },
+            services: { _id: true },
+          },
+          props: { isRoot: true },
+        });
       }
 
       if (inheritFromMonitors && alert.monitorId) {
@@ -89,6 +151,102 @@ class AlertLabelRuleEngineServiceClass {
         for (const label of monitor?.labels || []) {
           if (label.id) {
             labelIdsToAdd.add(label.id.toString());
+          }
+        }
+      }
+
+      if (inheritFromHosts && alertWithResources?.hosts?.length) {
+        for (const alertHost of alertWithResources.hosts) {
+          if (!alertHost.id) {
+            continue;
+          }
+          const host: Host | null = await HostService.findOneById({
+            id: alertHost.id,
+            select: { labels: { _id: true } },
+            props: { isRoot: true },
+          });
+          for (const label of host?.labels || []) {
+            if (label.id) {
+              labelIdsToAdd.add(label.id.toString());
+            }
+          }
+        }
+      }
+
+      if (
+        inheritFromKubernetesClusters &&
+        alertWithResources?.kubernetesClusters?.length
+      ) {
+        for (const alertCluster of alertWithResources.kubernetesClusters) {
+          if (!alertCluster.id) {
+            continue;
+          }
+          const cluster: KubernetesCluster | null =
+            await KubernetesClusterService.findOneById({
+              id: alertCluster.id,
+              select: { labels: { _id: true } },
+              props: { isRoot: true },
+            });
+          for (const label of cluster?.labels || []) {
+            if (label.id) {
+              labelIdsToAdd.add(label.id.toString());
+            }
+          }
+        }
+      }
+
+      if (inheritFromDockerHosts && alertWithResources?.dockerHosts?.length) {
+        for (const alertDockerHost of alertWithResources.dockerHosts) {
+          if (!alertDockerHost.id) {
+            continue;
+          }
+          const dockerHost: DockerHost | null =
+            await DockerHostService.findOneById({
+              id: alertDockerHost.id,
+              select: { labels: { _id: true } },
+              props: { isRoot: true },
+            });
+          for (const label of dockerHost?.labels || []) {
+            if (label.id) {
+              labelIdsToAdd.add(label.id.toString());
+            }
+          }
+        }
+      }
+
+      if (inheritFromPodmanHosts && alertWithResources?.podmanHosts?.length) {
+        for (const alertPodmanHost of alertWithResources.podmanHosts) {
+          if (!alertPodmanHost.id) {
+            continue;
+          }
+          const podmanHost: PodmanHost | null =
+            await PodmanHostService.findOneById({
+              id: alertPodmanHost.id,
+              select: { labels: { _id: true } },
+              props: { isRoot: true },
+            });
+          for (const label of podmanHost?.labels || []) {
+            if (label.id) {
+              labelIdsToAdd.add(label.id.toString());
+            }
+          }
+        }
+      }
+
+      if (inheritFromServices && alertWithResources?.services?.length) {
+        for (const alertService of alertWithResources.services) {
+          if (!alertService.id) {
+            continue;
+          }
+          const service: Service | null = await ServiceService.findOneById({
+            id: alertService.id,
+            select: { labels: { _id: true } },
+            props: { isRoot: true },
+          });
+          for (const label of service?.labels || []) {
+            if (label.id) {
+              labelIdsToAdd.add(label.id.toString());
+            }
           }
         }
       }

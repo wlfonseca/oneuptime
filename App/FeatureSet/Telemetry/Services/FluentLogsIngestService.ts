@@ -10,6 +10,7 @@ import CaptureSpan from "Common/Server/Utils/Telemetry/CaptureSpan";
 import ObjectID from "Common/Types/ObjectID";
 import OneUptimeDate from "Common/Types/Date";
 import LogSeverity from "Common/Types/Log/LogSeverity";
+import { resolveTelemetryRetentionInDays } from "Common/Types/Telemetry/TelemetryRetentionConfig";
 import TelemetryUtil, {
   AttributeType,
 } from "Common/Server/Utils/Telemetry/Telemetry";
@@ -21,6 +22,7 @@ import logger, {
 } from "Common/Server/Utils/Logger";
 import OTelIngestService, {
   TelemetryServiceMetadata,
+  getScalarEntityKeyColumns,
 } from "Common/Server/Services/OpenTelemetryIngestService";
 import LogService from "Common/Server/Services/LogService";
 import OtelIngestBaseService from "./OtelIngestBaseService";
@@ -173,23 +175,15 @@ export default class FluentLogsIngestService extends OtelIngestBaseService {
         this.DEFAULT_SERVICE_NAME,
       );
 
-      const metadata: {
-        serviceId: ObjectID;
-        dataRententionInDays: number;
-      } = await OTelIngestService.telemetryServiceFromName({
-        serviceName,
-        projectId,
-      });
-
-      const serviceMetadata: TelemetryServiceMetadata = {
-        serviceName,
-        serviceId: metadata.serviceId,
-        dataRententionInDays: metadata.dataRententionInDays,
-      } satisfies TelemetryServiceMetadata;
+      const serviceMetadata: TelemetryServiceMetadata =
+        await OTelIngestService.telemetryServiceFromName({
+          serviceName,
+          projectId,
+        });
 
       const baseAttributes: Dictionary<AttributeType | Array<AttributeType>> =
         TelemetryUtil.getAttributesForServiceIdAndServiceName({
-          serviceId: serviceMetadata.serviceId,
+          serviceId: serviceMetadata.primaryEntityId,
           serviceName,
         });
 
@@ -222,17 +216,28 @@ export default class FluentLogsIngestService extends OtelIngestBaseService {
             ...entryAttributes,
           };
 
+          const retentionDays: number = resolveTelemetryRetentionInDays({
+            pillar: "logs",
+            bucketKey: severityInfo.text,
+            serviceConfig: serviceMetadata.serviceRetentionConfig,
+            serviceRetentionInDays: serviceMetadata.serviceRetentionInDays,
+            projectConfig: serviceMetadata.projectRetentionConfig,
+            projectRetentionInDays: serviceMetadata.projectRetentionInDays,
+          });
           const retentionDate: Date = OneUptimeDate.addRemoveDays(
             ingestionDate,
-            serviceMetadata.dataRententionInDays || 15,
+            retentionDays,
           );
 
           const logRow: JSONObject = {
-            _id: ObjectID.generate().toString(),
+            _id: ObjectID.generateTimeOrdered().toString(),
             createdAt: ingestionDateTime,
-            updatedAt: ingestionDateTime,
             projectId: projectId.toString(),
-            serviceId: serviceMetadata.serviceId.toString(),
+            primaryEntityId: serviceMetadata.primaryEntityId.toString(),
+            primaryEntityType: serviceMetadata.primaryEntityType,
+            entityKeys: serviceMetadata.entityKeys || [],
+            // serviceEntityKey from the resolved service; '' for the rest.
+            ...getScalarEntityKeyColumns(serviceMetadata),
             time: OneUptimeDate.toClickhouseDateTime64(ingestionDate),
             timeUnixNano,
             severityNumber: severityInfo.number,

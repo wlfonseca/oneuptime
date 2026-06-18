@@ -8,6 +8,11 @@ enum MonitorType {
   Ping = "Ping",
   Kubernetes = "Kubernetes",
   Docker = "Docker",
+  Host = "Host",
+  Podman = "Podman",
+  DockerSwarm = "Docker Swarm",
+  Proxmox = "Proxmox",
+  Ceph = "Ceph",
   IP = "IP",
   IncomingRequest = "Incoming Request",
   IncomingEmail = "Incoming Email",
@@ -31,6 +36,9 @@ enum MonitorType {
 
   // DNS monitoring
   DNS = "DNS",
+
+  // DNSSEC validation monitoring
+  DNSSEC = "DNSSEC",
 
   // Domain registration monitoring
   Domain = "Domain",
@@ -64,11 +72,14 @@ export class MonitorTypeHelper {
           MonitorType.Ping,
           MonitorType.IP,
           MonitorType.Port,
-          MonitorType.DNS,
           MonitorType.SSLCertificate,
           MonitorType.Domain,
           MonitorType.ExternalStatusPage,
         ],
+      },
+      {
+        label: "DNS Monitoring",
+        monitorTypes: [MonitorType.DNS, MonitorType.DNSSEC],
       },
       {
         label: "Synthetic Monitoring",
@@ -83,7 +94,7 @@ export class MonitorTypeHelper {
       },
       {
         label: "Infrastructure",
-        monitorTypes: [MonitorType.Server, MonitorType.SNMP],
+        monitorTypes: [MonitorType.SNMP],
       },
       {
         label: "Kubernetes",
@@ -94,13 +105,40 @@ export class MonitorTypeHelper {
         monitorTypes: [MonitorType.Docker],
       },
       {
+        label: "Host",
+        monitorTypes: [MonitorType.Host],
+      },
+      {
+        label: "Podman",
+        monitorTypes: [MonitorType.Podman],
+      },
+      {
+        label: "Docker Swarm",
+        monitorTypes: [MonitorType.DockerSwarm],
+      },
+      {
+        label: "Proxmox",
+        monitorTypes: [MonitorType.Proxmox],
+      },
+      {
+        label: "Ceph",
+        monitorTypes: [MonitorType.Ceph],
+      },
+      {
         label: "Telemetry",
         monitorTypes: [
           MonitorType.Logs,
           MonitorType.Metrics,
           MonitorType.Traces,
           MonitorType.Exceptions,
-          MonitorType.Profiles,
+          /*
+           * MonitorType.Profiles is intentionally not offered here: the
+           * dashboard has no configuration form for the profile monitor
+           * step, so a Profiles monitor created from this picker would have
+           * no profileMonitor config and could never evaluate. Existing
+           * Profiles monitors keep working — the enum value, its props in
+           * getAllMonitorTypeProps, and worker-side evaluation all remain.
+           */
         ],
       },
       {
@@ -118,7 +156,12 @@ export class MonitorTypeHelper {
       monitorType === MonitorType.Exceptions ||
       monitorType === MonitorType.Profiles ||
       monitorType === MonitorType.Kubernetes ||
-      monitorType === MonitorType.Docker
+      monitorType === MonitorType.Docker ||
+      monitorType === MonitorType.Host ||
+      monitorType === MonitorType.Podman ||
+      monitorType === MonitorType.DockerSwarm ||
+      monitorType === MonitorType.Proxmox ||
+      monitorType === MonitorType.Ceph
     );
   }
 
@@ -169,6 +212,41 @@ export class MonitorTypeHelper {
         description:
           "This monitor type lets you monitor Docker containers — CPU, memory, network, restarts, and lifecycle events.",
         icon: IconProp.Cube,
+      },
+      {
+        monitorType: MonitorType.Host,
+        title: "Host",
+        description:
+          "This monitor type lets you monitor OpenTelemetry-instrumented hosts and servers (the Hosts product) — CPU, memory, disk, network, load average, and process count via the OneUptime Infrastructure Agent. It is the telemetry-metric counterpart to the agent-push Server / VM Monitor.",
+        icon: IconProp.Server,
+      },
+      {
+        monitorType: MonitorType.Podman,
+        title: "Podman Container",
+        description:
+          "This monitor type lets you monitor Podman containers — CPU, memory, network, restarts, and lifecycle events.",
+        icon: IconProp.Cube,
+      },
+      {
+        monitorType: MonitorType.DockerSwarm,
+        title: "Docker Swarm",
+        description:
+          "This monitor type lets you monitor Docker Swarm clusters — per-task container CPU, memory, network, process count, and uptime across the cluster's services and nodes.",
+        icon: IconProp.Cube,
+      },
+      {
+        monitorType: MonitorType.Proxmox,
+        title: "Proxmox",
+        description:
+          "This monitor type lets you monitor Proxmox VE clusters — node availability, VM and container (guest) health, CPU, memory, storage, and HA state.",
+        icon: IconProp.ServerStack,
+      },
+      {
+        monitorType: MonitorType.Ceph,
+        title: "Ceph",
+        description:
+          "This monitor type lets you monitor Ceph storage clusters — cluster health, monitor quorum, OSD availability, pool capacity, and placement group states.",
+        icon: IconProp.Database,
       },
       {
         monitorType: MonitorType.IP,
@@ -274,6 +352,13 @@ export class MonitorTypeHelper {
         icon: IconProp.GlobeAlt,
       },
       {
+        monitorType: MonitorType.DNSSEC,
+        title: "DNSSEC",
+        description:
+          "This monitor type performs full DNSSEC validation — DNSKEY, DS at the parent zone, RRSIG validity windows, AD-flag/SERVFAIL behavior across public resolvers, and primary/secondary nameserver consistency.",
+        icon: IconProp.Key,
+      },
+      {
         monitorType: MonitorType.Domain,
         title: "Domain",
         description:
@@ -334,6 +419,7 @@ export class MonitorTypeHelper {
       monitorType === MonitorType.CustomJavaScriptCode ||
       monitorType === MonitorType.SNMP ||
       monitorType === MonitorType.DNS ||
+      monitorType === MonitorType.DNSSEC ||
       monitorType === MonitorType.Domain ||
       monitorType === MonitorType.ExternalStatusPage;
     return isProbeableMonitor;
@@ -359,10 +445,16 @@ export class MonitorTypeHelper {
       MonitorType.Profiles,
       MonitorType.SNMP,
       MonitorType.DNS,
+      MonitorType.DNSSEC,
       MonitorType.Domain,
       MonitorType.ExternalStatusPage,
       MonitorType.Kubernetes,
       MonitorType.Docker,
+      MonitorType.Host,
+      MonitorType.Podman,
+      MonitorType.DockerSwarm,
+      MonitorType.Proxmox,
+      MonitorType.Ceph,
     ];
   }
 
@@ -397,6 +489,7 @@ export class MonitorTypeHelper {
       monitorType === MonitorType.CustomJavaScriptCode ||
       monitorType === MonitorType.SNMP ||
       monitorType === MonitorType.DNS ||
+      monitorType === MonitorType.DNSSEC ||
       monitorType === MonitorType.Domain ||
       monitorType === MonitorType.ExternalStatusPage
     ) {

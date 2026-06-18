@@ -267,6 +267,9 @@ export default class AuditLog extends AnalyticsBaseModel {
         delete: PlanType.Enterprise,
       },
       crudApiPath: new Route("/audit-log"),
+      enableDocumentation: true,
+      tableDescription:
+        "Immutable audit-trail records of actions taken within your project.",
       tableColumns: [
         projectIdColumn,
         resourceTypeColumn,
@@ -285,8 +288,18 @@ export default class AuditLog extends AnalyticsBaseModel {
       projections: [],
       sortKeys: ["projectId", "createdAt", "resourceType", "resourceId"],
       primaryKeys: ["projectId", "createdAt"],
-      partitionKey: "sipHash64(projectId) % 16",
+      partitionKey: "toYYYYMM(createdAt)",
+      tableSettings:
+        "ttl_only_drop_parts = 1, non_replicated_deduplication_window = 10000",
       ttlExpression: "retentionDate DELETE",
+      /*
+       * `createdAt` already participates in the AuditLog sort key
+       * (position 2 after `projectId`), so the legacy `createdAt
+       * DESC` default was already efficient here. Set it explicitly
+       * so the choice is intentional rather than inherited from the
+       * base class.
+       */
+      defaultSortColumn: "createdAt",
     });
   }
 

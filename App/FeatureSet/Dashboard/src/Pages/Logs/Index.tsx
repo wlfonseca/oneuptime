@@ -13,6 +13,7 @@ const LogsPage: FunctionComponent<PageComponentProps> = (
       limit={100}
       enableRealtime={true}
       id="logs"
+      syncUrlState={true}
     />
   );
 };

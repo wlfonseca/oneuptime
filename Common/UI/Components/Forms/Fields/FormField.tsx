@@ -8,6 +8,7 @@ import CheckboxElement, {
 import CodeEditor from "../../CodeEditor/CodeEditor";
 import DictionaryForm, { ValueType } from "../../Dictionary/Dictionary";
 import Dropdown, { DropdownValue } from "../../Dropdown/Dropdown";
+import EntityDropdown from "../../EntityDropdown/EntityDropdown";
 import FilePicker from "../../FilePicker/FilePicker";
 import Input, { InputType } from "../../Input/Input";
 import TimePicker from "../../TimePicker/Index";
@@ -39,6 +40,7 @@ import Radio, { RadioValue } from "../../Radio/Radio";
 import { BasicRadioButtonOption } from "../../RadioButtons/BasicRadioButtons";
 import HorizontalRule from "../../HorizontalRule/HorizontalRule";
 import MarkdownEditor from "../../Markdown.tsx/MarkdownEditor";
+import useTranslateValue from "../../../Utils/Translation";
 
 export interface ComponentProps<T extends GenericObject> {
   field: Field<T>;
@@ -60,6 +62,11 @@ const FormField: <T extends GenericObject>(
 ) => ReactElement = <T extends GenericObject>(
   props: ComponentProps<T>,
 ): ReactElement => {
+  const { translateString } = useTranslateValue();
+  const translatedPlaceholder: string | undefined = translateString(
+    props.field.placeholder,
+  );
+
   type onChangeFunction = (value: JSONValue) => void;
 
   const onChange: onChangeFunction = (value: JSONValue): void => {
@@ -336,7 +343,7 @@ const FormField: <T extends GenericObject>(
                 (props.field.defaultValue as any) ||
                 undefined
               }
-              placeholder={props.field.placeholder || undefined}
+              placeholder={translatedPlaceholder || undefined}
             />
           )}
 
@@ -350,7 +357,7 @@ const FormField: <T extends GenericObject>(
                 props.setFieldTouched(props.fieldName, true);
               }}
               tabIndex={index}
-              placeholder={props.field.placeholder || ""}
+              placeholder={translatedPlaceholder || ""}
               initialValue={
                 props.currentValues &&
                 (props.currentValues as any)[props.fieldName]
@@ -370,7 +377,7 @@ const FormField: <T extends GenericObject>(
                 props.setFieldTouched(props.fieldName, true);
               }}
               tabIndex={index}
-              placeholder={props.field.placeholder || ""}
+              placeholder={translatedPlaceholder || ""}
               initialValue={
                 props.currentValues &&
                 (props.currentValues as any)[props.fieldName]
@@ -382,35 +389,74 @@ const FormField: <T extends GenericObject>(
 
           {(props.field.fieldType === FormFieldSchemaType.Dropdown ||
             props.field.fieldType ===
-              FormFieldSchemaType.MultiSelectDropdown) && (
-            <Dropdown
-              error={props.touched && props.error ? props.error : undefined}
-              id={props.field.id}
-              tabIndex={index}
-              dataTestId={props.field.dataTestId}
-              onChange={async (
-                value: DropdownValue | Array<DropdownValue> | null,
-              ) => {
-                onChange(value);
-                props.setFieldValue(props.fieldName, value);
-              }}
-              onBlur={async () => {
-                props.setFieldTouched(props.fieldName, true);
-              }}
-              isMultiSelect={
-                props.field.fieldType ===
-                FormFieldSchemaType.MultiSelectDropdown
-              }
-              options={props.field.dropdownOptions || []}
-              placeholder={props.field.placeholder || ""}
-              value={
-                props.currentValues &&
-                (props.currentValues as any)[props.fieldName]
-                  ? (props.currentValues as any)[props.fieldName]
-                  : ""
-              }
-            />
-          )}
+              FormFieldSchemaType.MultiSelectDropdown) &&
+            /*
+             * Entity-backed dropdowns (dropdownModal set) route through the
+             * new EntityDropdown — server-side lazy search, optional Labels
+             * tab for multi-select on labeled entities. Static enum-style
+             * dropdowns (no dropdownModal) keep the existing react-select
+             * Dropdown until we have a reason to migrate enum lists too.
+             */
+            (props.field.dropdownModal && props.field.dropdownModal.type ? (
+              <EntityDropdown
+                error={props.touched && props.error ? props.error : undefined}
+                id={props.field.id}
+                tabIndex={index}
+                dataTestId={props.field.dataTestId}
+                onChange={(
+                  value: DropdownValue | Array<DropdownValue> | null,
+                ) => {
+                  onChange(value);
+                  props.setFieldValue(props.fieldName, value as JSONValue);
+                }}
+                onBlur={() => {
+                  props.setFieldTouched(props.fieldName, true);
+                }}
+                isMultiSelect={
+                  props.field.fieldType ===
+                  FormFieldSchemaType.MultiSelectDropdown
+                }
+                modelType={props.field.dropdownModal.type}
+                labelField={props.field.dropdownModal.labelField}
+                valueField={props.field.dropdownModal.valueField}
+                options={props.field.dropdownOptions || []}
+                placeholder={translatedPlaceholder || ""}
+                value={
+                  props.currentValues &&
+                  (props.currentValues as any)[props.fieldName]
+                    ? (props.currentValues as any)[props.fieldName]
+                    : undefined
+                }
+              />
+            ) : (
+              <Dropdown
+                error={props.touched && props.error ? props.error : undefined}
+                id={props.field.id}
+                tabIndex={index}
+                dataTestId={props.field.dataTestId}
+                onChange={async (
+                  value: DropdownValue | Array<DropdownValue> | null,
+                ) => {
+                  onChange(value);
+                  props.setFieldValue(props.fieldName, value);
+                }}
+                onBlur={async () => {
+                  props.setFieldTouched(props.fieldName, true);
+                }}
+                isMultiSelect={
+                  props.field.fieldType ===
+                  FormFieldSchemaType.MultiSelectDropdown
+                }
+                options={props.field.dropdownOptions || []}
+                placeholder={translatedPlaceholder || ""}
+                value={
+                  props.currentValues &&
+                  (props.currentValues as any)[props.fieldName]
+                    ? (props.currentValues as any)[props.fieldName]
+                    : ""
+                }
+              />
+            ))}
 
           {props.field.fieldType === FormFieldSchemaType.CardSelect && (
             <CardSelect
@@ -545,7 +591,7 @@ const FormField: <T extends GenericObject>(
                   ? (props.currentValues as any)[props.fieldName]
                   : ""
               }
-              placeholder={props.field.placeholder || ""}
+              placeholder={translatedPlaceholder || ""}
             />
           )}
 
@@ -574,7 +620,7 @@ const FormField: <T extends GenericObject>(
                   ? (props.currentValues as any)[props.fieldName]
                   : ""
               }
-              placeholder={props.field.placeholder || ""}
+              placeholder={translatedPlaceholder || ""}
             />
           )}
 
@@ -597,7 +643,7 @@ const FormField: <T extends GenericObject>(
                   ? (props.currentValues as any)[props.fieldName]
                   : ""
               }
-              placeholder={props.field.placeholder || ""}
+              placeholder={translatedPlaceholder || ""}
             />
           )}
 
@@ -620,7 +666,7 @@ const FormField: <T extends GenericObject>(
                   ? (props.currentValues as any)[props.fieldName]
                   : "",
 
-              placeholder: props.field.placeholder || "",
+              placeholder: translatedPlaceholder || "",
             })}
 
           {(props.field.fieldType === FormFieldSchemaType.HTML ||
@@ -644,7 +690,7 @@ const FormField: <T extends GenericObject>(
                   ? (props.currentValues as any)[props.fieldName]
                   : ""
               }
-              placeholder={props.field.placeholder || ""}
+              placeholder={translatedPlaceholder || ""}
             />
           )}
 
@@ -701,7 +747,7 @@ const FormField: <T extends GenericObject>(
                     ? []
                     : undefined
               }
-              placeholder={props.field.placeholder || ""}
+              placeholder={translatedPlaceholder || ""}
             />
           )}
 
@@ -809,7 +855,7 @@ const FormField: <T extends GenericObject>(
                   ? (props.currentValues as any)[props.fieldName]
                   : props.field.defaultValue || ""
               }
-              placeholder={props.field.placeholder || ""}
+              placeholder={translatedPlaceholder || ""}
             />
           )}
         </div>

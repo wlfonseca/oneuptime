@@ -11,6 +11,7 @@ import AnalyticsModelAPI, {
   ListResult,
 } from "Common/UI/Utils/AnalyticsModelAPI/AnalyticsModelAPI";
 import Log from "Common/Models/AnalyticsModels/Log";
+import DashboardResourceList from "../Utils/DashboardResourceList";
 import API from "Common/UI/Utils/API/API";
 import Icon from "Common/UI/Components/Icon/Icon";
 import IconProp from "Common/Types/Icon/IconProp";
@@ -148,7 +149,7 @@ const DashboardLogStreamComponentElement: FunctionComponent<ComponentProps> = (
           time: true,
           severityText: true,
           body: true,
-          serviceId: true,
+          primaryEntityId: true,
           traceId: true,
           spanId: true,
           attributes: true,
@@ -156,7 +157,7 @@ const DashboardLogStreamComponentElement: FunctionComponent<ComponentProps> = (
         sort: {
           time: SortOrder.Descending,
         },
-        requestOptions: {},
+        requestOptions: DashboardResourceList.getRequestOptions("log"),
       });
 
       setLogs(listResult.data);

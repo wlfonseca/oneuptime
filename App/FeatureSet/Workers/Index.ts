@@ -35,6 +35,7 @@ import "./Jobs/AlertEpisode/AutoResolve";
 import "./Jobs/AlertEpisode/ResolveInactiveEpisodes";
 
 // Alert Episode Owners
+import "./Jobs/AlertEpisodeOwners/SendAlertAddedNotification";
 import "./Jobs/AlertEpisodeOwners/SendCreatedResourceNotification";
 import "./Jobs/AlertEpisodeOwners/SendNotePostedNotification";
 import "./Jobs/AlertEpisodeOwners/SendOwnerAddedNotification";
@@ -53,6 +54,7 @@ import "./Jobs/IncidentEpisodePublicNote/SendNotificationToSubscribers";
 
 // Incident Episode Owners
 import "./Jobs/IncidentEpisodeOwners/SendCreatedResourceNotification";
+import "./Jobs/IncidentEpisodeOwners/SendIncidentAddedNotification";
 import "./Jobs/IncidentEpisodeOwners/SendNotePostedNotification";
 import "./Jobs/IncidentEpisodeOwners/SendOwnerAddedNotification";
 import "./Jobs/IncidentEpisodeOwners/SendStateChangeNotification";
@@ -142,8 +144,32 @@ import "./Jobs/Kubernetes/CleanupStaleResources";
 // Docker inventory cleanup + cached count refresh.
 import "./Jobs/Docker/CleanupStaleResources";
 
+// Podman inventory cleanup + cached count refresh.
+import "./Jobs/Podman/CleanupStaleResources";
+
 // Host disconnection sweeper.
 import "./Jobs/Host/CleanupStaleHosts";
+
+// Proxmox cluster disconnection sweeper + inventory cleanup.
+import "./Jobs/Proxmox/CleanupStaleResources";
+
+// Ceph cluster disconnection sweeper + inventory cleanup.
+import "./Jobs/Ceph/CleanupStaleResources";
+
+// Docker Swarm cluster disconnection sweeper + inventory cleanup.
+import "./Jobs/DockerSwarm/CleanupStaleResources";
+
+// Telemetry entity registry: TTL prune + span-derived service map edges.
+import "./Jobs/TelemetryEntity/PruneStaleEntities";
+import "./Jobs/TelemetryEntity/ComputeServiceDependencies";
+
+/*
+ * NOTE: there is deliberately no in-app V2 -> V3 historical telemetry
+ * copy. The V3 cut is forward-only (decision 2026-06-11): V3 tables start
+ * fresh, history ages in over the retention window, and operators who
+ * want to carry history forward run the documented clickhouse-client
+ * queries instead — see App/FeatureSet/Docs/Content/en/installation/upgrading.md ('Upgrading from OneUptime 10 → 11').
+ */
 
 /*
  * Metric retention is handled by ClickHouse TTL on Metric.retentionDate
@@ -174,6 +200,7 @@ import QueueWorker from "Common/Server/Infrastructure/QueueWorker";
 import FeatureSet from "Common/Server/Types/FeatureSet";
 import logger from "Common/Server/Utils/Logger";
 import {
+  DisableQueueWorkers,
   EnableQueueDashboard,
   QueueDashboardSecret,
 } from "Common/Server/EnvironmentConfig";
@@ -201,7 +228,27 @@ const WorkersFeatureSet: FeatureSet = {
       // expose metrics endpoint used by KEDA
       app.use(["/worker", "/"], MetricsAPI);
 
-      // run async database migrations
+      // create tables in analytics database
+      await AnalyticsTableManagement.createTables();
+
+      /*
+       * Ensure ClickHouse materialized views exist. Runs every boot and
+       * is idempotent (CREATE ... IF NOT EXISTS + existence check), so a
+       * wiped/recreated ClickHouse volume self-heals even when the
+       * one-time DataMigrations that originally created the MVs are
+       * already recorded as executed in Postgres. Must run after
+       * createTables() so the source/target tables exist.
+       */
+      await AnalyticsTableManagement.createMaterializedViews();
+
+      /*
+       * Run async database migrations AFTER the awaited schema sync above:
+       * on a wiped/first-boot ClickHouse, migration ALTERs against
+       * model-owned tables would otherwise race table creation and throw
+       * UNKNOWN_TABLE, wedging the chain until the next boot. Still
+       * fire-and-forget — a long migration never blocks the listener,
+       * probes, queues, or cron scheduling.
+       */
       RunDatabaseMigrations().catch((err: Error) => {
         logger.error("Error running database migrations", {
           service: "workers",
@@ -209,28 +256,38 @@ const WorkersFeatureSet: FeatureSet = {
         logger.error(err, { service: "workers" });
       });
 
-      // create tables in analytics database
-      await AnalyticsTableManagement.createTables();
+      /*
+       * Job process. Skipped in the "api" role (DISABLE_QUEUE_WORKERS=true) —
+       * the dedicated worker deployment drains the Worker queue (cron jobs,
+       * notifications, incident/alert state reconciliation, etc.). Cron
+       * scheduling above still runs in both roles; it only writes idempotent
+       * repeatable-job definitions to Redis and populates JobDictionary.
+       */
+      if (DisableQueueWorkers) {
+        logger.info(
+          "DISABLE_QUEUE_WORKERS=true — Worker queue consumer not registered (api role).",
+          { service: "workers" },
+        );
+      } else {
+        QueueWorker.getWorker(
+          QueueName.Worker,
+          async (job: QueueJob) => {
+            const name: string = job.name;
 
-      // Job process.
-      QueueWorker.getWorker(
-        QueueName.Worker,
-        async (job: QueueJob) => {
-          const name: string = job.name;
+            logger.debug("Running Job: " + name, { service: "workers" });
 
-          logger.debug("Running Job: " + name, { service: "workers" });
+            const funcToRun: PromiseVoidFunction =
+              JobDictionary.getJobFunction(name);
 
-          const funcToRun: PromiseVoidFunction =
-            JobDictionary.getJobFunction(name);
+            const timeoutInMs: number = JobDictionary.getTimeoutInMs(name);
 
-          const timeoutInMs: number = JobDictionary.getTimeoutInMs(name);
-
-          if (funcToRun) {
-            await QueueWorker.runJobWithTimeout(timeoutInMs, funcToRun);
-          }
-        },
-        { concurrency: WORKER_CONCURRENCY },
-      );
+            if (funcToRun) {
+              await QueueWorker.runJobWithTimeout(timeoutInMs, funcToRun);
+            }
+          },
+          { concurrency: WORKER_CONCURRENCY },
+        );
+      }
     } catch (err) {
       logger.error("App Init Failed:", { service: "workers" });
       logger.error(err, { service: "workers" });

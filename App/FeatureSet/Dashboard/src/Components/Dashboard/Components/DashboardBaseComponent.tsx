@@ -12,6 +12,7 @@ import DashboardTableComponentType from "Common/Types/Dashboard/DashboardCompone
 import DashboardGaugeComponentType from "Common/Types/Dashboard/DashboardComponents/DashboardGaugeComponent";
 import DashboardLogStreamComponentType from "Common/Types/Dashboard/DashboardComponents/DashboardLogStreamComponent";
 import DashboardTraceListComponentType from "Common/Types/Dashboard/DashboardComponents/DashboardTraceListComponent";
+import DashboardTraceChartComponentType from "Common/Types/Dashboard/DashboardComponents/DashboardTraceChartComponent";
 import DashboardIncidentListComponentType from "Common/Types/Dashboard/DashboardComponents/DashboardIncidentListComponent";
 import DashboardAlertListComponentType from "Common/Types/Dashboard/DashboardComponents/DashboardAlertListComponent";
 import DashboardMonitorListComponentType from "Common/Types/Dashboard/DashboardComponents/DashboardMonitorListComponent";
@@ -28,8 +29,18 @@ import DashboardDockerContainerListComponentType from "Common/Types/Dashboard/Da
 import DashboardDockerImageListComponentType from "Common/Types/Dashboard/DashboardComponents/DashboardDockerImageListComponent";
 import DashboardDockerNetworkListComponentType from "Common/Types/Dashboard/DashboardComponents/DashboardDockerNetworkListComponent";
 import DashboardDockerVolumeListComponentType from "Common/Types/Dashboard/DashboardComponents/DashboardDockerVolumeListComponent";
+import DashboardPodmanHostListComponentType from "Common/Types/Dashboard/DashboardComponents/DashboardPodmanHostListComponent";
+import DashboardPodmanContainerListComponentType from "Common/Types/Dashboard/DashboardComponents/DashboardPodmanContainerListComponent";
+import DashboardPodmanImageListComponentType from "Common/Types/Dashboard/DashboardComponents/DashboardPodmanImageListComponent";
+import DashboardPodmanNetworkListComponentType from "Common/Types/Dashboard/DashboardComponents/DashboardPodmanNetworkListComponent";
+import DashboardPodmanVolumeListComponentType from "Common/Types/Dashboard/DashboardComponents/DashboardPodmanVolumeListComponent";
 import DashboardHostListComponentType from "Common/Types/Dashboard/DashboardComponents/DashboardHostListComponent";
-import DashboardHostMetricChartComponentType from "Common/Types/Dashboard/DashboardComponents/DashboardHostMetricChartComponent";
+import DashboardProxmoxNodeListComponentType from "Common/Types/Dashboard/DashboardComponents/DashboardProxmoxNodeListComponent";
+import DashboardProxmoxGuestListComponentType from "Common/Types/Dashboard/DashboardComponents/DashboardProxmoxGuestListComponent";
+import DashboardDockerSwarmNodeListComponentType from "Common/Types/Dashboard/DashboardComponents/DashboardDockerSwarmNodeListComponent";
+import DashboardDockerSwarmServiceListComponentType from "Common/Types/Dashboard/DashboardComponents/DashboardDockerSwarmServiceListComponent";
+import DashboardCephOsdListComponentType from "Common/Types/Dashboard/DashboardComponents/DashboardCephOsdListComponent";
+import DashboardCephPoolListComponentType from "Common/Types/Dashboard/DashboardComponents/DashboardCephPoolListComponent";
 import DashboardBaseComponent from "Common/Types/Dashboard/DashboardComponents/DashboardBaseComponent";
 import DashboardChartComponent from "./DashboardChartComponent";
 import DashboardValueComponent from "./DashboardValueComponent";
@@ -38,6 +49,7 @@ import DashboardTableComponent from "./DashboardTableComponent";
 import DashboardGaugeComponent from "./DashboardGaugeComponent";
 import DashboardLogStreamComponent from "./DashboardLogStreamComponent";
 import DashboardTraceListComponent from "./DashboardTraceListComponent";
+import DashboardTraceChartComponent from "./DashboardTraceChartComponent";
 import DashboardIncidentListComponent from "./DashboardIncidentListComponent";
 import DashboardAlertListComponent from "./DashboardAlertListComponent";
 import DashboardMonitorListComponent from "./DashboardMonitorListComponent";
@@ -54,8 +66,18 @@ import DashboardDockerContainerListComponent from "./DashboardDockerContainerLis
 import DashboardDockerImageListComponent from "./DashboardDockerImageListComponent";
 import DashboardDockerNetworkListComponent from "./DashboardDockerNetworkListComponent";
 import DashboardDockerVolumeListComponent from "./DashboardDockerVolumeListComponent";
+import DashboardPodmanHostListComponent from "./DashboardPodmanHostListComponent";
+import DashboardPodmanContainerListComponent from "./DashboardPodmanContainerListComponent";
+import DashboardPodmanImageListComponent from "./DashboardPodmanImageListComponent";
+import DashboardPodmanNetworkListComponent from "./DashboardPodmanNetworkListComponent";
+import DashboardPodmanVolumeListComponent from "./DashboardPodmanVolumeListComponent";
 import DashboardHostListComponent from "./DashboardHostListComponent";
-import DashboardHostMetricChartComponent from "./DashboardHostMetricChartComponent";
+import DashboardProxmoxNodeListComponent from "./DashboardProxmoxNodeListComponent";
+import DashboardProxmoxGuestListComponent from "./DashboardProxmoxGuestListComponent";
+import DashboardDockerSwarmNodeListComponent from "./DashboardDockerSwarmNodeListComponent";
+import DashboardDockerSwarmServiceListComponent from "./DashboardDockerSwarmServiceListComponent";
+import DashboardCephOsdListComponent from "./DashboardCephOsdListComponent";
+import DashboardCephPoolListComponent from "./DashboardCephPoolListComponent";
 import DefaultDashboardSize, {
   GetDashboardComponentHeightInDashboardUnits,
   GetDashboardComponentWidthInDashboardUnits,
@@ -582,7 +604,7 @@ const DashboardBaseComponentElement: FunctionComponent<ComponentProps> = (
         <div
           className="absolute z-10 pointer-events-none"
           style={{
-            top: showHandles ? "32px" : "6px",
+            top: "32px",
             right: "6px",
           }}
         >
@@ -598,11 +620,13 @@ const DashboardBaseComponentElement: FunctionComponent<ComponentProps> = (
         </div>
       )}
 
-      {/* Component content */}
+      {/* Component content — keep padding constant in edit mode so the move
+          handle and resize handles overlay without resizing the child (which
+          would force charts/tables to re-measure and flicker on hover). */}
       <div
         className="w-full h-full"
         style={{
-          padding: showHandles ? "28px 12px 12px 12px" : "12px",
+          padding: props.isEditMode ? "28px 12px 12px 12px" : "12px",
         }}
       >
         {component.componentType === DashboardComponentType.Text && (
@@ -659,6 +683,14 @@ const DashboardBaseComponentElement: FunctionComponent<ComponentProps> = (
             isEditMode={props.isEditMode}
             isSelected={props.isSelected}
             component={component as DashboardTraceListComponentType}
+          />
+        )}
+        {component.componentType === DashboardComponentType.TraceChart && (
+          <DashboardTraceChartComponent
+            {...props}
+            isEditMode={props.isEditMode}
+            isSelected={props.isSelected}
+            component={component as DashboardTraceChartComponentType}
           />
         )}
         {component.componentType === DashboardComponentType.IncidentList && (
@@ -808,6 +840,49 @@ const DashboardBaseComponentElement: FunctionComponent<ComponentProps> = (
             component={component as DashboardDockerVolumeListComponentType}
           />
         )}
+        {component.componentType === DashboardComponentType.PodmanHostList && (
+          <DashboardPodmanHostListComponent
+            {...props}
+            isEditMode={props.isEditMode}
+            isSelected={props.isSelected}
+            component={component as DashboardPodmanHostListComponentType}
+          />
+        )}
+        {component.componentType ===
+          DashboardComponentType.PodmanContainerList && (
+          <DashboardPodmanContainerListComponent
+            {...props}
+            isEditMode={props.isEditMode}
+            isSelected={props.isSelected}
+            component={component as DashboardPodmanContainerListComponentType}
+          />
+        )}
+        {component.componentType === DashboardComponentType.PodmanImageList && (
+          <DashboardPodmanImageListComponent
+            {...props}
+            isEditMode={props.isEditMode}
+            isSelected={props.isSelected}
+            component={component as DashboardPodmanImageListComponentType}
+          />
+        )}
+        {component.componentType ===
+          DashboardComponentType.PodmanNetworkList && (
+          <DashboardPodmanNetworkListComponent
+            {...props}
+            isEditMode={props.isEditMode}
+            isSelected={props.isSelected}
+            component={component as DashboardPodmanNetworkListComponentType}
+          />
+        )}
+        {component.componentType ===
+          DashboardComponentType.PodmanVolumeList && (
+          <DashboardPodmanVolumeListComponent
+            {...props}
+            isEditMode={props.isEditMode}
+            isSelected={props.isSelected}
+            component={component as DashboardPodmanVolumeListComponentType}
+          />
+        )}
         {component.componentType === DashboardComponentType.HostList && (
           <DashboardHostListComponent
             {...props}
@@ -816,12 +891,57 @@ const DashboardBaseComponentElement: FunctionComponent<ComponentProps> = (
             component={component as DashboardHostListComponentType}
           />
         )}
-        {component.componentType === DashboardComponentType.HostMetricChart && (
-          <DashboardHostMetricChartComponent
+        {component.componentType === DashboardComponentType.ProxmoxNodeList && (
+          <DashboardProxmoxNodeListComponent
             {...props}
             isEditMode={props.isEditMode}
             isSelected={props.isSelected}
-            component={component as DashboardHostMetricChartComponentType}
+            component={component as DashboardProxmoxNodeListComponentType}
+          />
+        )}
+        {component.componentType ===
+          DashboardComponentType.ProxmoxGuestList && (
+          <DashboardProxmoxGuestListComponent
+            {...props}
+            isEditMode={props.isEditMode}
+            isSelected={props.isSelected}
+            component={component as DashboardProxmoxGuestListComponentType}
+          />
+        )}
+        {component.componentType ===
+          DashboardComponentType.DockerSwarmNodeList && (
+          <DashboardDockerSwarmNodeListComponent
+            {...props}
+            isEditMode={props.isEditMode}
+            isSelected={props.isSelected}
+            component={component as DashboardDockerSwarmNodeListComponentType}
+          />
+        )}
+        {component.componentType ===
+          DashboardComponentType.DockerSwarmServiceList && (
+          <DashboardDockerSwarmServiceListComponent
+            {...props}
+            isEditMode={props.isEditMode}
+            isSelected={props.isSelected}
+            component={
+              component as DashboardDockerSwarmServiceListComponentType
+            }
+          />
+        )}
+        {component.componentType === DashboardComponentType.CephOsdList && (
+          <DashboardCephOsdListComponent
+            {...props}
+            isEditMode={props.isEditMode}
+            isSelected={props.isSelected}
+            component={component as DashboardCephOsdListComponentType}
+          />
+        )}
+        {component.componentType === DashboardComponentType.CephPoolList && (
+          <DashboardCephPoolListComponent
+            {...props}
+            isEditMode={props.isEditMode}
+            isSelected={props.isSelected}
+            component={component as DashboardCephPoolListComponentType}
           />
         )}
       </div>

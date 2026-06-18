@@ -473,6 +473,41 @@ export const PageSEOConfig: Record<string, PageSEOData> = {
     },
   },
 
+  "/product/podman": {
+    title:
+      "Podman Observability | Monitor Hosts, Containers & Images | OneUptime",
+    description:
+      "Complete Podman observability with real-time host monitoring, container health tracking, image insights, and automated alerting. Daemonless and rootless-capable. OpenTelemetry native. Open source.",
+    canonicalPath: "/product/podman",
+    twitterCard: "summary_large_image",
+    pageType: "product",
+    breadcrumbs: [
+      { name: "Home", url: "/" },
+      { name: "Products", url: "/#products" },
+      { name: "Podman", url: "/product/podman" },
+    ],
+    softwareApplication: {
+      name: "OneUptime Podman Observability",
+      applicationCategory: "DeveloperApplication",
+      operatingSystem: "Web, Cloud",
+      description:
+        "Monitor Podman hosts, containers, and images with real-time metrics, intelligent alerting, and pre-built dashboards. Daemonless and rootless-capable via Podman's Docker-compatible API socket.",
+      features: [
+        "Multi-host fleet monitoring",
+        "Container health and metrics",
+        "Image and volume insights",
+        "OOM kill detection",
+        "Restart loop alerting",
+        "CPU and memory tracking",
+        "Network and block I/O metrics",
+        "OpenTelemetry native",
+        "Podman Compose deployment",
+        "docker_stats receiver",
+        "Container logs correlation",
+      ],
+    },
+  },
+
   "/product/host": {
     title: "Host Observability | Server Metrics, Processes & Logs | OneUptime",
     description:
@@ -502,6 +537,144 @@ export const PageSEOConfig: Record<string, PageSEOData> = {
         "Correlated host logs",
         "Last-seen + connection status",
         "OS, architecture, host.id capture",
+        "Open source",
+      ],
+    },
+  },
+
+  "/product/proxmox": {
+    title: "Proxmox Monitoring | Nodes, VMs, Storage & Backups | OneUptime",
+    description:
+      "Monitor Proxmox VE clusters end to end: node and guest health, storage usage, backup coverage, and replication alerting. One agent per cluster, flat project pricing, 10-minute setup. Open source.",
+    canonicalPath: "/product/proxmox",
+    twitterCard: "summary_large_image",
+    pageType: "product",
+    breadcrumbs: [
+      { name: "Home", url: "/" },
+      { name: "Products", url: "/#products" },
+      { name: "Proxmox", url: "/product/proxmox" },
+    ],
+    softwareApplication: {
+      name: "OneUptime Proxmox Monitoring",
+      applicationCategory: "DeveloperApplication",
+      operatingSystem: "Web, Cloud",
+      description:
+        "Monitor Proxmox VE clusters with one agent: node, VM, and container health, storage capacity, backup coverage, replication alerting, and on-call escalation in a single product.",
+      features: [
+        "Whole-cluster monitoring from one agent",
+        "Node, VM, and LXC inventory with status pills",
+        "Backup coverage: guests without a backup job",
+        "Storage replication failure alerting",
+        "Quorum-risk and HA resource state alerts",
+        "Storage usage and growth tracking",
+        "Guest-to-host agent cross-linking",
+        "Copy-paste onboarding with token validator",
+        "Flat project pricing, not per-host",
+        "OpenTelemetry native",
+        "Open source",
+      ],
+    },
+  },
+
+  "/product/ceph": {
+    title:
+      "Ceph Monitoring | Cluster Health, OSDs, Pools & Capacity | OneUptime",
+    description:
+      "Monitor Ceph clusters without bolting Grafana onto the dashboard: health drill-downs, OSD and PG state, pool capacity with growth forecasts, and alerting with on-call built in. Open source.",
+    canonicalPath: "/product/ceph",
+    twitterCard: "summary_large_image",
+    pageType: "product",
+    breadcrumbs: [
+      { name: "Home", url: "/" },
+      { name: "Products", url: "/#products" },
+      { name: "Ceph", url: "/product/ceph" },
+    ],
+    softwareApplication: {
+      name: "OneUptime Ceph Monitoring",
+      applicationCategory: "DeveloperApplication",
+      operatingSystem: "Web, Cloud",
+      description:
+        "Monitor Ceph clusters from the mgr Prometheus module: health status with reason drill-downs, OSD up/in state, PG breakdown, pool capacity and forecasts, and alert templates with on-call escalation built in.",
+      features: [
+        "Cluster health pill with reason drill-down",
+        "Capacity gauge with nearfull/full thresholds",
+        "Capacity growth forecasting",
+        "OSD up/in matrix and honeycomb view",
+        "Placement group state breakdown",
+        "Pool usage, IOPS, and throughput",
+        "Monitor quorum tracking",
+        "Fleet view across every cluster",
+        "Alert templates with on-call built in",
+        "No Grafana or Alertmanager required",
+        "Open source",
+      ],
+    },
+  },
+
+  "/product/docker-swarm": {
+    title:
+      "Docker Swarm Monitoring | Nodes, Services, Tasks & Stacks | OneUptime",
+    description:
+      "Monitor Docker Swarm clusters end to end: manager and worker node health, services and their task replicas, stacks, overlay networks, secrets, configs, and volumes. One agent on a manager node, flat project pricing, 10-minute setup. Open source.",
+    canonicalPath: "/product/docker-swarm",
+    twitterCard: "summary_large_image",
+    pageType: "product",
+    breadcrumbs: [
+      { name: "Home", url: "/" },
+      { name: "Products", url: "/#products" },
+      { name: "Docker Swarm", url: "/product/docker-swarm" },
+    ],
+    softwareApplication: {
+      name: "OneUptime Docker Swarm Monitoring",
+      applicationCategory: "DeveloperApplication",
+      operatingSystem: "Web, Cloud",
+      description:
+        "Monitor an entire Docker Swarm cluster from one OpenTelemetry collector and inventory poller on a manager node: node, service, task, stack, overlay network, secret, config, and volume inventory, running-vs-desired replica convergence alerting, per-container CPU and memory, and logs.",
+      features: [
+        "Whole-cluster visibility from one manager-node agent",
+        "Manager & worker node health and roles",
+        "Service inventory with running vs desired replicas",
+        "Task-level (container instance) tracking",
+        "Stack, overlay network, secret & config inventory",
+        "Volume usage and growth",
+        "Raft manager quorum & service convergence alerting",
+        "Per-container CPU and memory metrics",
+        "Container and service logs",
+        "Flat project pricing",
+        "OpenTelemetry native",
+        "Open source",
+      ],
+    },
+  },
+
+  "/product/services": {
+    title: "Service Catalog | Map, Own & Monitor Every Service | OneUptime",
+    description:
+      "A single catalog of every service you run. Assign owners, group by labels, and connect each service to its logs, traces, metrics, and incidents. Open source.",
+    canonicalPath: "/product/services",
+    twitterCard: "summary_large_image",
+    pageType: "product",
+    breadcrumbs: [
+      { name: "Home", url: "/" },
+      { name: "Products", url: "/#products" },
+      { name: "Services", url: "/product/services" },
+    ],
+    softwareApplication: {
+      name: "OneUptime Service Catalog",
+      applicationCategory: "DeveloperApplication",
+      operatingSystem: "Web, Cloud",
+      description:
+        "A single catalog of every service you run. Map ownership, group with labels, and link each service to its logs, traces, metrics, and incidents.",
+      features: [
+        "Centralized service catalog",
+        "Owner teams and users",
+        "Label-based grouping",
+        "Linked logs, traces, and metrics",
+        "Linked incidents and alerts",
+        "Bulk owner and label updates",
+        "Searchable across the project",
+        "Color-coded for fast scanning",
+        "API and dashboard creatable",
         "Open source",
       ],
     },
@@ -669,6 +842,111 @@ export const PageSEOConfig: Record<string, PageSEOData> = {
         "Custom time ranges",
         "Dashboard templates",
         "Role-based access control",
+      ],
+    },
+  },
+
+  "/product/serverless": {
+    title: "Serverless Observability | AWS Lambda & Functions | OneUptime",
+    description:
+      "Monitor AWS Lambda, Google Cloud Functions, Azure Functions, and Cloudflare Workers with OpenTelemetry. Invocations, cold starts, duration, errors, and per-invocation traces. Open source.",
+    canonicalPath: "/product/serverless",
+    twitterCard: "summary_large_image",
+    pageType: "product",
+    breadcrumbs: [
+      { name: "Home", url: "/" },
+      { name: "Products", url: "/#products" },
+      { name: "Serverless", url: "/product/serverless" },
+    ],
+    softwareApplication: {
+      name: "OneUptime Serverless Observability",
+      applicationCategory: "DeveloperApplication",
+      operatingSystem: "Web, Cloud",
+      description:
+        "Monitor serverless functions across AWS Lambda, Google Cloud Functions, Azure Functions, and Cloudflare Workers with OpenTelemetry — invocations, cold starts, duration, errors, and distributed traces.",
+      features: [
+        "Auto-discovered functions",
+        "Keyed on the faas.name attribute",
+        "Invocation and error-rate tracking",
+        "Cold-start detection",
+        "Duration percentiles (p50/p95/p99)",
+        "Concurrency and throttle insight",
+        "Per-invocation distributed traces",
+        "Multi-cloud: AWS, GCP, Azure, Cloudflare",
+        "Cloud region and account metadata",
+        "Correlated logs and exceptions",
+        "OpenTelemetry native",
+        "Open source",
+      ],
+    },
+  },
+
+  "/product/cloud": {
+    title: "Cloud Monitoring | AWS, Google Cloud & Azure | OneUptime",
+    description:
+      "Monitor AWS, Google Cloud, and Azure with OpenTelemetry. Auto-discovered cloud environments, real-time resource metrics, logs, traces, and alerting across every region and account. Open source.",
+    canonicalPath: "/product/cloud",
+    twitterCard: "summary_large_image",
+    pageType: "product",
+    breadcrumbs: [
+      { name: "Home", url: "/" },
+      { name: "Products", url: "/#products" },
+      { name: "Cloud", url: "/product/cloud" },
+    ],
+    softwareApplication: {
+      name: "OneUptime Cloud Monitoring",
+      applicationCategory: "DeveloperApplication",
+      operatingSystem: "Web, Cloud",
+      description:
+        "Unified multi-cloud monitoring for AWS, Google Cloud, and Azure with OpenTelemetry — auto-discovered environments, real-time resource metrics, logs, traces, and alerting across regions and accounts.",
+      features: [
+        "Multi-cloud unified dashboard",
+        "AWS, Google Cloud, and Azure",
+        "Auto-discovered cloud environments",
+        "EC2, GCP, and Azure resource detectors",
+        "cloud.platform / account / region metadata",
+        "Real-time CPU and memory utilization",
+        "Multi-account and multi-region rollups",
+        "Correlated logs, metrics, and traces",
+        "Linked hosts, Docker, and Kubernetes",
+        "Resource saturation alerting",
+        "OpenTelemetry native",
+        "Open source",
+      ],
+    },
+  },
+
+  "/product/rum": {
+    title: "Real User Monitoring (RUM) | Web Vitals & Sessions | OneUptime",
+    description:
+      "Real User Monitoring for browser and mobile apps with the OpenTelemetry Web SDK. Core Web Vitals, page views, JavaScript errors, and real user sessions correlated with backend traces. Open source.",
+    canonicalPath: "/product/rum",
+    twitterCard: "summary_large_image",
+    pageType: "product",
+    breadcrumbs: [
+      { name: "Home", url: "/" },
+      { name: "Products", url: "/#products" },
+      { name: "RUM", url: "/product/rum" },
+    ],
+    softwareApplication: {
+      name: "OneUptime Real User Monitoring",
+      applicationCategory: "DeveloperApplication",
+      operatingSystem: "Web, Cloud, iOS, Android",
+      description:
+        "Real User Monitoring for browser and mobile applications with the OpenTelemetry Web SDK — Core Web Vitals, page performance, JavaScript errors, and sessions correlated with backend traces.",
+      features: [
+        "Core Web Vitals (LCP, INP, CLS, FCP, TTFB)",
+        "Real page view and load timing",
+        "JavaScript error tracking",
+        "Browser, OS, and device breakdown",
+        "Geographic performance comparison",
+        "Per-session troubleshooting",
+        "Front-end to back-end trace correlation",
+        "OpenTelemetry Web SDK",
+        "Browser and mobile app support",
+        "Web Vitals regression alerting",
+        "OpenTelemetry native",
+        "Open source",
       ],
     },
   },

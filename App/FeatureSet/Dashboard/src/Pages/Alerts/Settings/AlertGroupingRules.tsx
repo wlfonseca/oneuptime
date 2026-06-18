@@ -84,12 +84,11 @@ flowchart LR
 
 | Option | When Enabled | When Disabled |
 |--------|-------------|---------------|
-| **Group By Service** | Alerts from monitors in different services → separate episodes | Alerts can be grouped regardless of service |
 | **Group By Monitor** | Alerts from different monitors → separate episodes | Alerts from any monitor can be grouped together |
 | **Group By Severity** | Alerts with different severities → separate episodes | Alerts of any severity can be grouped together |
 | **Group By Alert Title** | Alerts with different titles → separate episodes | Alerts with any title can be grouped together |
-
-> **Note:** Monitors can be attached to Services. A Service can have multiple monitors. Group By Service is useful when you want to group all alerts from a service together regardless of which specific monitor triggered them.
+| **Group By Alert Labels** | Alerts with different sets of labels → separate episodes (exact set match) | Alert labels are ignored for grouping |
+| **Group By Monitor Labels** | Alerts whose monitors have different sets of labels → separate episodes (exact set match) | Monitor labels are ignored for grouping |
 
 #### Default Behavior
 
@@ -145,6 +144,9 @@ const AlertGroupingRulesPage: FunctionComponent<
         id="alert-grouping-rules-table"
         name="Settings > Alert Grouping Rules"
         userPreferencesKey="alert-grouping-rules-table"
+        saveFilterProps={{
+          tableId: "alert-grouping-rules-table",
+        }}
         isDeleteable={true}
         isEditable={true}
         isCreateable={true}
@@ -421,17 +423,6 @@ const AlertGroupingRulesPage: FunctionComponent<
           // Group By Fields
           {
             field: {
-              groupByService: true,
-            },
-            title: "Group By Service",
-            stepId: "group-by",
-            fieldType: FormFieldSchemaType.Checkbox,
-            required: false,
-            description:
-              "When enabled, alerts from monitors belonging to different services will be grouped into separate episodes. Monitors can be attached to services, and a service can have multiple monitors.",
-          },
-          {
-            field: {
               groupByMonitor: true,
             },
             title: "Group By Monitor",
@@ -462,6 +453,28 @@ const AlertGroupingRulesPage: FunctionComponent<
             required: false,
             description:
               "When enabled, alerts with different titles will be grouped into separate episodes. When disabled, alerts with any title can be grouped together.",
+          },
+          {
+            field: {
+              groupByAlertLabels: true,
+            },
+            title: "Group By Alert Labels",
+            stepId: "group-by",
+            fieldType: FormFieldSchemaType.Checkbox,
+            required: false,
+            description:
+              "When enabled, alerts with different sets of labels will be grouped into separate episodes (exact set match). When disabled, alert labels are ignored for grouping.",
+          },
+          {
+            field: {
+              groupByMonitorLabels: true,
+            },
+            title: "Group By Monitor Labels",
+            stepId: "group-by",
+            fieldType: FormFieldSchemaType.Checkbox,
+            required: false,
+            description:
+              "When enabled, alerts whose monitors have different sets of labels will be grouped into separate episodes (exact set match). When disabled, monitor labels are ignored for grouping.",
           },
           // Time Settings Fields
           {

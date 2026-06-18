@@ -11,6 +11,7 @@ import OneUptimeDate from "../../Types/Date";
 import LIMIT_MAX from "../../Types/Database/LimitMax";
 import GlobalCache from "../Infrastructure/GlobalCache";
 import logger, { LogAttributes } from "../Utils/Logger";
+import { canonicalizeEntityValue } from "../../Utils/Telemetry/EntityKey";
 import crypto from "crypto";
 
 const LAST_SEEN_CACHE_NAMESPACE: string = "host-last-seen";
@@ -60,10 +61,31 @@ export class Service extends DatabaseService<Model> {
     projectId: ObjectID;
     hostIdentifier: string;
   }): Promise<Model> {
+    /*
+     * Canonicalize the identifier (trim + lowercase, matching
+     * QueryHelper.findWithSameText). Host identity comes from the OTel
+     * `host.name` resource attribute, whose casing is not stable across
+     * batches — Windows in particular surfaces the hostname uppercased
+     * (`COMPUTERNAME`-style, e.g. PRIMARY01) from some resource detectors
+     * and lowercased from others, so the same physical host arrives as
+     * both `PRIMARY01` and `primary01`. Ingest already canonicalizes
+     * host.name (OtelIngestBaseService.normalizeHostNameAttributesInPlace);
+     * we repeat it here so the method is correct for any caller.
+     */
+    const hostIdentifier: string = canonicalizeEntityValue(data.hostIdentifier);
+
+    /*
+     * Look up case-insensitively. The unique guard on name/hostIdentifier
+     * (DatabaseService.checkUniqueColumnBy -> QueryHelper.findWithSameText)
+     * already compares case-insensitively, so a case-sensitive lookup here
+     * would miss an existing row, then fail to create it ("Host with the
+     * same name already exists"), and permanently wedge ingest for that
+     * host. Mirrors LabelService.findOrCreateLabelByName.
+     */
     const existingHost: Model | null = await this.findOneBy({
       query: {
         projectId: data.projectId,
-        hostIdentifier: data.hostIdentifier,
+        hostIdentifier: QueryHelper.findWithSameText(hostIdentifier),
       },
       select: {
         _id: true,
@@ -76,14 +98,46 @@ export class Service extends DatabaseService<Model> {
     });
 
     if (existingHost) {
+      /*
+       * Converge a legacy mixed-case identifier onto the canonical form so
+       * the stored resource.host.name (also canonicalized at ingest) keeps
+       * matching the host-detail page filter. Best-effort — never block
+       * ingest on it. Updates don't re-run the unique guard, so writing the
+       * host's own canonical identifier cannot collide.
+       */
+      if (
+        existingHost._id &&
+        existingHost.hostIdentifier &&
+        existingHost.hostIdentifier !== hostIdentifier
+      ) {
+        try {
+          await this.updateOneById({
+            id: new ObjectID(existingHost._id.toString()),
+            data: {
+              hostIdentifier: hostIdentifier,
+            },
+            props: {
+              isRoot: true,
+            },
+          });
+          existingHost.hostIdentifier = hostIdentifier;
+        } catch (err) {
+          logger.warn(
+            `HostService: failed to canonicalize hostIdentifier for host ${existingHost._id.toString()}: ${
+              err instanceof Error ? err.message : String(err)
+            }`,
+          );
+        }
+      }
+
       return existingHost;
     }
 
     try {
       const newHost: Model = new Model();
       newHost.projectId = data.projectId;
-      newHost.name = data.hostIdentifier;
-      newHost.hostIdentifier = data.hostIdentifier;
+      newHost.name = hostIdentifier;
+      newHost.hostIdentifier = hostIdentifier;
       newHost.otelCollectorStatus = "connected";
       newHost.lastSeenAt = OneUptimeDate.getCurrentDate();
 
@@ -96,10 +150,16 @@ export class Service extends DatabaseService<Model> {
 
       return createdHost;
     } catch {
+      /*
+       * Either two ingest workers raced to create the same host, or a
+       * host with this identifier in a different case already existed and
+       * the unique guard rejected the insert. Re-resolve case-insensitively
+       * so the caller still gets the existing row instead of throwing.
+       */
       const reFetchedHost: Model | null = await this.findOneBy({
         query: {
           projectId: data.projectId,
-          hostIdentifier: data.hostIdentifier,
+          hostIdentifier: QueryHelper.findWithSameText(hostIdentifier),
         },
         select: {
           _id: true,
@@ -115,7 +175,7 @@ export class Service extends DatabaseService<Model> {
         return reFetchedHost;
       }
 
-      throw new Error("Failed to create or find host: " + data.hostIdentifier);
+      throw new Error("Failed to create or find host: " + hostIdentifier);
     }
   }
 
@@ -135,6 +195,14 @@ export class Service extends DatabaseService<Model> {
       containerRuntime?: string | undefined;
       dockerHostId?: ObjectID | undefined;
       kubernetesClusterId?: ObjectID | undefined;
+      agentVersion?: string | undefined;
+      deploymentEnvironment?: string | undefined;
+      runtimeName?: string | undefined;
+      runtimeVersion?: string | undefined;
+      cloudProvider?: string | undefined;
+      cloudPlatform?: string | undefined;
+      cloudRegion?: string | undefined;
+      cloudAccountId?: string | undefined;
     },
   ): Promise<void> {
     /*
@@ -204,6 +272,30 @@ export class Service extends DatabaseService<Model> {
     if (extra?.kubernetesClusterId) {
       data.kubernetesClusterId = extra.kubernetesClusterId;
     }
+    if (extra?.agentVersion) {
+      data.agentVersion = extra.agentVersion;
+    }
+    if (extra?.deploymentEnvironment) {
+      data.deploymentEnvironment = extra.deploymentEnvironment;
+    }
+    if (extra?.runtimeName) {
+      data.runtimeName = extra.runtimeName;
+    }
+    if (extra?.runtimeVersion) {
+      data.runtimeVersion = extra.runtimeVersion;
+    }
+    if (extra?.cloudProvider) {
+      data.cloudProvider = extra.cloudProvider;
+    }
+    if (extra?.cloudPlatform) {
+      data.cloudPlatform = extra.cloudPlatform;
+    }
+    if (extra?.cloudRegion) {
+      data.cloudRegion = extra.cloudRegion;
+    }
+    if (extra?.cloudAccountId) {
+      data.cloudAccountId = extra.cloudAccountId;
+    }
 
     await this.updateOneById({
       id: hostId,
@@ -227,6 +319,14 @@ export class Service extends DatabaseService<Model> {
     containerRuntime?: string | undefined;
     dockerHostId?: ObjectID | undefined;
     kubernetesClusterId?: ObjectID | undefined;
+    agentVersion?: string | undefined;
+    deploymentEnvironment?: string | undefined;
+    runtimeName?: string | undefined;
+    runtimeVersion?: string | undefined;
+    cloudProvider?: string | undefined;
+    cloudPlatform?: string | undefined;
+    cloudRegion?: string | undefined;
+    cloudAccountId?: string | undefined;
   }): string {
     const normalized: Record<string, string | number | null> = {
       osType: extra?.osType ?? null,
@@ -241,6 +341,14 @@ export class Service extends DatabaseService<Model> {
       containerRuntime: extra?.containerRuntime ?? null,
       dockerHostId: extra?.dockerHostId?.toString() ?? null,
       kubernetesClusterId: extra?.kubernetesClusterId?.toString() ?? null,
+      agentVersion: extra?.agentVersion ?? null,
+      deploymentEnvironment: extra?.deploymentEnvironment ?? null,
+      runtimeName: extra?.runtimeName ?? null,
+      runtimeVersion: extra?.runtimeVersion ?? null,
+      cloudProvider: extra?.cloudProvider ?? null,
+      cloudPlatform: extra?.cloudPlatform ?? null,
+      cloudRegion: extra?.cloudRegion ?? null,
+      cloudAccountId: extra?.cloudAccountId ?? null,
     };
 
     return crypto
@@ -333,15 +441,23 @@ export class Service extends DatabaseService<Model> {
 
   @CaptureSpan()
   public async markDisconnectedHosts(): Promise<void> {
-    const fiveMinutesAgo: Date = OneUptimeDate.addRemoveMinutes(
+    /*
+     * Threshold must stay well above the 5-minute OTel ingest
+     * maintenance fence (MAINTENANCE_FENCE_TTL_SECONDS in
+     * OtelIngestBaseService) — lastSeenAt is legitimately up to
+     * ~5 minutes stale during continuous telemetry, so a threshold
+     * equal to the fence TTL flaps healthy resources. 15 minutes
+     * gives 3x headroom.
+     */
+    const fifteenMinutesAgo: Date = OneUptimeDate.addRemoveMinutes(
       OneUptimeDate.getCurrentDate(),
-      -5,
+      -15,
     );
 
     const connectedHosts: Array<Model> = await this.findBy({
       query: {
         otelCollectorStatus: "connected",
-        lastSeenAt: QueryHelper.lessThan(fiveMinutesAgo),
+        lastSeenAt: QueryHelper.lessThan(fifteenMinutesAgo),
       },
       select: {
         _id: true,

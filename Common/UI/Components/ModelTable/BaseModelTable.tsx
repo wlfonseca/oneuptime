@@ -12,6 +12,7 @@ import Sort from "../../../Types/BaseDatabase/Sort";
 import Select from "../../../Types/BaseDatabase/Select";
 import { Logger } from "../../Utils/Logger";
 import Navigation from "../../Utils/Navigation";
+import TableFilterUrlState from "../../Utils/TableFilterUrlState";
 import PermissionUtil from "../../Utils/Permission";
 import ProjectUtil from "../../Utils/Project";
 import User from "../../Utils/User";
@@ -161,6 +162,11 @@ export interface BaseTableProps<
     | undefined
     | ((data: Array<TBaseModel>, totalCount: number) => void);
   cardProps?: CardComponentProps | undefined;
+  /**
+   * Optional content rendered inside the card body, above the table rows.
+   * Useful for in-table filter chips, alerts, etc.
+   */
+  topContent?: ReactElement | undefined;
   helpContent?:
     | {
         title: string;
@@ -179,6 +185,7 @@ export interface BaseTableProps<
   isDeleteable: boolean;
   isEditable?: boolean | undefined;
   isCreateable: boolean;
+  onCreateClick?: (() => void) | undefined;
   disablePagination?: undefined | boolean;
   formFields?: undefined | Array<ModelField<TBaseModel>>;
   formSteps?: undefined | Array<FormStep<TBaseModel>>;
@@ -239,6 +246,19 @@ export interface BaseTableProps<
   initialFilterData?: FilterData<TBaseModel> | undefined;
 
   saveFilterProps?: SaveFilterProps | undefined;
+
+  /**
+   * Extra serializable state to persist alongside the saved view (e.g. facet
+   * selections from a parent hook). Stored on `TableView.facets`. The shape
+   * is opaque to ModelTable.
+   */
+  currentFacetState?: JSONObject | undefined;
+  /**
+   * Called when a saved view is loaded so the parent can restore its facet
+   * state. `null` means "no saved facet data" (e.g. the user reset to the
+   * default empty view).
+   */
+  onFacetStateRestored?: ((state: JSONObject | null) => void) | undefined;
 
   onFilterApplied?: ((isFilterApplied: boolean) => void) | undefined;
 
@@ -363,6 +383,13 @@ const BaseModelTable: <TBaseModel extends BaseModel | AnalyticsBaseModel>(
   const [query, setQuery] = useState<Query<TBaseModel>>({});
   const [currentPageNumber, setCurrentPageNumber] = useState<number>(1);
   const [totalItemsCount, setTotalItemsCount] = useState<number>(0);
+  /*
+   * Analytics endpoints (Log/Span/Metric/...) skip COUNT(*) for
+   * performance and instead return `hasMore`. When `hasMore` is
+   * `undefined`, the endpoint emitted an exact `count` and the
+   * pagination falls back to the count-based UI.
+   */
+  const [hasMore, setHasMore] = useState<boolean | undefined>(undefined);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   const [error, setError] = useState<string>("");
@@ -1171,7 +1198,16 @@ const BaseModelTable: <TBaseModel extends BaseModel | AnalyticsBaseModel>(
       });
 
       setTotalItemsCount(listResult.count);
+      setHasMore(listResult.hasMore);
       setData(listResult.data);
+      /*
+       * Fire onFetchSuccess so consumers (e.g. the resource-owners hook)
+       * can react to the loaded page. Previously the prop was declared
+       * but never invoked, which broke per-row owner enrichment.
+       */
+      if (props.onFetchSuccess) {
+        props.onFetchSuccess(listResult.data, listResult.count);
+      }
     } catch (err) {
       setError(API.getFriendlyMessage(err));
     }
@@ -1260,6 +1296,7 @@ const BaseModelTable: <TBaseModel extends BaseModel | AnalyticsBaseModel>(
           currentSortBy={sortBy}
           currentItemsOnPage={itemsOnPage}
           currentSortOrder={sortOrder}
+          currentFacetState={props.currentFacetState}
           onViewChange={async (tableView: TableView | null) => {
             setTableView(tableView);
 
@@ -1286,12 +1323,22 @@ const BaseModelTable: <TBaseModel extends BaseModel | AnalyticsBaseModel>(
               if (classicTableFilters.length === 0) {
                 await getFilterDropdownItems();
               }
+
+              if (props.onFacetStateRestored) {
+                props.onFacetStateRestored(
+                  (tableView.facets as JSONObject | undefined) || null,
+                );
+              }
             } else {
               setQuery({});
               setSortBy(null);
               setSortOrder(SortOrder.Descending);
               setItemsOnPage(10);
               setCurrentPageNumber(1);
+
+              if (props.onFacetStateRestored) {
+                props.onFacetStateRestored(null);
+              }
             }
           }}
         />
@@ -1381,6 +1428,10 @@ const BaseModelTable: <TBaseModel extends BaseModel | AnalyticsBaseModel>(
         buttonSize: ButtonSize.Normal,
         className: "",
         onClick: () => {
+          if (props.onCreateClick) {
+            props.onCreateClick();
+            return;
+          }
           setModalType(ModalType.Create);
           setShowModal(true);
         },
@@ -1576,6 +1627,17 @@ const BaseModelTable: <TBaseModel extends BaseModel | AnalyticsBaseModel>(
   useEffect(() => {
     serializeToTableColumns();
   }, [data]);
+
+  /*
+   * Re-serialize whenever the parent passes a new `columns` reference. The
+   * column array carries `getElement` closures that capture parent state
+   * (e.g. an owners map populated asynchronously). Without this, the cell
+   * renders are frozen at first paint and never see updated state — which
+   * is what made the Owners column stick on "Loading…" forever.
+   */
+  useEffect(() => {
+    serializeToTableColumns();
+  }, [props.columns]);
 
   const setActionSchema: VoidFunction = () => {
     const permissions: Array<Permission> = PermissionUtil.getAllPermissions();
@@ -1801,23 +1863,64 @@ const BaseModelTable: <TBaseModel extends BaseModel | AnalyticsBaseModel>(
     setQuery({ ...newQuery });
   };
 
+  /*
+   * URL persistence for classic (column) filters, keyed by the table's
+   * `saveFilterProps.tableId`. Mirrors the facet persistence in
+   * `useResourceOwners` so filters survive navigating to a detail page and
+   * back, and so a filtered view is shareable. `hasRestoredUrlFilters` is
+   * state (not a ref) so the persist effect only runs after the restore has
+   * been applied — never clobbering the snapshot with the empty default.
+   */
+  const [hasRestoredUrlFilters, setHasRestoredUrlFilters] =
+    useState<boolean>(false);
+
+  useEffect(() => {
+    const restored: JSONObject | null = TableFilterUrlState.read(
+      props.saveFilterProps?.tableId,
+      "filter",
+    );
+    if (restored) {
+      /*
+       * Re-run through onFilterChanged so the derived query is rebuilt and the
+       * first fetch uses the restored filters.
+       */
+      onFilterChanged(restored as unknown as FilterData<TBaseModel>);
+    }
+    setHasRestoredUrlFilters(true);
+  }, []);
+
+  useEffect(() => {
+    if (!hasRestoredUrlFilters) {
+      return;
+    }
+    TableFilterUrlState.write(
+      props.saveFilterProps?.tableId,
+      "filter",
+      filterData as unknown as JSONObject,
+    );
+  }, [hasRestoredUrlFilters, filterData]);
+
   type GetDeleteBulkActionFunction = () => BulkActionButtonSchema<TBaseModel>;
 
   const getDeleteBulkAction: GetDeleteBulkActionFunction =
     (): BulkActionButtonSchema<TBaseModel> => {
       return {
         title: "Delete",
-        buttonStyleType: ButtonStyleType.NORMAL,
+        buttonStyleType: ButtonStyleType.DANGER,
         icon: IconProp.Trash,
         confirmMessage: (items: Array<TBaseModel>) => {
-          return `Are you sure you want to delete ${items.length} ${
-            props.pluralName || model.pluralName || "items"
-          }?`;
+          const itemLabel: string =
+            items.length === 1
+              ? props.singularName || model.singularName || "item"
+              : props.pluralName || model.pluralName || "items";
+          return `Are you sure you want to delete ${items.length} ${itemLabel}? This action cannot be undone.`;
         },
         confirmTitle: (items: Array<TBaseModel>) => {
-          return `Delete ${items.length} ${
-            props.pluralName || model.pluralName || "items"
-          }`;
+          const itemLabel: string =
+            items.length === 1
+              ? props.singularName || model.singularName || "item"
+              : props.pluralName || model.pluralName || "items";
+          return `Delete ${items.length} ${itemLabel}`;
         },
         confirmButtonStyleType: ButtonStyleType.DANGER,
         onClick: async ({
@@ -1908,25 +2011,68 @@ const BaseModelTable: <TBaseModel extends BaseModel | AnalyticsBaseModel>(
         onFilterRefreshClick={async () => {
           await getFilterDropdownItems();
         }}
-        bulkActions={{
-          buttons: props.bulkActions?.buttons.map(
+        bulkActions={(() => {
+          const permissions: Array<Permission> =
+            PermissionUtil.getAllPermissions();
+          const userCanDelete: boolean =
+            model.hasDeletePermissions(permissions);
+
+          const sourceButtons: Array<
+            BulkActionButtonSchema<TBaseModel> | ModalTableBulkDefaultActions
+          > = [...(props.bulkActions?.buttons ?? [])];
+
+          /*
+           * Auto-include the default Delete bulk action whenever the user has
+           * model-level delete permission, so every table that exposes row
+           * selection also exposes a way to delete the selected rows. This is
+           * intentionally decoupled from `isDeleteable` — that flag governs the
+           * per-row Delete button in the Actions column, not bulk operations.
+           * The confirmation modal is wired up via the schema's confirmMessage
+           * / confirmTitle below. Skip if the table author already added it.
+           */
+          const alreadyHasDeleteAction: boolean = sourceButtons.some(
             (
               action:
                 | BulkActionButtonSchema<TBaseModel>
                 | ModalTableBulkDefaultActions,
             ) => {
-              const permissions: Array<Permission> =
-                PermissionUtil.getAllPermissions();
-              if (
-                action === ModalTableBulkDefaultActions.Delete &&
-                model.hasDeletePermissions(permissions)
-              ) {
-                return getDeleteBulkAction();
+              if (action === ModalTableBulkDefaultActions.Delete) {
+                return true;
               }
-              return action;
+              if (
+                typeof action === "object" &&
+                action !== null &&
+                "title" in action &&
+                (action as BulkActionButtonSchema<TBaseModel>).title ===
+                  "Delete"
+              ) {
+                return true;
+              }
+              return false;
             },
-          ) as Array<BulkActionButtonSchema<TBaseModel>>,
-        }}
+          );
+          if (userCanDelete && !alreadyHasDeleteAction) {
+            sourceButtons.push(ModalTableBulkDefaultActions.Delete);
+          }
+
+          return {
+            buttons: sourceButtons.map(
+              (
+                action:
+                  | BulkActionButtonSchema<TBaseModel>
+                  | ModalTableBulkDefaultActions,
+              ) => {
+                if (
+                  action === ModalTableBulkDefaultActions.Delete &&
+                  userCanDelete
+                ) {
+                  return getDeleteBulkAction();
+                }
+                return action;
+              },
+            ) as Array<BulkActionButtonSchema<TBaseModel>>,
+          };
+        })()}
         onBulkActionEnd={async () => {
           setBulkSelectedItems([]);
           await fetchItems();
@@ -2016,6 +2162,7 @@ const BaseModelTable: <TBaseModel extends BaseModel | AnalyticsBaseModel>(
         dragDropIdField={"_id"}
         dragDropIndexField={props.dragDropIndexField}
         totalItemsCount={totalItemsCount}
+        hasMore={hasMore}
         data={data}
         id={props.id}
         columns={tableColumns}
@@ -2172,6 +2319,7 @@ const BaseModelTable: <TBaseModel extends BaseModel | AnalyticsBaseModel>(
         dragDropIndexField={props.dragDropIndexField}
         isLoading={getTableLoadingState()}
         totalItemsCount={totalItemsCount}
+        hasMore={hasMore}
         data={data}
         id={props.id}
         fields={fields}
@@ -2382,7 +2530,8 @@ const BaseModelTable: <TBaseModel extends BaseModel | AnalyticsBaseModel>(
       })
       .filter((l: SearchLabelOption) => {
         return (
-          lowerPrefix.length === 0 || l.name.toLowerCase().includes(lowerPrefix)
+          lowerPrefix.length === 0 ||
+          l.name.toLowerCase().startsWith(lowerPrefix)
         );
       })
       .slice(0, 8);
@@ -2553,12 +2702,23 @@ const BaseModelTable: <TBaseModel extends BaseModel | AnalyticsBaseModel>(
                 />
               </div>
             )}
-            {showMatchPill && totalItemsCount >= 0 && (
+            {showMatchPill && totalItemsCount >= 0 && hasMore === undefined && (
               <span
                 className="flex-none whitespace-nowrap rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700"
                 title={`${totalItemsCount} ${totalItemsCount === 1 ? "result" : "results"}`}
               >
                 {totalItemsCount} {totalItemsCount === 1 ? "match" : "matches"}
+              </span>
+            )}
+            {showMatchPill && hasMore !== undefined && data.length > 0 && (
+              <span
+                className="flex-none whitespace-nowrap rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700"
+                title={`${data.length}${hasMore ? "+" : ""} ${
+                  data.length === 1 ? "result" : "results"
+                } on this page`}
+              >
+                {data.length}
+                {hasMore ? "+" : ""} {data.length === 1 ? "match" : "matches"}
               </span>
             )}
             {searchText.length > 0 || selectedLabels.length > 0 ? (
@@ -3008,6 +3168,7 @@ const BaseModelTable: <TBaseModel extends BaseModel | AnalyticsBaseModel>(
               ) : (
                 <></>
               )}
+              {props.topContent || <></>}
               {tableColumns.length > 0 && showAs === ShowAs.Table ? (
                 getTable()
               ) : (
@@ -3034,6 +3195,7 @@ const BaseModelTable: <TBaseModel extends BaseModel | AnalyticsBaseModel>(
           ) : (
             <></>
           )}
+          {!props.cardProps && props.topContent}
           {!props.cardProps && showAs === ShowAs.Table ? getTable() : <></>}
           {!props.cardProps && showAs === ShowAs.List ? getList() : <></>}
         </div>

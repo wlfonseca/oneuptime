@@ -12,11 +12,13 @@ import { JSONObject } from "Common/Types/JSON";
 import ObjectID from "Common/Types/ObjectID";
 import OneUptimeDate from "Common/Types/Date";
 import LogSeverity from "Common/Types/Log/LogSeverity";
+import { resolveTelemetryRetentionInDays } from "Common/Types/Telemetry/TelemetryRetentionConfig";
 import TelemetryUtil, {
   AttributeType,
 } from "Common/Server/Utils/Telemetry/Telemetry";
 import OTelIngestService, {
   TelemetryServiceMetadata,
+  getScalarEntityKeyColumns,
 } from "Common/Server/Services/OpenTelemetryIngestService";
 import LogService from "Common/Server/Services/LogService";
 import logger, {
@@ -165,19 +167,11 @@ export default class SyslogIngestService extends OtelIngestBaseService {
           const serviceName: string = this.resolveServiceName(req, parsed);
 
           if (!serviceCache[serviceName]) {
-            const metadata: {
-              serviceId: ObjectID;
-              dataRententionInDays: number;
-            } = await OTelIngestService.telemetryServiceFromName({
-              serviceName,
-              projectId,
-            });
-
-            serviceCache[serviceName] = {
-              serviceName,
-              serviceId: metadata.serviceId,
-              dataRententionInDays: metadata.dataRententionInDays,
-            } satisfies TelemetryServiceMetadata;
+            serviceCache[serviceName] =
+              await OTelIngestService.telemetryServiceFromName({
+                serviceName,
+                projectId,
+              });
           }
 
           const serviceMetadata: TelemetryServiceMetadata =
@@ -193,21 +187,32 @@ export default class SyslogIngestService extends OtelIngestBaseService {
           const attributes: Dictionary<AttributeType | Array<AttributeType>> =
             this.buildAttributes({
               parsed,
-              serviceId: serviceMetadata.serviceId,
+              primaryEntityId: serviceMetadata.primaryEntityId,
               serviceName,
             });
 
+          const retentionDays: number = resolveTelemetryRetentionInDays({
+            pillar: "logs",
+            bucketKey: severityInfo.text,
+            serviceConfig: serviceMetadata.serviceRetentionConfig,
+            serviceRetentionInDays: serviceMetadata.serviceRetentionInDays,
+            projectConfig: serviceMetadata.projectRetentionConfig,
+            projectRetentionInDays: serviceMetadata.projectRetentionInDays,
+          });
           const retentionDate: Date = OneUptimeDate.addRemoveDays(
             ingestionDate,
-            serviceMetadata.dataRententionInDays || 15,
+            retentionDays,
           );
 
           const logRow: JSONObject = {
-            _id: ObjectID.generate().toString(),
+            _id: ObjectID.generateTimeOrdered().toString(),
             createdAt: OneUptimeDate.toClickhouseDateTime(ingestionDate),
-            updatedAt: OneUptimeDate.toClickhouseDateTime(ingestionDate),
             projectId: projectId.toString(),
-            serviceId: serviceMetadata.serviceId.toString(),
+            primaryEntityId: serviceMetadata.primaryEntityId.toString(),
+            primaryEntityType: serviceMetadata.primaryEntityType,
+            entityKeys: serviceMetadata.entityKeys || [],
+            // serviceEntityKey from the resolved service; '' for the rest.
+            ...getScalarEntityKeyColumns(serviceMetadata),
             time: OneUptimeDate.toClickhouseDateTime64(timestamp),
             timeUnixNano: Math.trunc(
               OneUptimeDate.toUnixNano(timestamp),
@@ -288,14 +293,14 @@ export default class SyslogIngestService extends OtelIngestBaseService {
 
   private static buildAttributes(data: {
     parsed: ParsedSyslogMessage;
-    serviceId: ObjectID;
+    primaryEntityId: ObjectID;
     serviceName: string;
   }): Dictionary<AttributeType | Array<AttributeType>> {
     const { parsed } = data;
 
     const attributes: Dictionary<AttributeType | Array<AttributeType>> = {
       ...TelemetryUtil.getAttributesForServiceIdAndServiceName({
-        serviceId: data.serviceId,
+        serviceId: data.primaryEntityId,
         serviceName: data.serviceName,
       }),
       "syslog.raw": parsed.raw,

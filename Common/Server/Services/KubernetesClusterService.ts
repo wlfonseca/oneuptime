@@ -59,11 +59,21 @@ export class Service extends DatabaseService<Model> {
     projectId: ObjectID;
     clusterIdentifier: string;
   }): Promise<Model> {
-    // Try to find existing cluster
+    /*
+     * Look up case-insensitively. The unique guard on name/clusterIdentifier
+     * (checkUniqueColumnBy -> findWithSameText) compares case-insensitively,
+     * so a case-sensitive lookup would miss an existing row on casing drift
+     * (k8s.cluster.name), then fail to create it ("KubernetesCluster with the
+     * same name already exists") and wedge ingest. Mirrors
+     * LabelService.findOrCreateLabelByName. Unlike HostService we keep the
+     * stored casing as-is: k8s.cluster.name is not normalized at ingest, so
+     * lowering the identifier here would desync it from the raw-cased
+     * resource.k8s.cluster.name attribute the detail page filters on.
+     */
     const existingCluster: Model | null = await this.findOneBy({
       query: {
         projectId: data.projectId,
-        clusterIdentifier: data.clusterIdentifier,
+        clusterIdentifier: QueryHelper.findWithSameText(data.clusterIdentifier),
       },
       select: {
         _id: true,
@@ -104,7 +114,9 @@ export class Service extends DatabaseService<Model> {
       const reFetchedCluster: Model | null = await this.findOneBy({
         query: {
           projectId: data.projectId,
-          clusterIdentifier: data.clusterIdentifier,
+          clusterIdentifier: QueryHelper.findWithSameText(
+            data.clusterIdentifier,
+          ),
         },
         select: {
           _id: true,
@@ -127,28 +139,51 @@ export class Service extends DatabaseService<Model> {
   }
 
   @CaptureSpan()
-  public async updateLastSeen(clusterId: ObjectID): Promise<void> {
+  public async updateLastSeen(
+    clusterId: ObjectID,
+    extra?: {
+      agentVersion?: string | undefined;
+    },
+  ): Promise<void> {
     const cacheKey: string = clusterId.toString();
+    const extrasFingerprint: string = crypto
+      .createHash("sha1")
+      .update(
+        JSON.stringify({
+          agentVersion: extra?.agentVersion ?? null,
+        }),
+      )
+      .digest("hex");
 
     const cached: string | null = await GlobalCache.getString(
       LAST_SEEN_CACHE_NAMESPACE,
       cacheKey,
     );
 
-    if (cached) {
-      return; // another pod already updated recently
+    if (cached === extrasFingerprint) {
+      return; // same data was written recently
     }
 
-    await GlobalCache.setString(LAST_SEEN_CACHE_NAMESPACE, cacheKey, "1", {
-      expiresInSeconds: LAST_SEEN_THROTTLE_SECONDS,
-    });
+    await GlobalCache.setString(
+      LAST_SEEN_CACHE_NAMESPACE,
+      cacheKey,
+      extrasFingerprint,
+      { expiresInSeconds: LAST_SEEN_THROTTLE_SECONDS },
+    );
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const data: any = {
+      lastSeenAt: OneUptimeDate.getCurrentDate(),
+      otelCollectorStatus: "connected",
+    };
+
+    if (extra?.agentVersion) {
+      data.agentVersion = extra.agentVersion;
+    }
 
     await this.updateOneById({
       id: clusterId,
-      data: {
-        lastSeenAt: OneUptimeDate.getCurrentDate(),
-        otelCollectorStatus: "connected",
-      },
+      data: data,
       props: {
         isRoot: true,
       },
@@ -234,15 +269,23 @@ export class Service extends DatabaseService<Model> {
 
   @CaptureSpan()
   public async markDisconnectedClusters(): Promise<void> {
-    const fiveMinutesAgo: Date = OneUptimeDate.addRemoveMinutes(
+    /*
+     * Threshold must stay well above the 5-minute OTel ingest
+     * maintenance fence (MAINTENANCE_FENCE_TTL_SECONDS in
+     * OtelIngestBaseService) — lastSeenAt is legitimately up to
+     * ~5 minutes stale during continuous telemetry, so a threshold
+     * equal to the fence TTL flaps healthy resources. 15 minutes
+     * gives 3x headroom.
+     */
+    const fifteenMinutesAgo: Date = OneUptimeDate.addRemoveMinutes(
       OneUptimeDate.getCurrentDate(),
-      -5,
+      -15,
     );
 
     const connectedClusters: Array<Model> = await this.findBy({
       query: {
         otelCollectorStatus: "connected",
-        lastSeenAt: QueryHelper.lessThan(fiveMinutesAgo),
+        lastSeenAt: QueryHelper.lessThan(fifteenMinutesAgo),
       },
       select: {
         _id: true,

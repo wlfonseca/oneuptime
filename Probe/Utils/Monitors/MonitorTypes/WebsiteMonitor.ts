@@ -3,10 +3,10 @@ import HTTPMethod from "Common/Types/API/HTTPMethod";
 import Headers from "Common/Types/API/Headers";
 import Protocol from "Common/Types/API/Protocol";
 import URL from "Common/Types/API/URL";
-import Dictionary from "Common/Types/Dictionary";
 import HTML from "Common/Types/Html";
 import ObjectID from "Common/Types/ObjectID";
 import PositiveNumber from "Common/Types/PositiveNumber";
+import ProbeAttempt from "Common/Types/Probe/ProbeAttempt";
 import RequestFailedDetails from "Common/Types/Probe/RequestFailedDetails";
 import Sleep from "Common/Types/Sleep";
 import WebsiteRequest, { WebsiteResponse } from "Common/Types/WebsiteRequest";
@@ -28,6 +28,8 @@ export interface ProbeWebsiteResponse {
   failureCause: string;
   requestFailedDetails?: RequestFailedDetails | undefined;
   isTimeout?: boolean;
+  probeAttempts?: Array<ProbeAttempt> | undefined;
+  totalAttempts?: number | undefined;
 }
 
 export default class WebsiteMonitor {
@@ -39,13 +41,13 @@ export default class WebsiteMonitor {
       currentRetryCount?: number | undefined;
       monitorId?: ObjectID | undefined;
       isOnlineCheckRequest?: boolean | undefined;
-      timeout?: PositiveNumber;
+      timeout?: PositiveNumber; // timeout in milliseconds
       doNotFollowRedirects?: boolean | undefined;
       allowSelfSignedCertificates?: boolean | undefined;
       tlsClientCertificate?: string | undefined;
       tlsClientKey?: string | undefined;
       tlsClientKeyPassphrase?: string | undefined;
-      requestHeaders?: Dictionary<string> | undefined;
+      attempts?: Array<ProbeAttempt> | undefined;
     },
   ): Promise<ProbeWebsiteResponse | null> {
     if (!options) {
@@ -54,6 +56,10 @@ export default class WebsiteMonitor {
 
     if (options?.currentRetryCount === undefined) {
       options.currentRetryCount = 1;
+    }
+
+    if (!options.attempts) {
+      options.attempts = [];
     }
 
     let requestType: HTTPMethod = HTTPMethod.GET;
@@ -122,6 +128,7 @@ export default class WebsiteMonitor {
       return proxyAgents;
     };
 
+    const attemptedAt: Date = new Date();
     try {
       logger.debug(
         `Website Monitor - Pinging ${options.monitorId?.toString()} ${requestType} ${url.toString()} - Retry: ${
@@ -134,7 +141,6 @@ export default class WebsiteMonitor {
         isHeadRequest: options.isHeadRequest,
         timeout: options.timeout?.toNumber() || 5000,
         doNotFollowRedirects: options.doNotFollowRedirects || false,
-        headers: options.requestHeaders || undefined,
         ...buildAgents(),
       });
 
@@ -148,7 +154,6 @@ export default class WebsiteMonitor {
           isHeadRequest: false,
           timeout: options.timeout?.toNumber() || 5000,
           doNotFollowRedirects: options.doNotFollowRedirects || false,
-          headers: options.requestHeaders || undefined,
           ...buildAgents(),
         });
       }
@@ -157,6 +162,16 @@ export default class WebsiteMonitor {
       const responseTimeInMS: PositiveNumber = new PositiveNumber(
         Math.ceil((endTime[0] * 1000000000 + endTime[1]) / 1000000),
       );
+      const responseReceivedAt: Date = new Date();
+
+      options.attempts!.push({
+        attemptNumber: options.currentRetryCount,
+        attemptedAt,
+        responseReceivedAt,
+        responseTimeInMs: responseTimeInMS.toNumber(),
+        responseCode: result.responseStatusCode,
+        isOnline: true,
+      });
 
       // if response time is greater than 10 seconds then give it one more try
 
@@ -171,7 +186,7 @@ export default class WebsiteMonitor {
 
       const probeWebsiteResponse: ProbeWebsiteResponse = {
         url: url,
-        requestHeaders: options.requestHeaders || {},
+        requestHeaders: {},
         isOnline: true,
         isSecure: url.protocol === Protocol.HTTPS,
         responseTimeInMS: responseTimeInMS,
@@ -180,6 +195,8 @@ export default class WebsiteMonitor {
         responseHeaders: result.responseHeaders,
         failureCause: "",
         isTimeout: false,
+        probeAttempts: options.attempts,
+        totalAttempts: options.attempts!.length,
       };
 
       logger.debug(
@@ -197,6 +214,27 @@ export default class WebsiteMonitor {
       if (!options.currentRetryCount) {
         options.currentRetryCount = 0; // default value
       }
+
+      if (!options.attempts) {
+        options.attempts = [];
+      }
+
+      const responseReceivedAt: Date = new Date();
+      const failureCauseForAttempt: string = API.getFriendlyErrorMessage(
+        err as Error,
+      );
+      const statusCodeForAttempt: number | undefined =
+        err instanceof AxiosError ? err.response?.status : undefined;
+
+      options.attempts.push({
+        attemptNumber: options.currentRetryCount || 1,
+        attemptedAt,
+        responseReceivedAt,
+        responseTimeInMs: responseReceivedAt.getTime() - attemptedAt.getTime(),
+        responseCode: statusCodeForAttempt,
+        isOnline: false,
+        failureCause: failureCauseForAttempt,
+      });
 
       if (options.currentRetryCount < (options.retry || 5)) {
         options.currentRetryCount++;
@@ -223,7 +261,7 @@ export default class WebsiteMonitor {
         probeWebsiteResponse = {
           url: url,
           isOnline: Boolean(err.response),
-          requestHeaders: options.requestHeaders || {},
+          requestHeaders: {},
           isSecure: url.protocol === Protocol.HTTPS,
           responseTimeInMS: new PositiveNumber(0),
           statusCode: err.response?.status,
@@ -232,13 +270,15 @@ export default class WebsiteMonitor {
           responseHeaders: (err.response?.headers as Headers) || {},
           failureCause: API.getFriendlyErrorMessage(err),
           requestFailedDetails: requestFailedDetails,
+          probeAttempts: options.attempts,
+          totalAttempts: options.attempts.length,
         };
       } else {
         probeWebsiteResponse = {
           url: url,
           isOnline: false,
 
-          requestHeaders: options.requestHeaders || {},
+          requestHeaders: {},
           isSecure: url.protocol === Protocol.HTTPS,
           responseTimeInMS: new PositiveNumber(0),
           statusCode: (err as any)?.response?.status,
@@ -247,6 +287,8 @@ export default class WebsiteMonitor {
           isTimeout: false,
           failureCause: API.getFriendlyErrorMessage(err as Error),
           requestFailedDetails: requestFailedDetails,
+          probeAttempts: options.attempts,
+          totalAttempts: options.attempts.length,
         };
       }
 

@@ -1,6 +1,6 @@
 {
     "name": "@oneuptime/root",
-    "version": "3.0.2",
+    "version": "11.0.3",
     "description": "One Complete Observability platform.",
     "main": "ts",
     "type": "module",
@@ -27,7 +27,7 @@
         "husky": "^7.0.0",
         "jest-environment-jsdom": "^30.4.1",
         "lint-staged": "^13.2.1",
-        "nodemon": "^2.0.20",
+        "nodemon": "^3.1.14",
         "prettier": "3.3.2",
         "ts-jest": "^29.4.11",
         "typescript": "^5.9.2",
@@ -38,7 +38,9 @@
         "config-to-ci": "node ./Scripts/Install/ReplaceValueInConfig.js ENVIRONMENT ci",
         "config-to-test": "node ./Scripts/Install/ReplaceValueInConfig.js ENVIRONMENT test && node ./Scripts/Install/ReplaceValueInConfig.js APP_TAG test",
         "config-to-production": "node ./Scripts/Install/ReplaceValueInConfig.js ENVIRONMENT production",
-        "prerun": "bash configure.sh",
+        "sync-package-versions": "node ./Scripts/Install/SyncPackageVersions.js",
+        "check-package-versions": "node ./Scripts/Install/SyncPackageVersions.js --check",
+        "prerun": "node ./Scripts/Install/SyncPackageVersions.js && bash configure.sh",
         "typeorm": "node --require ts-node/register ./node_modules/typeorm/cli.js",
         "uninstall": "bash uninstall.sh",
         "clean-modules": "bash remove-node-modules.sh",
@@ -47,6 +49,7 @@
         "lint": "export NODE_OPTIONS='--max-old-space-size=32768' && npx eslint . --cache",
         "fix-lint": "export NODE_OPTIONS='--max-old-space-size=32768' && npx eslint . --fix --cache --debug",
         "fix": "npm run fix-lint",
+        "i18n:validate": "node ./Scripts/I18n/ValidateLocales.js",
         "status-check": "bash ./Tests/Scripts/status-check.sh $npm_config_services",
         "start": "export $(grep -v '^#' config.env | xargs) && docker compose up --remove-orphans -d $npm_config_services && npm run status-check",
         "dev-llm": "npm run prerun && export $(grep -v '^#' config.env | xargs) && docker compose -f docker-compose.llm.yml up --remove-orphans -d $npm_config_services",
@@ -93,6 +96,9 @@
     "keywords": [],
     "author": "OneUptime <hello@oneuptime.com> (https://oneuptime.com/)",
     "license": "Apache-2.0",
+    "engines": {
+        "node": ">=26.0.0"
+    },
     "bugs": {
         "url": "https://gitlab.com/oneuptime/app/issues"
     },

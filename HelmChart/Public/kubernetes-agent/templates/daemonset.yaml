@@ -21,6 +21,10 @@ spec:
         checksum/config: {{ include (print $.Template.BasePath "/configmap-daemonset.yaml") . | sha256sum }}
     spec:
       serviceAccountName: {{ include "kubernetes-agent.serviceAccountName" . }}
+      {{- if and .Values.debug.enabled .Values.debug.shareProcessNamespace }}
+      # Lets the debug sidecar see the collector's processes (ps, /proc, strace).
+      shareProcessNamespace: true
+      {{- end }}
       tolerations:
         - operator: Exists
       containers:
@@ -38,6 +42,16 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: status.hostIP
+            {{- with .Values.logs.resources.limits.memory }}
+            # Go runtime soft memory limit — makes the GC reclaim
+            # aggressively as the heap approaches the cgroup limit, so the
+            # collector's own memory_limiter (same 80% target) and the kernel
+            # OOM killer act as backstops rather than the primary control.
+            # Derived from .Values.logs.resources.limits.memory so it tracks
+            # the container limit. Only set when a memory limit is configured.
+            - name: GOMEMLIMIT
+              value: {{ include "kubernetes-agent.gomemlimit" . | quote }}
+            {{- end }}
             - name: ONEUPTIME_API_KEY
               valueFrom:
                 secretKeyRef:
@@ -77,6 +91,9 @@ spec:
               mountPath: /var/log/kubernetes
               readOnly: true
             {{- end }}
+        {{- if .Values.debug.enabled }}
+        {{- include "kubernetes-agent.debugContainer" . | nindent 8 }}
+        {{- end }}
       volumes:
         - name: config
           configMap:

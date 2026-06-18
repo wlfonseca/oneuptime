@@ -1,6 +1,22 @@
 {
-  "transform": {
-    "^.+\\.tsx?$": "<rootDir>/../Common/node_modules/ts-jest"
+  "preset": "ts-jest",
+  "testPathIgnorePatterns": ["node_modules", "dist"],
+  "verbose": true,
+  "globals": {
+    "ts-jest": {
+      "tsconfig": "tsconfig.json",
+      "babelConfig": false
+    }
   },
-  "testEnvironment": "node"
+  "modulePathIgnorePatterns": ["<rootDir>/build"],
+  "moduleNameMapper": {
+    "Common/(.*)": "<rootDir>/../Common/$1"
+  },
+  "moduleFileExtensions": ["ts", "tsx", "js", "json"],
+  "transform": {
+    ".(ts|tsx)": "ts-jest"
+  },
+  "testEnvironment": "node",
+  "collectCoverage": false,
+  "testRegex": "./Tests/(.*)\\.test\\.(ts|tsx)$"
 }

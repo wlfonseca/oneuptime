@@ -82,3 +82,186 @@ FROM pg_database
 ORDER BY pg_database_size(datname) DESC;
 ```
 
+### Operator-managed Postgres with CloudNativePG (optional)
+
+By default OneUptime runs Postgres as a single-replica `StatefulSet` (no
+replication, failover, or built-in backups). You can instead run Postgres under
+the [CloudNativePG](https://cloudnative-pg.io) operator, which adds HA
+(primary + hot standbys), automated failover, rolling minor upgrades, and
+backup/PITR.
+
+Enabling it is a single switch. The CloudNativePG operator is **bundled** as a
+chart dependency and installed together with the release. The config lives in a
+self-contained, top-level `postgresOperator` object (**not** nested under
+`postgresql`); `cnpg` is nested so other operators can be added later:
+
+```yaml
+# values.yaml
+postgresOperator:
+  cnpg:
+    enabled: true        # turns on the operator + an operator-managed Cluster
+    instances: 3         # 1 primary + 2 hot standbys (use 1 for single node)
+    imageName: "ghcr.io/cloudnative-pg/postgresql:17.4"   # pin a minor version
+    database: oneuptimedb
+```
+
+When `postgresOperator.cnpg.enabled` is `true`:
+
+* The built-in `StatefulSet`, its `Service`s and `ConfigMap`s are **not**
+  rendered (regardless of `postgresql.enabled`; the operator path takes
+  precedence).
+* A CloudNativePG `Cluster` named `<release>-postgresql-cnpg` is created.
+* The app connects as the `postgres` superuser to the read-write service
+  `<release>-postgresql-cnpg-rw` on port `5432`, using the password in the
+  `<release>-postgresql-cnpg-superuser` secret (auto-generated, or set
+  `postgresOperator.cnpg.postgresPassword`). The password is preserved across
+  upgrades.
+* The object is self-contained — `database`, `persistence`, `resources`,
+  `nodeSelector`, `tolerations` and CloudNativePG `parameters` all live under
+  `postgresOperator.cnpg.*`. It does not read any `postgresql.*` values.
+
+Read the superuser password:
+
+```
+echo $(kubectl get secret --namespace "default" oneuptime-postgresql-cnpg-superuser -o jsonpath="{.data.password}" | base64 -d)
+```
+
+> **Bundled-operator caveats.** The operator is cluster-scoped and owns the
+> CloudNativePG CRDs. Do **not** enable the bundled operator in more than one
+> OneUptime release in the same cluster (they would fight over the CRDs/RBAC).
+> Because the CRDs are installed by the chart, `helm uninstall` can remove them
+> and cascade-delete every CloudNativePG `Cluster` in the cluster — back up
+> first. If you already run CloudNativePG cluster-wide, do not use the bundled
+> mode.
+
+#### First install with the operator enabled (CRDs must exist first)
+
+The CloudNativePG CRDs ship as **templates** in the bundled subchart, not in a
+`crds/` directory. Helm renders and validates *every* manifest against the API
+server **before** applying anything, so on a cluster that does not yet have the
+CRDs the very first `helm install`/`helm upgrade` with
+`postgresOperator.cnpg.enabled: true` aborts with:
+
+```
+Error: ... resource mapping not found for name: "<release>-postgresql-cnpg" ...
+no matches for kind "Cluster" in version "postgresql.cnpg.io/v1"
+ensure CRDs are installed first
+```
+
+Nothing is applied (not even the CRDs), so re-running Helm alone does **not**
+help. `--disable-openapi-validation` does not fix it either (the failure is a
+resource-mapping check, not schema validation). Install the CRDs **once** before
+the first Helm run, then proceed normally. They are cluster-scoped, so this is a
+one-time step per cluster:
+
+```bash
+# 1) Render the chart and apply ONLY the CloudNativePG CRDs first.
+helm template oneuptime ./HelmChart/Public/oneuptime \
+  -f ./HelmChart/Public/oneuptime/values.yaml \
+  -f ./HelmChart/Values/<your>.values.yaml \
+| python3 -c 'import sys,re; d=sys.stdin.read().split("\n---\n"); print("\n---\n".join(x for x in d if re.search(r"^kind: CustomResourceDefinition$",x,re.M) and "cnpg.io" in x))' \
+| kubectl apply --server-side -f -
+
+# 2) Hand the CRDs to Helm so the upgrade can adopt them (crds.create stays true).
+for c in $(kubectl get crd -o name | grep '\.postgresql\.cnpg\.io' | sed 's#.*/##'); do
+  kubectl label  crd "$c" app.kubernetes.io/managed-by=Helm --overwrite
+  kubectl annotate crd "$c" \
+    meta.helm.sh/release-name=oneuptime \
+    meta.helm.sh/release-namespace=default --overwrite
+done
+
+# 3) Now the normal install/upgrade (e.g. npm run deploy-test) succeeds.
+helm upgrade --install oneuptime ./HelmChart/Public/oneuptime \
+  -f ./HelmChart/Public/oneuptime/values.yaml -f ./HelmChart/Values/<your>.values.yaml
+```
+
+Step 2 is only needed if you keep the default `cloudnative-pg.crds.create: true`
+(Helm then manages CRD upgrades for you). Alternatively, set
+`cloudnative-pg.crds.create: false` so Helm never templates or owns the CRDs —
+then skip step 2, but you must apply CRD upgrades out of band yourself. Once the
+CRDs exist, all subsequent upgrades work in a single pass.
+
+### Replication, failover, and scaling (CloudNativePG)
+
+When `postgresOperator.cnpg.enabled` is set, replication and failover are managed
+by the operator:
+
+* **Replication** — `postgresOperator.cnpg.instances` is the total number of
+  PostgreSQL pods. `instances: 3` = 1 primary + 2 streaming hot-standby replicas.
+  Scaling is online: change `instances` and `helm upgrade`.
+* **Automatic failover** — if the primary becomes unhealthy the operator promotes
+  a replica and re-points the `-rw` service. No application change is needed.
+* **Synchronous replication** — set `postgresOperator.cnpg.synchronousReplicas: N`
+  for quorum-based synchronous commits (zero data loss). Keep
+  `instances >= synchronousReplicas + 2` so a single standby outage does not block
+  writes.
+* **Read scaling** — send read-only/reporting traffic to the
+  `<release>-postgresql-cnpg-ro` service (replicas only). The OneUptime app uses
+  the `-rw` (primary) service.
+
+Inspect cluster and replication status:
+
+```
+kubectl cnpg status <release>-postgresql-cnpg
+# or, without the cnpg kubectl plugin:
+kubectl get cluster <release>-postgresql-cnpg -o wide
+```
+
+**Sharding is not supported** by CloudNativePG or this chart. Scale via vertical
+sizing, read replicas, connection pooling, and PostgreSQL table partitioning for
+very large tables. Distributed sharding requires the Citus extension (or an
+operator that wraps it) — a separate architecture, out of scope here.
+
+### Backups (CloudNativePG volume snapshots)
+
+Enable scheduled, online volume-snapshot backups — native to CloudNativePG, with
+no object store or extra components:
+
+```yaml
+postgresOperator:
+  cnpg:
+    enabled: true
+    backup:
+      enabled: true
+      schedule: "0 0 3 * * *"      # 6-field cron WITH seconds — 03:00 daily
+      immediate: true
+      volumeSnapshotClassName: ""  # your CSI VolumeSnapshotClass (empty = default)
+      online: true                 # hot snapshot, no downtime
+```
+
+This sets `spec.backup.volumeSnapshot` on the cluster and creates a
+`ScheduledBackup` named `<release>-postgresql-cnpg-backup`. Requirements: a CSI
+driver that supports `VolumeSnapshot`, and a `VolumeSnapshotClass` (set
+`volumeSnapshotClassName`, or rely on the driver default). Volume snapshots do
+**not** require WAL archiving / an object store.
+
+On-demand backup (needs the `cnpg` kubectl plugin):
+
+```
+kubectl cnpg backup <release>-postgresql-cnpg
+```
+
+**Restore** is a brand-new cluster that bootstraps from a snapshot instead of
+`initdb` (the same `bootstrap.recovery` mechanism shown below), optionally with a
+`recoveryTarget` for point-in-time recovery.
+
+**Retention caveat.** CloudNativePG does **not** auto-prune volume snapshots —
+`spec.backup.retentionPolicy` applies only to object-store (Barman) backups and is
+deprecated. With snapshots, old `Backup` / `VolumeSnapshot` objects accumulate
+until deleted. Options: prune them with your own job/process, rely on your CSI
+driver or cloud provider's snapshot lifecycle, or switch to object-store backups
+(Barman Cloud Plugin) which support a recovery-window retention policy plus
+continuous WAL archiving (full PITR).
+
+### Migrating existing StatefulSet data into CloudNativePG
+
+Turning on `postgresOperator.cnpg.enabled` bootstraps a **fresh, empty**
+cluster — it does **not** copy data from the existing standalone `StatefulSet`
+(different PVC ownership, a `pgdata` sub-directory layout, and a different runtime
+UID mean there's no supported in-place PV hand-off). The full step-by-step
+migration runbook — operator-native logical import, `pg_basebackup`, and manual
+`pg_dump`/`pg_restore`, plus quiescing, verification, rollback, and cleanup —
+lives in its own doc:
+
+➡️ **[Migrating PostgreSQL: Standalone → CloudNativePG Operator](./MigratePostgresStandaloneToOperator.md)**
+

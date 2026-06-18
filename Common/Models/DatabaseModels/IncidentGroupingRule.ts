@@ -840,9 +840,9 @@ export default class IncidentGroupingRule extends BaseModel {
   @TableColumn({
     required: false,
     type: TableColumnType.Boolean,
-    title: "Group By Service",
+    title: "Group By Incident Labels",
     description:
-      "When enabled, incidents from monitors belonging to different services will be grouped into separate episodes. When disabled, incidents can be grouped together regardless of which service the monitor belongs to.",
+      "When enabled, incidents with different sets of labels will be grouped into separate episodes (exact set match). When disabled, incident labels are ignored for grouping.",
     defaultValue: false,
     isDefaultValueColumn: true,
   })
@@ -851,7 +851,45 @@ export default class IncidentGroupingRule extends BaseModel {
     nullable: false,
     default: false,
   })
-  public groupByService?: boolean = undefined;
+  public groupByIncidentLabels?: boolean = undefined;
+
+  @ColumnAccessControl({
+    create: [
+      Permission.ProjectOwner,
+      Permission.ProjectAdmin,
+      Permission.CreateIncidentGroupingRule,
+    ],
+    read: [
+      Permission.ProjectOwner,
+      Permission.ProjectAdmin,
+      Permission.ProjectMember,
+      Permission.Viewer,
+      Permission.IncidentAdmin,
+      Permission.IncidentMember,
+      Permission.IncidentViewer,
+      Permission.ReadIncidentGroupingRule,
+    ],
+    update: [
+      Permission.ProjectOwner,
+      Permission.ProjectAdmin,
+      Permission.EditIncidentGroupingRule,
+    ],
+  })
+  @TableColumn({
+    required: false,
+    type: TableColumnType.Boolean,
+    title: "Group By Monitor Labels",
+    description:
+      "When enabled, incidents whose monitors have different sets of labels will be grouped into separate episodes (exact set match). When disabled, monitor labels are ignored for grouping.",
+    defaultValue: false,
+    isDefaultValueColumn: true,
+  })
+  @Column({
+    type: ColumnType.Boolean,
+    nullable: false,
+    default: false,
+  })
+  public groupByMonitorLabels?: boolean = undefined;
 
   @ColumnAccessControl({
     create: [

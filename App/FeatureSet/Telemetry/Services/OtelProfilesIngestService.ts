@@ -1,8 +1,12 @@
 import { TelemetryRequest } from "Common/Server/Middleware/TelemetryIngest";
-import OTelIngestService, {
+import {
   TelemetryServiceMetadata,
+  getScalarEntityKeyColumns,
 } from "Common/Server/Services/OpenTelemetryIngestService";
+import { ResourceEntityRef } from "Common/Server/Utils/Telemetry/TelemetryEntity";
+import OtelPayloadDecoder from "../Utils/OtelPayloadDecoder";
 import OneUptimeDate from "Common/Types/Date";
+import { resolveTelemetryRetentionInDays } from "Common/Types/Telemetry/TelemetryRetentionConfig";
 import BadRequestException from "Common/Types/Exception/BadRequestException";
 import {
   ExpressRequest,
@@ -26,6 +30,7 @@ import CaptureSpan from "Common/Server/Utils/Telemetry/CaptureSpan";
 import Text from "Common/Types/Text";
 import ProfilesQueueService from "./Queue/ProfilesQueueService";
 import OtelIngestBaseService from "./OtelIngestBaseService";
+import ServiceType from "Common/Types/Telemetry/ServiceType";
 import {
   TELEMETRY_PROFILE_FLUSH_BATCH_SIZE,
   TELEMETRY_PROFILE_SAMPLE_FLUSH_BATCH_SIZE,
@@ -133,8 +138,10 @@ export default class OtelProfilesIngestService extends OtelIngestBaseService {
         );
       }
 
-      req.body = req.body?.toJSON ? req.body.toJSON() : req.body;
-
+      /*
+       * Send 200 first, then enqueue the raw bytes. Protobuf decode
+       * now happens in the worker — see TelemetryQueueService.
+       */
       Response.sendEmptySuccessResponse(req, res);
 
       await ProfilesQueueService.addProfileIngestJob(req as TelemetryRequest);
@@ -157,6 +164,20 @@ export default class OtelProfilesIngestService extends OtelIngestBaseService {
     req: ExpressRequest,
   ): Promise<void> {
     try {
+      /*
+       * An empty body means the queued payload was lost (the Redis body
+       * key expired or was already consumed) — there is nothing to
+       * ingest and never will be, so skip instead of throwing into a
+       * pointless BullMQ retry loop. Matches the logs/traces/metrics
+       * services' handling of the same condition.
+       */
+      if (Object.keys(req.body as JSONObject).length === 0) {
+        logger.debug(
+          "Profiles ingest: empty body (queued payload expired or already consumed) — skipping.",
+        );
+        return;
+      }
+
       const resourceProfiles: JSONArray = req.body[
         "resourceProfiles"
       ] as JSONArray;
@@ -198,35 +219,125 @@ export default class OtelProfilesIngestService extends OtelIngestBaseService {
               "attributes"
             ] as JSONArray) || [];
 
-          const serviceName: string = await this.getServiceNameFromAttributes(
-            req,
-            resourceAttributes_raw,
-          );
+          // Producer-declared entities (authoritative when present).
+          const resourceEntityRefs: Array<ResourceEntityRef> =
+            OtelPayloadDecoder.getEntityRefsFromResource(
+              resourceProfile["resource"] as JSONObject | undefined,
+            );
 
-          if (!serviceDictionary[serviceName]) {
-            const service: {
-              serviceId: ObjectID;
-              dataRententionInDays: number;
-            } = await OTelIngestService.telemetryServiceFromName({
-              serviceName: serviceName,
+          /*
+           * Auto-discover host / docker host / k8s cluster from
+           * resource attributes. The eBPF profiler is a host-level
+           * agent, so most batches without an explicit service.name
+           * carry a host signal and need to land on the Host row
+           * rather than synthesising a phantom `host/<name>` Service.
+           */
+          const kubernetesClusterId: ObjectID | null =
+            await this.autoDiscoverKubernetesCluster({
               projectId: (req as TelemetryRequest).projectId,
-              resourceAttributes: resourceAttributes_raw,
+              attributes: resourceAttributes_raw,
             });
 
-            serviceDictionary[serviceName] = {
-              serviceName: serviceName,
-              serviceId: service.serviceId,
-              dataRententionInDays: service.dataRententionInDays,
-            };
-          }
+          const dockerHostId: ObjectID | null =
+            await this.autoDiscoverDockerHost({
+              projectId: (req as TelemetryRequest).projectId,
+              attributes: resourceAttributes_raw,
+            });
+
+          const podmanHostId: ObjectID | null =
+            await this.autoDiscoverPodmanHost({
+              projectId: (req as TelemetryRequest).projectId,
+              attributes: resourceAttributes_raw,
+            });
+
+          const hostId: ObjectID | null = await this.autoDiscoverHost({
+            projectId: (req as TelemetryRequest).projectId,
+            attributes: resourceAttributes_raw,
+            hasInfraSignal: false,
+            dockerHostId,
+            podmanHostId,
+            kubernetesClusterId,
+          });
+
+          const serverlessFunctionId: ObjectID | null =
+            await this.autoDiscoverServerless({
+              projectId: (req as TelemetryRequest).projectId,
+              attributes: resourceAttributes_raw,
+            });
+
+          const cloudResourceId: ObjectID | null =
+            await this.autoDiscoverCloudResource({
+              projectId: (req as TelemetryRequest).projectId,
+              attributes: resourceAttributes_raw,
+            });
+
+          const rumApplicationId: ObjectID | null = await this.autoDiscoverRum({
+            projectId: (req as TelemetryRequest).projectId,
+            attributes: resourceAttributes_raw,
+          });
+
+          const resolvedServiceMetadata: TelemetryServiceMetadata =
+            await this.resolveTelemetryResource({
+              req,
+              attributes: resourceAttributes_raw,
+              projectId: (req as TelemetryRequest).projectId,
+              hostId,
+              dockerHostId,
+              podmanHostId,
+              kubernetesClusterId,
+              serverlessFunctionId,
+              cloudResourceId,
+              rumApplicationId,
+              entityRefs: resourceEntityRefs,
+            });
+          const serviceName: string = resolvedServiceMetadata.serviceName;
+
+          serviceDictionary[serviceName] = resolvedServiceMetadata;
+
+          const stampHostName: string | null =
+            OtelIngestBaseService.getStringAttribute(
+              resourceAttributes_raw,
+              "host.name",
+            );
+          const stampClusterName: string | null =
+            OtelIngestBaseService.getClusterNameFromAttributes(
+              resourceAttributes_raw,
+            );
 
           const resourceAttributes: Dictionary<
             AttributeType | Array<AttributeType>
           > = {
-            ...TelemetryUtil.getAttributesForServiceIdAndServiceName({
-              serviceId: serviceDictionary[serviceName]!.serviceId!,
-              serviceName: serviceName,
-            }),
+            ...(resolvedServiceMetadata.primaryEntityType ===
+            ServiceType.OpenTelemetry
+              ? TelemetryUtil.getAttributesForServiceIdAndServiceName({
+                  serviceId: resolvedServiceMetadata.primaryEntityId!,
+                  serviceName: serviceName,
+                })
+              : {}),
+            ...(hostId && stampHostName
+              ? TelemetryUtil.getAttributesForHostIdAndHostName({
+                  hostId,
+                  hostName: stampHostName,
+                })
+              : {}),
+            ...(dockerHostId && stampHostName
+              ? TelemetryUtil.getAttributesForDockerHostIdAndHostName({
+                  dockerHostId,
+                  hostName: stampHostName,
+                })
+              : {}),
+            ...(podmanHostId && stampHostName
+              ? TelemetryUtil.getAttributesForPodmanHostIdAndHostName({
+                  podmanHostId,
+                  hostName: stampHostName,
+                })
+              : {}),
+            ...(kubernetesClusterId && stampClusterName
+              ? TelemetryUtil.getAttributesForKubernetesClusterIdAndName({
+                  kubernetesClusterId,
+                  clusterName: stampClusterName,
+                })
+              : {}),
             ...TelemetryUtil.getAttributes({
               items: resourceAttributes_raw,
               prefixKeysWithString: "resource",
@@ -271,10 +382,10 @@ export default class OtelProfilesIngestService extends OtelIngestBaseService {
 
                   const projectId: ObjectID = (req as TelemetryRequest)
                     .projectId;
-                  const serviceId: ObjectID =
-                    serviceDictionary[serviceName]!.serviceId!;
-                  const dataRetentionInDays: number =
-                    serviceDictionary[serviceName]!.dataRententionInDays;
+                  const profileServiceMetadata: TelemetryServiceMetadata =
+                    serviceDictionary[serviceName]!;
+                  const primaryEntityId: ObjectID =
+                    profileServiceMetadata.primaryEntityId!;
 
                   const frame: NormalizedProfileFrame =
                     this.normalizeProfileItem(
@@ -350,14 +461,31 @@ export default class OtelProfilesIngestService extends OtelIngestBaseService {
 
                   const stringTable: Array<string> = profile.stringTable;
 
+                  /*
+                   * pprof profiles routinely carry several parallel
+                   * sample types (Go CPU: [samples/count,
+                   * cpu/nanoseconds]; heap: [alloc_objects, alloc_space,
+                   * inuse_objects, inuse_space]). Pick the canonical one
+                   * once and use that index for BOTH the profile
+                   * metadata and every sample's value — mixing index 0
+                   * metadata with index-0 values made Go CPU profiles
+                   * report raw sample counts labelled as "samples"
+                   * instead of cpu time.
+                   */
                   const sampleTypes: JSONArray = profile.sampleType;
+                  const canonicalSampleTypeIndex: number =
+                    this.selectCanonicalSampleTypeIndex(
+                      sampleTypes,
+                      stringTable,
+                    );
                   if (sampleTypes.length > 0) {
-                    const firstSampleType: JSONObject =
-                      sampleTypes[0] as JSONObject;
+                    const canonicalSampleType: JSONObject = sampleTypes[
+                      canonicalSampleTypeIndex
+                    ] as JSONObject;
                     const typeIndex: number =
-                      (firstSampleType["type"] as number) || 0;
+                      (canonicalSampleType["type"] as number) || 0;
                     const unitIndex: number =
-                      (firstSampleType["unit"] as number) || 0;
+                      (canonicalSampleType["unit"] as number) || 0;
 
                     if (stringTable[typeIndex]) {
                       profileType = stringTable[typeIndex]!;
@@ -480,11 +608,21 @@ export default class OtelProfilesIngestService extends OtelIngestBaseService {
                        */
                       let sampleValue: number = 0;
                       if (values.length > 0) {
-                        const first: number | string = values[0]!;
+                        /*
+                         * `values` is parallel to `sample_type`; read the
+                         * canonical index so the value matches the
+                         * profileType/unit recorded on the profile row.
+                         * Defensive fallback to index 0 for producers
+                         * that emit fewer values than sample types.
+                         */
+                        const canonicalValue: number | string =
+                          values.length > canonicalSampleTypeIndex
+                            ? values[canonicalSampleTypeIndex]!
+                            : values[0]!;
                         sampleValue =
-                          typeof first === "string"
-                            ? parseInt(first, 10) || 0
-                            : Number(first) || 0;
+                          typeof canonicalValue === "string"
+                            ? parseInt(canonicalValue, 10) || 0
+                            : Number(canonicalValue) || 0;
                       } else if (timestamps.length > 0) {
                         sampleValue = timestamps.length;
                       } else {
@@ -551,7 +689,7 @@ export default class OtelProfilesIngestService extends OtelIngestBaseService {
 
                       const sampleRow: JSONObject = this.buildSampleRow({
                         projectId: projectId,
-                        serviceId: serviceId,
+                        primaryEntityId: primaryEntityId,
                         profileId: profileId,
                         traceId: traceId,
                         spanId: spanId,
@@ -562,7 +700,7 @@ export default class OtelProfilesIngestService extends OtelIngestBaseService {
                         value: sampleValue,
                         profileType: profileType,
                         labels: sampleLabels,
-                        dataRetentionInDays: dataRetentionInDays,
+                        serviceMetadata: profileServiceMetadata,
                       });
 
                       dbSamples.push(sampleRow);
@@ -634,7 +772,7 @@ export default class OtelProfilesIngestService extends OtelIngestBaseService {
 
                   const profileRow: JSONObject = this.buildProfileRow({
                     projectId: projectId,
-                    serviceId: serviceId,
+                    primaryEntityId: primaryEntityId,
                     profileId: profileId,
                     traceId: profileTraceId,
                     spanId: profileSpanId,
@@ -649,7 +787,7 @@ export default class OtelProfilesIngestService extends OtelIngestBaseService {
                     attributeKeys: attributeKeys,
                     sampleCount: sampleCount,
                     originalPayloadFormat: originalPayloadFormat,
-                    dataRetentionInDays: dataRetentionInDays,
+                    serviceMetadata: profileServiceMetadata,
                   });
 
                   dbProfiles.push(profileRow);
@@ -706,6 +844,61 @@ export default class OtelProfilesIngestService extends OtelIngestBaseService {
       logger.error(error, getLogAttributesFromRequest(req as RequestLike));
       throw error;
     }
+  }
+
+  /**
+   * Choose which entry of a multi-valued pprof `sample_type` array is
+   * the one worth charting. Preference order by (type, unit):
+   * cpu/nanoseconds (Go CPU profiles put it at index 1, after
+   * samples/count), then wall time, then inuse_space/bytes (live heap),
+   * then alloc_space/bytes, then the first available entry. The
+   * v1development OTLP schema normalises to a single sample type, so
+   * this only does work for multi-type pprof-derived payloads.
+   */
+  private static selectCanonicalSampleTypeIndex(
+    sampleTypes: JSONArray,
+    stringTable: Array<string>,
+  ): number {
+    if (sampleTypes.length <= 1) {
+      return 0;
+    }
+
+    const resolved: Array<{ type: string; unit: string }> = sampleTypes.map(
+      (st: JSONObject): { type: string; unit: string } => {
+        const obj: JSONObject = st || {};
+        const typeIndex: number = (obj["type"] as number) || 0;
+        const unitIndex: number = (obj["unit"] as number) || 0;
+        return {
+          type: (stringTable[typeIndex] || "").toLowerCase(),
+          unit: (stringTable[unitIndex] || "").toLowerCase(),
+        };
+      },
+    );
+
+    const preferences: Array<(st: { type: string; unit: string }) => boolean> =
+      [
+        (st: { type: string; unit: string }): boolean => {
+          return st.type === "cpu" && st.unit === "nanoseconds";
+        },
+        (st: { type: string; unit: string }): boolean => {
+          return st.type === "wall";
+        },
+        (st: { type: string; unit: string }): boolean => {
+          return st.type === "inuse_space" && st.unit === "bytes";
+        },
+        (st: { type: string; unit: string }): boolean => {
+          return st.type === "alloc_space" && st.unit === "bytes";
+        },
+      ];
+
+    for (const matches of preferences) {
+      const index: number = resolved.findIndex(matches);
+      if (index >= 0) {
+        return index;
+      }
+    }
+
+    return 0;
   }
 
   private static resolveStackFrames(data: {
@@ -854,12 +1047,19 @@ export default class OtelProfilesIngestService extends OtelIngestBaseService {
 
           lineNumber = (line["line"] as number) || 0;
 
+          /*
+           * Stored shapes: 'fn@file:line', 'fn@file', or bare 'fn'.
+           * The line suffix rides only on a fileName: parseFrame treats
+           * any '@'-less token entirely as the function name, so a
+           * file-less 'fn:line' would bake the line number into the
+           * function's identity and break deploy-stable matching.
+           */
           let frame: string = functionName;
           if (fileName) {
             frame += `@${fileName}`;
-          }
-          if (lineNumber > 0) {
-            frame += `:${lineNumber}`;
+            if (lineNumber > 0) {
+              frame += `:${lineNumber}`;
+            }
           }
 
           frames.push(frame);
@@ -873,7 +1073,7 @@ export default class OtelProfilesIngestService extends OtelIngestBaseService {
 
   private static buildProfileRow(data: {
     projectId: ObjectID;
-    serviceId: ObjectID;
+    primaryEntityId: ObjectID;
     profileId: string;
     traceId: string;
     spanId: string;
@@ -888,22 +1088,31 @@ export default class OtelProfilesIngestService extends OtelIngestBaseService {
     attributeKeys: Array<string>;
     sampleCount: number;
     originalPayloadFormat: string;
-    dataRetentionInDays: number;
+    serviceMetadata: TelemetryServiceMetadata;
   }): JSONObject {
     const ingestionDate: Date = OneUptimeDate.getCurrentDate();
     const ingestionTimestamp: string =
       OneUptimeDate.toClickhouseDateTime(ingestionDate);
+    const retentionDays: number = resolveTelemetryRetentionInDays({
+      pillar: "profiles",
+      serviceConfig: data.serviceMetadata.serviceRetentionConfig,
+      serviceRetentionInDays: data.serviceMetadata.serviceRetentionInDays,
+      projectConfig: data.serviceMetadata.projectRetentionConfig,
+      projectRetentionInDays: data.serviceMetadata.projectRetentionInDays,
+    });
     const retentionDate: Date = OneUptimeDate.addRemoveDays(
       ingestionDate,
-      data.dataRetentionInDays || 15,
+      retentionDays,
     );
 
     return {
-      _id: ObjectID.generate().toString(),
+      _id: ObjectID.generateTimeOrdered().toString(),
       createdAt: ingestionTimestamp,
-      updatedAt: ingestionTimestamp,
       projectId: data.projectId.toString(),
-      serviceId: data.serviceId.toString(),
+      primaryEntityId: data.primaryEntityId.toString(),
+      primaryEntityType: data.serviceMetadata.primaryEntityType,
+      entityKeys: data.serviceMetadata.entityKeys || [],
+      ...getScalarEntityKeyColumns(data.serviceMetadata),
       profileId: data.profileId,
       traceId: data.traceId || "",
       spanId: data.spanId || "",
@@ -926,7 +1135,7 @@ export default class OtelProfilesIngestService extends OtelIngestBaseService {
 
   private static buildSampleRow(data: {
     projectId: ObjectID;
-    serviceId: ObjectID;
+    primaryEntityId: ObjectID;
     profileId: string;
     traceId: string;
     spanId: string;
@@ -937,22 +1146,31 @@ export default class OtelProfilesIngestService extends OtelIngestBaseService {
     value: number;
     profileType: string;
     labels: Dictionary<string>;
-    dataRetentionInDays: number;
+    serviceMetadata: TelemetryServiceMetadata;
   }): JSONObject {
     const ingestionDate: Date = OneUptimeDate.getCurrentDate();
     const ingestionTimestamp: string =
       OneUptimeDate.toClickhouseDateTime(ingestionDate);
+    const retentionDays: number = resolveTelemetryRetentionInDays({
+      pillar: "profiles",
+      serviceConfig: data.serviceMetadata.serviceRetentionConfig,
+      serviceRetentionInDays: data.serviceMetadata.serviceRetentionInDays,
+      projectConfig: data.serviceMetadata.projectRetentionConfig,
+      projectRetentionInDays: data.serviceMetadata.projectRetentionInDays,
+    });
     const retentionDate: Date = OneUptimeDate.addRemoveDays(
       ingestionDate,
-      data.dataRetentionInDays || 15,
+      retentionDays,
     );
 
     return {
-      _id: ObjectID.generate().toString(),
+      _id: ObjectID.generateTimeOrdered().toString(),
       createdAt: ingestionTimestamp,
-      updatedAt: ingestionTimestamp,
       projectId: data.projectId.toString(),
-      serviceId: data.serviceId.toString(),
+      primaryEntityId: data.primaryEntityId.toString(),
+      primaryEntityType: data.serviceMetadata.primaryEntityType,
+      entityKeys: data.serviceMetadata.entityKeys || [],
+      ...getScalarEntityKeyColumns(data.serviceMetadata),
       profileId: data.profileId,
       traceId: data.traceId || "",
       spanId: data.spanId || "",
@@ -1321,15 +1539,13 @@ export default class OtelProfilesIngestService extends OtelIngestBaseService {
     return "";
   }
 
+  /*
+   * OTLP/JSON sends ids (trace/span and the 16-byte profile id) as hex
+   * strings, OTLP/protobuf as base64 — Text.convertOtlpIdToHex tells
+   * them apart so hex ids are never base64-decoded into garbage, which
+   * silently broke trace<->profile correlation.
+   */
   private static convertBase64ToHexSafe(value: string | undefined): string {
-    if (!value) {
-      return "";
-    }
-
-    try {
-      return Text.convertBase64ToHex(value);
-    } catch {
-      return "";
-    }
+    return Text.convertOtlpIdToHex(value);
   }
 }

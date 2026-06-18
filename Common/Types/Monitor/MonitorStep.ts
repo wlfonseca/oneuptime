@@ -38,6 +38,9 @@ import MonitorStepDnsMonitor, {
 import MonitorStepDomainMonitor, {
   MonitorStepDomainMonitorUtil,
 } from "./MonitorStepDomainMonitor";
+import MonitorStepDnssecMonitor, {
+  MonitorStepDnssecMonitorUtil,
+} from "./MonitorStepDnssecMonitor";
 import MonitorStepExternalStatusPageMonitor, {
   MonitorStepExternalStatusPageMonitorUtil,
 } from "./MonitorStepExternalStatusPageMonitor";
@@ -47,7 +50,55 @@ import MonitorStepKubernetesMonitor, {
 import MonitorStepDockerMonitor, {
   MonitorStepDockerMonitorUtil,
 } from "./MonitorStepDockerMonitor";
+import MonitorStepHostMonitor, {
+  MonitorStepHostMonitorUtil,
+} from "./MonitorStepHostMonitor";
+import MonitorStepPodmanMonitor, {
+  MonitorStepPodmanMonitorUtil,
+} from "./MonitorStepPodmanMonitor";
+import MonitorStepProxmoxMonitor, {
+  MonitorStepProxmoxMonitorUtil,
+} from "./MonitorStepProxmoxMonitor";
+import MonitorStepDockerSwarmMonitor, {
+  MonitorStepDockerSwarmMonitorUtil,
+} from "./MonitorStepDockerSwarmMonitor";
+import MonitorStepCephMonitor, {
+  MonitorStepCephMonitorUtil,
+} from "./MonitorStepCephMonitor";
 import Zod, { ZodSchema } from "../../Utils/Schema/Zod";
+
+/*
+ * Caps and defaults for per-step request timeout and retry settings.
+ * Users may lower these via the UI; values higher than the cap are clamped.
+ */
+export const MAX_MONITOR_REQUEST_TIMEOUT_IN_MS: number = 60000; // 60 seconds
+export const DEFAULT_MONITOR_REQUEST_TIMEOUT_IN_MS: number = 60000;
+export const MAX_MONITOR_RETRY_COUNT: number = 3;
+export const DEFAULT_MONITOR_RETRY_COUNT: number = 3;
+
+export const clampMonitorRequestTimeoutInMs: (value: number) => number = (
+  value: number,
+): number => {
+  if (!value || value <= 0) {
+    return DEFAULT_MONITOR_REQUEST_TIMEOUT_IN_MS;
+  }
+  if (value > MAX_MONITOR_REQUEST_TIMEOUT_IN_MS) {
+    return MAX_MONITOR_REQUEST_TIMEOUT_IN_MS;
+  }
+  return value;
+};
+
+export const clampMonitorRetryCount: (value: number) => number = (
+  value: number,
+): number => {
+  if (value === undefined || value === null || isNaN(value) || value < 0) {
+    return DEFAULT_MONITOR_RETRY_COUNT;
+  }
+  if (value > MAX_MONITOR_RETRY_COUNT) {
+    return MAX_MONITOR_RETRY_COUNT;
+  }
+  return value;
+};
 
 export interface MonitorStepType {
   id: string;
@@ -85,6 +136,19 @@ export interface MonitorStepType {
   // retry count for synthetic monitors - number of times to retry on error
   retryCountOnError?: number | undefined;
 
+  /*
+   * Per-step request timeout in milliseconds for probe-based monitors
+   * (Website, API, Ping, IP, Port, SSLCertificate). Defaults to and is
+   * capped at 60000 ms (60 seconds).
+   */
+  requestTimeoutInMs?: number | undefined;
+
+  /*
+   * Per-step retry count for probe-based monitors when a check fails.
+   * Defaults to and is capped at 3.
+   */
+  retryCount?: number | undefined;
+
   // Log monitor type.
   logMonitor?: MonitorStepLogMonitor | undefined;
 
@@ -109,6 +173,9 @@ export interface MonitorStepType {
   // Domain monitor
   domainMonitor?: MonitorStepDomainMonitor | undefined;
 
+  // DNSSEC monitor
+  dnssecMonitor?: MonitorStepDnssecMonitor | undefined;
+
   // External Status Page monitor
   externalStatusPageMonitor?: MonitorStepExternalStatusPageMonitor | undefined;
 
@@ -117,6 +184,21 @@ export interface MonitorStepType {
 
   // Docker monitor
   dockerMonitor?: MonitorStepDockerMonitor | undefined;
+
+  // Host monitor
+  hostMonitor?: MonitorStepHostMonitor | undefined;
+
+  // Podman monitor
+  podmanMonitor?: MonitorStepPodmanMonitor | undefined;
+
+  // Proxmox monitor
+  proxmoxMonitor?: MonitorStepProxmoxMonitor | undefined;
+
+  // Docker Swarm monitor
+  dockerSwarmMonitor?: MonitorStepDockerSwarmMonitor | undefined;
+
+  // Ceph monitor
+  cephMonitor?: MonitorStepCephMonitor | undefined;
 }
 
 export default class MonitorStep extends DatabaseProperty {
@@ -142,6 +224,8 @@ export default class MonitorStep extends DatabaseProperty {
       screenSizeTypes: undefined,
       browserTypes: undefined,
       retryCountOnError: undefined,
+      requestTimeoutInMs: undefined,
+      retryCount: undefined,
       logMonitor: undefined,
       traceMonitor: undefined,
       metricMonitor: undefined,
@@ -150,9 +234,15 @@ export default class MonitorStep extends DatabaseProperty {
       snmpMonitor: undefined,
       dnsMonitor: undefined,
       domainMonitor: undefined,
+      dnssecMonitor: undefined,
       externalStatusPageMonitor: undefined,
       kubernetesMonitor: undefined,
       dockerMonitor: undefined,
+      hostMonitor: undefined,
+      podmanMonitor: undefined,
+      proxmoxMonitor: undefined,
+      dockerSwarmMonitor: undefined,
+      cephMonitor: undefined,
     };
   }
 
@@ -183,6 +273,8 @@ export default class MonitorStep extends DatabaseProperty {
       screenSizeTypes: undefined,
       browserTypes: undefined,
       retryCountOnError: undefined,
+      requestTimeoutInMs: undefined,
+      retryCount: undefined,
       logMonitor: undefined,
       traceMonitor: undefined,
       metricMonitor: undefined,
@@ -191,9 +283,15 @@ export default class MonitorStep extends DatabaseProperty {
       snmpMonitor: undefined,
       dnsMonitor: undefined,
       domainMonitor: undefined,
+      dnssecMonitor: undefined,
       externalStatusPageMonitor: undefined,
       kubernetesMonitor: undefined,
       dockerMonitor: undefined,
+      hostMonitor: undefined,
+      podmanMonitor: undefined,
+      proxmoxMonitor: undefined,
+      dockerSwarmMonitor: undefined,
+      cephMonitor: undefined,
     };
 
     return monitorStep;
@@ -286,6 +384,27 @@ export default class MonitorStep extends DatabaseProperty {
     return this;
   }
 
+  public setRequestTimeoutInMs(
+    requestTimeoutInMs: number | undefined,
+  ): MonitorStep {
+    if (requestTimeoutInMs === undefined) {
+      this.data!.requestTimeoutInMs = undefined;
+      return this;
+    }
+    this.data!.requestTimeoutInMs =
+      clampMonitorRequestTimeoutInMs(requestTimeoutInMs);
+    return this;
+  }
+
+  public setRetryCount(retryCount: number | undefined): MonitorStep {
+    if (retryCount === undefined) {
+      this.data!.retryCount = undefined;
+      return this;
+    }
+    this.data!.retryCount = clampMonitorRetryCount(retryCount);
+    return this;
+  }
+
   public setLogMonitor(logMonitor: MonitorStepLogMonitor): MonitorStep {
     this.data!.logMonitor = logMonitor;
     return this;
@@ -334,6 +453,13 @@ export default class MonitorStep extends DatabaseProperty {
     return this;
   }
 
+  public setDnssecMonitor(
+    dnssecMonitor: MonitorStepDnssecMonitor,
+  ): MonitorStep {
+    this.data!.dnssecMonitor = dnssecMonitor;
+    return this;
+  }
+
   public setExternalStatusPageMonitor(
     externalStatusPageMonitor: MonitorStepExternalStatusPageMonitor,
   ): MonitorStep {
@@ -352,6 +478,37 @@ export default class MonitorStep extends DatabaseProperty {
     dockerMonitor: MonitorStepDockerMonitor,
   ): MonitorStep {
     this.data!.dockerMonitor = dockerMonitor;
+    return this;
+  }
+
+  public setHostMonitor(hostMonitor: MonitorStepHostMonitor): MonitorStep {
+    this.data!.hostMonitor = hostMonitor;
+    return this;
+  }
+
+  public setPodmanMonitor(
+    podmanMonitor: MonitorStepPodmanMonitor,
+  ): MonitorStep {
+    this.data!.podmanMonitor = podmanMonitor;
+    return this;
+  }
+
+  public setProxmoxMonitor(
+    proxmoxMonitor: MonitorStepProxmoxMonitor,
+  ): MonitorStep {
+    this.data!.proxmoxMonitor = proxmoxMonitor;
+    return this;
+  }
+
+  public setDockerSwarmMonitor(
+    dockerSwarmMonitor: MonitorStepDockerSwarmMonitor,
+  ): MonitorStep {
+    this.data!.dockerSwarmMonitor = dockerSwarmMonitor;
+    return this;
+  }
+
+  public setCephMonitor(cephMonitor: MonitorStepCephMonitor): MonitorStep {
+    this.data!.cephMonitor = cephMonitor;
     return this;
   }
 
@@ -385,10 +542,17 @@ export default class MonitorStep extends DatabaseProperty {
         screenSizeTypes: undefined,
         browserTypes: undefined,
         retryCountOnError: undefined,
+        requestTimeoutInMs: undefined,
+        retryCount: undefined,
         logMonitor: undefined,
         exceptionMonitor: undefined,
         kubernetesMonitor: undefined,
         dockerMonitor: undefined,
+        hostMonitor: undefined,
+        podmanMonitor: undefined,
+        proxmoxMonitor: undefined,
+        dockerSwarmMonitor: undefined,
+        cephMonitor: undefined,
       },
     };
   }
@@ -508,6 +672,23 @@ export default class MonitorStep extends DatabaseProperty {
       }
     }
 
+    if (monitorType === MonitorType.DNSSEC) {
+      if (!value.data.dnssecMonitor) {
+        return "DNSSEC configuration is required";
+      }
+
+      if (!value.data.dnssecMonitor.domainName) {
+        return "Domain name is required";
+      }
+
+      if (
+        !value.data.dnssecMonitor.resolvers ||
+        value.data.dnssecMonitor.resolvers.length === 0
+      ) {
+        return "At least one resolver is required";
+      }
+    }
+
     if (monitorType === MonitorType.ExternalStatusPage) {
       if (!value.data.externalStatusPageMonitor) {
         return "External status page configuration is required";
@@ -538,6 +719,56 @@ export default class MonitorStep extends DatabaseProperty {
       }
     }
 
+    if (monitorType === MonitorType.Host) {
+      if (!value.data.hostMonitor) {
+        return "Host monitor configuration is required";
+      }
+
+      if (!value.data.hostMonitor.hostIdentifier) {
+        return "Host is required";
+      }
+    }
+
+    if (monitorType === MonitorType.Podman) {
+      if (!value.data.podmanMonitor) {
+        return "Podman monitor configuration is required";
+      }
+
+      if (!value.data.podmanMonitor.hostIdentifier) {
+        return "Podman host is required";
+      }
+    }
+
+    if (monitorType === MonitorType.Proxmox) {
+      if (!value.data.proxmoxMonitor) {
+        return "Proxmox monitor configuration is required";
+      }
+
+      if (!value.data.proxmoxMonitor.clusterIdentifier) {
+        return "Proxmox cluster is required";
+      }
+    }
+
+    if (monitorType === MonitorType.DockerSwarm) {
+      if (!value.data.dockerSwarmMonitor) {
+        return "Docker Swarm monitor configuration is required";
+      }
+
+      if (!value.data.dockerSwarmMonitor.clusterIdentifier) {
+        return "Docker Swarm cluster is required";
+      }
+    }
+
+    if (monitorType === MonitorType.Ceph) {
+      if (!value.data.cephMonitor) {
+        return "Ceph monitor configuration is required";
+      }
+
+      if (!value.data.cephMonitor.clusterIdentifier) {
+        return "Ceph cluster is required";
+      }
+    }
+
     return null;
   }
 
@@ -565,6 +796,11 @@ export default class MonitorStep extends DatabaseProperty {
           screenSizeTypes: this.data.screenSizeTypes || undefined,
           browserTypes: this.data.browserTypes || undefined,
           retryCountOnError: this.data.retryCountOnError || undefined,
+          requestTimeoutInMs: this.data.requestTimeoutInMs || undefined,
+          retryCount:
+            this.data.retryCount === undefined
+              ? undefined
+              : this.data.retryCount,
           logMonitor: this.data.logMonitor
             ? MonitorStepLogMonitorUtil.toJSON(
                 this.data.logMonitor || MonitorStepLogMonitorUtil.getDefault(),
@@ -600,6 +836,9 @@ export default class MonitorStep extends DatabaseProperty {
           domainMonitor: this.data.domainMonitor
             ? MonitorStepDomainMonitorUtil.toJSON(this.data.domainMonitor)
             : undefined,
+          dnssecMonitor: this.data.dnssecMonitor
+            ? MonitorStepDnssecMonitorUtil.toJSON(this.data.dnssecMonitor)
+            : undefined,
           externalStatusPageMonitor: this.data.externalStatusPageMonitor
             ? MonitorStepExternalStatusPageMonitorUtil.toJSON(
                 this.data.externalStatusPageMonitor,
@@ -612,6 +851,23 @@ export default class MonitorStep extends DatabaseProperty {
             : undefined,
           dockerMonitor: this.data.dockerMonitor
             ? MonitorStepDockerMonitorUtil.toJSON(this.data.dockerMonitor)
+            : undefined,
+          hostMonitor: this.data.hostMonitor
+            ? MonitorStepHostMonitorUtil.toJSON(this.data.hostMonitor)
+            : undefined,
+          podmanMonitor: this.data.podmanMonitor
+            ? MonitorStepPodmanMonitorUtil.toJSON(this.data.podmanMonitor)
+            : undefined,
+          proxmoxMonitor: this.data.proxmoxMonitor
+            ? MonitorStepProxmoxMonitorUtil.toJSON(this.data.proxmoxMonitor)
+            : undefined,
+          dockerSwarmMonitor: this.data.dockerSwarmMonitor
+            ? MonitorStepDockerSwarmMonitorUtil.toJSON(
+                this.data.dockerSwarmMonitor,
+              )
+            : undefined,
+          cephMonitor: this.data.cephMonitor
+            ? MonitorStepCephMonitorUtil.toJSON(this.data.cephMonitor)
             : undefined,
         },
       });
@@ -710,6 +966,11 @@ export default class MonitorStep extends DatabaseProperty {
         (json["screenSizeTypes"] as Array<ScreenSizeType>) || undefined,
       browserTypes: (json["browserTypes"] as Array<BrowserType>) || undefined,
       retryCountOnError: (json["retryCountOnError"] as number) || undefined,
+      requestTimeoutInMs: (json["requestTimeoutInMs"] as number) || undefined,
+      retryCount:
+        json["retryCount"] === undefined || json["retryCount"] === null
+          ? undefined
+          : (json["retryCount"] as number),
       logMonitor: json["logMonitor"]
         ? (json["logMonitor"] as JSONObject)
         : undefined,
@@ -734,6 +995,9 @@ export default class MonitorStep extends DatabaseProperty {
       domainMonitor: json["domainMonitor"]
         ? (json["domainMonitor"] as JSONObject)
         : undefined,
+      dnssecMonitor: json["dnssecMonitor"]
+        ? (json["dnssecMonitor"] as JSONObject)
+        : undefined,
       externalStatusPageMonitor: json["externalStatusPageMonitor"]
         ? (json["externalStatusPageMonitor"] as JSONObject)
         : undefined,
@@ -742,6 +1006,21 @@ export default class MonitorStep extends DatabaseProperty {
         : undefined,
       dockerMonitor: json["dockerMonitor"]
         ? (json["dockerMonitor"] as JSONObject)
+        : undefined,
+      hostMonitor: json["hostMonitor"]
+        ? (json["hostMonitor"] as JSONObject)
+        : undefined,
+      podmanMonitor: json["podmanMonitor"]
+        ? (json["podmanMonitor"] as JSONObject)
+        : undefined,
+      proxmoxMonitor: json["proxmoxMonitor"]
+        ? (json["proxmoxMonitor"] as JSONObject)
+        : undefined,
+      dockerSwarmMonitor: json["dockerSwarmMonitor"]
+        ? (json["dockerSwarmMonitor"] as JSONObject)
+        : undefined,
+      cephMonitor: json["cephMonitor"]
+        ? (json["cephMonitor"] as JSONObject)
         : undefined,
     }) as any;
 
@@ -768,6 +1047,8 @@ export default class MonitorStep extends DatabaseProperty {
         screenSizeTypes: Zod.any().optional(),
         browserTypes: Zod.any().optional(),
         retryCountOnError: Zod.number().optional(),
+        requestTimeoutInMs: Zod.number().optional(),
+        retryCount: Zod.number().optional(),
         logMonitor: Zod.any().optional(),
         traceMonitor: Zod.any().optional(),
         metricMonitor: Zod.any().optional(),
@@ -775,9 +1056,15 @@ export default class MonitorStep extends DatabaseProperty {
         snmpMonitor: Zod.any().optional(),
         dnsMonitor: Zod.any().optional(),
         domainMonitor: Zod.any().optional(),
+        dnssecMonitor: Zod.any().optional(),
         externalStatusPageMonitor: Zod.any().optional(),
         kubernetesMonitor: Zod.any().optional(),
         dockerMonitor: Zod.any().optional(),
+        hostMonitor: Zod.any().optional(),
+        podmanMonitor: Zod.any().optional(),
+        proxmoxMonitor: Zod.any().optional(),
+        dockerSwarmMonitor: Zod.any().optional(),
+        cephMonitor: Zod.any().optional(),
       }).openapi({
         type: "object",
         example: {

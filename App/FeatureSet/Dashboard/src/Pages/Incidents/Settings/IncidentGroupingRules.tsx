@@ -89,12 +89,11 @@ flowchart LR
 
 | Option | When Enabled | When Disabled |
 |--------|-------------|---------------|
-| **Group By Service** | Incidents from monitors in different services → separate episodes | Incidents can be grouped regardless of service |
 | **Group By Monitor** | Incidents from different monitors → separate episodes | Incidents from any monitor can be grouped together |
 | **Group By Severity** | Incidents with different severities → separate episodes | Incidents of any severity can be grouped together |
 | **Group By Incident Title** | Incidents with different titles → separate episodes | Incidents with any title can be grouped together |
-
-> **Note:** Monitors can be attached to Services. A Service can have multiple monitors. Group By Service is useful when you want to group all incidents from a service together regardless of which specific monitor triggered them.
+| **Group By Incident Labels** | Incidents with different sets of labels → separate episodes (exact set match) | Incident labels are ignored for grouping |
+| **Group By Monitor Labels** | Incidents whose monitors have different sets of labels → separate episodes (exact set match) | Monitor labels are ignored for grouping |
 
 #### Default Behavior
 
@@ -150,6 +149,9 @@ const IncidentGroupingRulesPage: FunctionComponent<
         id="incident-grouping-rules-table"
         name="Settings > Incident Grouping Rules"
         userPreferencesKey="incident-grouping-rules-table"
+        saveFilterProps={{
+          tableId: "incident-grouping-rules-table",
+        }}
         isDeleteable={true}
         isEditable={true}
         isCreateable={true}
@@ -432,17 +434,6 @@ const IncidentGroupingRulesPage: FunctionComponent<
           // Group By Fields
           {
             field: {
-              groupByService: true,
-            },
-            title: "Group By Service",
-            stepId: "group-by",
-            fieldType: FormFieldSchemaType.Checkbox,
-            required: false,
-            description:
-              "When enabled, incidents from monitors belonging to different services will be grouped into separate episodes. Monitors can be attached to services, and a service can have multiple monitors.",
-          },
-          {
-            field: {
               groupByMonitor: true,
             },
             title: "Group By Monitor",
@@ -473,6 +464,28 @@ const IncidentGroupingRulesPage: FunctionComponent<
             required: false,
             description:
               "When enabled, incidents with different titles will be grouped into separate episodes. When disabled, incidents with any title can be grouped together.",
+          },
+          {
+            field: {
+              groupByIncidentLabels: true,
+            },
+            title: "Group By Incident Labels",
+            stepId: "group-by",
+            fieldType: FormFieldSchemaType.Checkbox,
+            required: false,
+            description:
+              "When enabled, incidents with different sets of labels will be grouped into separate episodes (exact set match). When disabled, incident labels are ignored for grouping.",
+          },
+          {
+            field: {
+              groupByMonitorLabels: true,
+            },
+            title: "Group By Monitor Labels",
+            stepId: "group-by",
+            fieldType: FormFieldSchemaType.Checkbox,
+            required: false,
+            description:
+              "When enabled, incidents whose monitors have different sets of labels will be grouped into separate episodes (exact set match). When disabled, monitor labels are ignored for grouping.",
           },
           // Time Settings Fields
           {

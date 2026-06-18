@@ -19,8 +19,7 @@ enum ComponentID {
   SendEmail = "send-email",
   IfElse = "if-else",
   WorkflowRun = "workflow-run",
-  ClickUpCreateTask = "clickup-create-task",
-  ClickUpUpdateTask = "clickup-update-task",
+  Sleep = "sleep",
 }
 
 export default ComponentID;

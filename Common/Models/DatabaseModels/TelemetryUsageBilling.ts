@@ -15,6 +15,7 @@ import TenantColumn from "../../Types/Database/TenantColumn";
 import Decimal from "../../Types/Decimal";
 import IconProp from "../../Types/Icon/IconProp";
 import ProductType from "../../Types/MeteredPlan/ProductType";
+import ServiceType from "../../Types/Telemetry/ServiceType";
 import ObjectID from "../../Types/ObjectID";
 import Permission from "../../Types/Permission";
 import { Column, Entity, Index, JoinColumn, ManyToOne } from "typeorm";
@@ -256,7 +257,7 @@ export default class TelemetryUsageBilling extends BaseModel {
     update: [],
   })
   @TableColumn({
-    manyToOneRelationColumn: "serviceId",
+    manyToOneRelationColumn: "primaryEntityId",
     type: TableColumnType.Entity,
     modelType: Service,
     title: "Service",
@@ -270,11 +271,19 @@ export default class TelemetryUsageBilling extends BaseModel {
     {
       eager: false,
       nullable: true,
-      onDelete: "CASCADE",
-      orphanedRowAction: "nullify",
+      /*
+       * No DB-level foreign key. Telemetry that arrives without a
+       * service.name is metered against a synthetic "unattributed"
+       * bucket whose primaryEntityId is the projectId (ServiceType.Unknown),
+       * which has no matching Service row — a FK would reject those
+       * billing rows. The relation is kept for read-side joins; it
+       * resolves to null for the unattributed bucket and the UI renders
+       * a synthetic "Unknown Service" in its place.
+       */
+      createForeignKeyConstraints: false,
     },
   )
-  @JoinColumn({ name: "serviceId" })
+  @JoinColumn({ name: "primaryEntityId" })
   public service?: Service = undefined;
 
   @ColumnAccessControl({
@@ -299,7 +308,31 @@ export default class TelemetryUsageBilling extends BaseModel {
     nullable: false,
     transformer: ObjectID.getDatabaseTransformer(),
   })
-  public serviceId?: ObjectID = undefined;
+  public primaryEntityId?: ObjectID = undefined;
+
+  @ColumnAccessControl({
+    create: [],
+    read: [
+      Permission.ProjectOwner,
+      Permission.ProjectAdmin,
+      Permission.ManageProjectBilling,
+    ],
+    update: [],
+  })
+  @TableColumn({
+    type: TableColumnType.ShortText,
+    canReadOnRelationQuery: true,
+    title: "Service Type",
+    description:
+      "Resource type that produced this telemetry (e.g. OpenTelemetry service, Host, DockerHost, KubernetesCluster, or Unknown for unattributed telemetry).",
+    example: "OpenTelemetry",
+  })
+  @Column({
+    nullable: true,
+    type: ColumnType.ShortText,
+    length: ColumnLength.ShortText,
+  })
+  public primaryEntityType?: ServiceType = undefined;
 
   @ColumnAccessControl({
     create: [],

@@ -11,9 +11,13 @@ import TelemetryRoutes from "./FeatureSet/Telemetry/Index";
 import WorkflowRoutes from "./FeatureSet/Workflow/Index";
 import RunbookRoutes from "./FeatureSet/Runbook/Index";
 import AppMetricsAPI from "./API/Metrics";
+import AdminHealthAPI from "./API/AdminHealth";
 import Express, { ExpressApplication } from "Common/Server/Utils/Express";
 import { PromiseVoidFunction } from "Common/Types/FunctionTypes";
-import { ClickhouseAppInstance } from "Common/Server/Infrastructure/ClickhouseDatabase";
+import {
+  ClickhouseAppInstance,
+  ClickhouseIngestInstance,
+} from "Common/Server/Infrastructure/ClickhouseDatabase";
 import PostgresAppInstance from "Common/Server/Infrastructure/PostgresDatabase";
 import Redis from "Common/Server/Infrastructure/Redis";
 import InfrastructureStatus from "Common/Server/Infrastructure/Status";
@@ -90,6 +94,9 @@ const init: PromiseVoidFunction = async (): Promise<void> => {
     await ClickhouseAppInstance.connect(
       ClickhouseAppInstance.getDatasourceOptions(),
     );
+    await ClickhouseIngestInstance.connect(
+      ClickhouseIngestInstance.getDatasourceOptions(),
+    );
 
     // Initialize the app with service name and status checks
     await App.init({
@@ -109,6 +116,9 @@ const init: PromiseVoidFunction = async (): Promise<void> => {
     // Expose app-level combined metrics endpoint for KEDA
     const expressApp: ExpressApplication = Express.getExpressApp();
     expressApp.use("/", AppMetricsAPI);
+
+    // Admin instance-health overview (master-admin only).
+    expressApp.use("/api/admin/health", AdminHealthAPI);
 
     // Initialize feature sets
     await IdentityRoutes.init();

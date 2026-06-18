@@ -1,10 +1,14 @@
 import Alert from "../../../Models/DatabaseModels/Alert";
 import AlertSeverity from "../../../Models/DatabaseModels/AlertSeverity";
 import AlertStateTimeline from "../../../Models/DatabaseModels/AlertStateTimeline";
+import CephCluster from "../../../Models/DatabaseModels/CephCluster";
+import DockerSwarmCluster from "../../../Models/DatabaseModels/DockerSwarmCluster";
 import Host from "../../../Models/DatabaseModels/Host";
 import Label from "../../../Models/DatabaseModels/Label";
 import Monitor from "../../../Models/DatabaseModels/Monitor";
 import OnCallDutyPolicy from "../../../Models/DatabaseModels/OnCallDutyPolicy";
+import ProxmoxCluster from "../../../Models/DatabaseModels/ProxmoxCluster";
+import Service from "../../../Models/DatabaseModels/Service";
 import SortOrder from "../../../Types/BaseDatabase/SortOrder";
 import { LIMIT_PER_PROJECT } from "../../../Types/Database/LimitMax";
 import Dictionary from "../../../Types/Dictionary";
@@ -19,9 +23,13 @@ import AlertService from "../../Services/AlertService";
 import AlertSeverityService from "../../Services/AlertSeverityService";
 import AlertStateTimelineService from "../../Services/AlertStateTimelineService";
 import HostService from "../../Services/HostService";
+import ServiceService from "../../Services/ServiceService";
 import logger, { LogAttributes } from "../Logger";
 import CaptureSpan from "../Telemetry/CaptureSpan";
 import DataToProcess from "./DataToProcess";
+import MonitorClusterContextUtil, {
+  MonitorClusterContext,
+} from "./MonitorClusterContext";
 import MonitorTemplateUtil from "./MonitorTemplateUtil";
 import { JSONObject } from "../../../Types/JSON";
 import OneUptimeDate from "../../../Types/Date";
@@ -113,6 +121,13 @@ export default class MonitorAlert {
       telemetryQuery?: TelemetryQuery | undefined;
     };
     matchesPerSeries?: Array<PerSeriesCriteriaMatch> | undefined;
+    /**
+     * Series fingerprints whose underlying resource is inside an
+     * ongoing scheduled maintenance window. Alerts for these series are
+     * suppressed at creation time even though the monitor keeps
+     * evaluating. See MonitorMaintenanceSuppression.
+     */
+    suppressedSeriesFingerprints?: Set<string> | undefined;
   }): Promise<void> {
     const alertLogAttributes: LogAttributes = {
       projectId: input.monitor.projectId?.toString(),
@@ -150,6 +165,19 @@ export default class MonitorAlert {
       return;
     }
 
+    /*
+     * Proxmox/Ceph monitors: resolve the monitored cluster once per
+     * evaluation (lookup-only, from the step config's clusterIdentifier)
+     * so every alert created below is attached to it. Series labels
+     * cannot supply this — they carry datapoint labels (`id`,
+     * `ceph_daemon`, `pool_id`), not cluster identity, and ungrouped
+     * templates have no series at all. No-op for other monitor types.
+     */
+    const clusterContext: MonitorClusterContext =
+      await MonitorClusterContextUtil.resolveClusterContextForMonitor({
+        monitor: input.monitor,
+      });
+
     const seriesToProcess: Array<PerSeriesCriteriaMatch | undefined> =
       input.matchesPerSeries && input.matchesPerSeries.length > 0
         ? input.matchesPerSeries
@@ -161,6 +189,33 @@ export default class MonitorAlert {
         const seriesLabels: JSONObject | undefined = seriesMatch?.labels;
         const seriesRootCause: string =
           seriesMatch?.rootCause || input.rootCause;
+
+        /*
+         * Per-series scheduled-maintenance suppression: skip creating an
+         * alert for a series whose resource is inside an ongoing
+         * maintenance window. Other series on the same monitor are
+         * unaffected. Only *new* creation is suppressed — existing open
+         * alerts follow the normal resolve path.
+         */
+        if (
+          seriesFingerprint &&
+          input.suppressedSeriesFingerprints?.has(seriesFingerprint)
+        ) {
+          logger.debug(
+            `${input.monitor.id?.toString()} - Skipping alert for series ${seriesFingerprint}: its resource is under an active scheduled maintenance window.`,
+            alertLogAttributes,
+          );
+
+          input.evaluationSummary?.events.push({
+            type: "alert-skipped",
+            title: "Alert suppressed by scheduled maintenance",
+            message:
+              "Skipped creating an alert because the resource for this series is under an active scheduled maintenance window.",
+            relatedCriteriaId: input.criteriaInstance.data?.id,
+            at: OneUptimeDate.getCurrentDate(),
+          });
+          continue;
+        }
 
         const alreadyOpenAlert: Alert | undefined = openAlerts.find(
           (alert: Alert) => {
@@ -305,6 +360,75 @@ export default class MonitorAlert {
               alert.hosts = [host];
             }
           }
+
+          /*
+           * Same idea for Service — OTel ingest stamps `service.name` and
+           * auto-creates a Service row keyed by that name (see
+           * OpenTelemetryIngestService.telemetryServiceFromName). When the
+           * breaching series carries that attribute, link the alert to the
+           * emitting service so the on-call/labels pipeline can fan out.
+           */
+          const serviceName: string | undefined =
+            typeof seriesLabels["resource.service.name"] === "string"
+              ? (seriesLabels["resource.service.name"] as string)
+              : typeof seriesLabels["service.name"] === "string"
+                ? (seriesLabels["service.name"] as string)
+                : undefined;
+
+          if (serviceName) {
+            const service: Service | null = await ServiceService.findOneBy({
+              query: {
+                projectId: input.monitor.projectId!,
+                name: serviceName,
+              },
+              select: {
+                _id: true,
+              },
+              props: {
+                isRoot: true,
+              },
+            });
+
+            if (service) {
+              alert.services = [service];
+            }
+          }
+        }
+
+        /*
+         * Deterministic Proxmox/Ceph cluster link from the monitor's
+         * step config (resolved once above). Series labels never carry
+         * cluster identity for these monitor types, so this — not the
+         * label path above — is what makes the per-cluster Activity
+         * tabs and badge counts see monitor-created alerts. Runs for
+         * both grouped and ungrouped alerts.
+         */
+        if (clusterContext.proxmoxClusterIds.length > 0) {
+          alert.proxmoxClusters = clusterContext.proxmoxClusterIds.map(
+            (id: string): ProxmoxCluster => {
+              const cluster: ProxmoxCluster = new ProxmoxCluster();
+              cluster._id = id;
+              return cluster;
+            },
+          );
+        }
+        if (clusterContext.cephClusterIds.length > 0) {
+          alert.cephClusters = clusterContext.cephClusterIds.map(
+            (id: string): CephCluster => {
+              const cluster: CephCluster = new CephCluster();
+              cluster._id = id;
+              return cluster;
+            },
+          );
+        }
+        if (clusterContext.dockerSwarmClusterIds.length > 0) {
+          alert.dockerSwarmClusters = clusterContext.dockerSwarmClusterIds.map(
+            (id: string): DockerSwarmCluster => {
+              const cluster: DockerSwarmCluster = new DockerSwarmCluster();
+              cluster._id = id;
+              return cluster;
+            },
+          );
         }
 
         alert.onCallDutyPolicies =

@@ -1,8 +1,12 @@
 import { TelemetryRequest } from "Common/Server/Middleware/TelemetryIngest";
-import OTelIngestService, {
+import {
   TelemetryServiceMetadata,
+  getScalarEntityKeyColumns,
 } from "Common/Server/Services/OpenTelemetryIngestService";
+import { ResourceEntityRef } from "Common/Server/Utils/Telemetry/TelemetryEntity";
+import OtelPayloadDecoder from "../Utils/OtelPayloadDecoder";
 import OneUptimeDate from "Common/Types/Date";
+import { resolveTelemetryRetentionInDays } from "Common/Types/Telemetry/TelemetryRetentionConfig";
 import BadRequestException from "Common/Types/Exception/BadRequestException";
 import {
   ExpressRequest,
@@ -21,8 +25,10 @@ import {
   SpanKind,
   SpanStatus,
 } from "Common/Models/AnalyticsModels/Span";
-import ExceptionUtil from "../Utils/Exception";
-import StackTraceParser, { ParsedStackTrace } from "../Utils/StackTraceParser";
+import ExceptionUtil, { TelemetryExceptionPayload } from "../Utils/Exception";
+import StackTraceParser, {
+  ParsedStackTrace,
+} from "Common/Server/Utils/Telemetry/StackTraceParser";
 import logger, {
   getLogAttributesFromRequest,
   type RequestLike,
@@ -33,12 +39,14 @@ import CaptureSpan from "Common/Server/Utils/Telemetry/CaptureSpan";
 import Text from "Common/Types/Text";
 import TracesQueueService from "./Queue/TracesQueueService";
 import OtelIngestBaseService from "./OtelIngestBaseService";
-import TraceDropFilterService from "./TraceDropFilterService";
+import ServiceType from "Common/Types/Telemetry/ServiceType";
+import TraceDropFilterService, {
+  LoadedTraceDropFilter,
+} from "./TraceDropFilterService";
 import TraceScrubRuleService from "./TraceScrubRuleService";
 import TracePipelineService, {
   LoadedTracePipeline,
 } from "./TracePipelineService";
-import TraceDropFilter from "Common/Models/DatabaseModels/TraceDropFilter";
 import TraceScrubRule from "Common/Models/DatabaseModels/TraceScrubRule";
 import {
   TELEMETRY_EXCEPTION_FLUSH_BATCH_SIZE,
@@ -59,7 +67,7 @@ type ParsedUnixNano = {
 
 type ExceptionEventPayload = {
   projectId: ObjectID;
-  serviceId: ObjectID;
+  primaryEntityId: ObjectID;
   spanId: string;
   traceId: string;
   spanStatusCode: SpanStatus;
@@ -74,7 +82,7 @@ type ExceptionEventPayload = {
   release: string;
   environment: string;
   parsedFrames: string;
-  dataRententionInDays: number;
+  serviceMetadata: TelemetryServiceMetadata;
 };
 
 const SPAN_KIND_BY_OTEL_INT: Record<number, SpanKind> = {
@@ -171,8 +179,12 @@ export default class OtelTracesIngestService extends OtelIngestBaseService {
         );
       }
 
-      req.body = req.body?.toJSON ? req.body.toJSON() : req.body;
-
+      /*
+       * Send the 200 first, then enqueue the raw request bytes. The
+       * heavy protobuf decode + toJSON used to run here on the
+       * Express event loop, blocking all other requests (including
+       * dashboard reads). The worker now handles it.
+       */
       Response.sendEmptySuccessResponse(req, res);
 
       await TracesQueueService.addTraceIngestJob(req as TelemetryRequest);
@@ -203,15 +215,36 @@ export default class OtelTracesIngestService extends OtelIngestBaseService {
         throw new BadRequestException("Invalid resourceSpans format");
       }
 
+      /*
+       * Canonicalize host.name casing so the resolved hostIdentifier and
+       * the stored resource.host.name attribute share one casing, keeping
+       * host-scoped trace queries matching via the fast query path.
+       */
+      OtelIngestBaseService.normalizeHostNameAttributesInPlace(resourceSpans);
+
       const dbSpans: Array<JSONObject> = [];
       const dbExceptions: Array<JSONObject> = [];
+      /*
+       * Pending TelemetryException (Postgres) upserts for this batch.
+       * The old code did one fire-and-forget findOneBy + update/create
+       * pair per exception event, which (a) burnt one Postgres
+       * round-trip per event and (b) lost occuranceCount increments
+       * under concurrent writes because the +1 was read-modify-write
+       * in JS. We now buffer the payloads and flush them in one
+       * batched ON CONFLICT statement (per
+       * ExceptionUtil.saveOrUpdateTelemetryExceptionsBatch) at the
+       * end of the worker job, which collapses thousands of
+       * round-trips into one and lets Postgres do the increment
+       * atomically.
+       */
+      const pendingExceptionUpserts: Array<TelemetryExceptionPayload> = [];
       const serviceDictionary: Dictionary<TelemetryServiceMetadata> = {};
       let totalSpansProcessed: number = 0;
 
       const projectId: ObjectID = (req as TelemetryRequest).projectId;
 
       // Load trace pipeline artifacts once per batch (60s cached inside services).
-      let dropFilters: Array<TraceDropFilter> = [];
+      let dropFilters: Array<LoadedTraceDropFilter> = [];
       let scrubRules: Array<CompiledTraceScrubRule> = [];
       let pipelines: Array<LoadedTracePipeline> = [];
       try {
@@ -243,48 +276,133 @@ export default class OtelTracesIngestService extends OtelIngestBaseService {
               "attributes"
             ] as JSONArray) || [];
 
-          const serviceName: string = await this.getServiceNameFromAttributes(
-            req,
-            resourceAttributes_raw,
-          );
+          // Producer-declared entities (authoritative when present).
+          const resourceEntityRefs: Array<ResourceEntityRef> =
+            OtelPayloadDecoder.getEntityRefsFromResource(
+              resourceSpan["resource"] as JSONObject | undefined,
+            );
+
+          /*
+           * K8s cluster and Docker host discovery are independent — they
+           * inspect different resource attributes and don't share state.
+           * Run them concurrently so per-resource Postgres latency
+           * collapses from `t(k8s) + t(docker)` to `max(t(k8s), t(docker))`.
+           * `autoDiscoverHost` still has to wait because it consumes
+           * the two ids above.
+           */
+          const [kubernetesClusterId, dockerHostId, podmanHostId]: [
+            ObjectID | null,
+            ObjectID | null,
+            ObjectID | null,
+          ] = await Promise.all([
+            this.autoDiscoverKubernetesCluster({
+              projectId,
+              attributes: resourceAttributes_raw,
+            }),
+            this.autoDiscoverDockerHost({
+              projectId,
+              attributes: resourceAttributes_raw,
+            }),
+            this.autoDiscoverPodmanHost({
+              projectId,
+              attributes: resourceAttributes_raw,
+            }),
+          ]);
 
           /*
            * Generic Host auto-discovery from resource attributes.
            * Traces don't carry infra metrics; we gate on resource
-           * signals (host.id / host.arch / os.type / container.runtime /
-           * k8s.cluster.name) so app-only traces don't flood the Hosts
-           * list.
+           * signals (os.type / container.runtime) so app-only traces
+           * don't flood the Hosts list. K8s telemetry routes to the
+           * KubernetesCluster id instead.
            */
-          await this.autoDiscoverHost({
+          const hostId: ObjectID | null = await this.autoDiscoverHost({
             projectId,
             attributes: resourceAttributes_raw,
             hasInfraSignal: false,
+            dockerHostId,
+            podmanHostId,
+            kubernetesClusterId,
           });
 
-          if (!serviceDictionary[serviceName]) {
-            const service: {
-              serviceId: ObjectID;
-              dataRententionInDays: number;
-            } = await OTelIngestService.telemetryServiceFromName({
-              serviceName: serviceName,
-              projectId: (req as TelemetryRequest).projectId,
-              resourceAttributes: resourceAttributes_raw,
+          const serverlessFunctionId: ObjectID | null =
+            await this.autoDiscoverServerless({
+              projectId,
+              attributes: resourceAttributes_raw,
             });
 
-            serviceDictionary[serviceName] = {
-              serviceName: serviceName,
-              serviceId: service.serviceId,
-              dataRententionInDays: service.dataRententionInDays,
-            };
-          }
+          const cloudResourceId: ObjectID | null =
+            await this.autoDiscoverCloudResource({
+              projectId,
+              attributes: resourceAttributes_raw,
+            });
+
+          const rumApplicationId: ObjectID | null = await this.autoDiscoverRum({
+            projectId,
+            attributes: resourceAttributes_raw,
+          });
+
+          const serviceMetadata: TelemetryServiceMetadata =
+            await this.resolveTelemetryResource({
+              req,
+              attributes: resourceAttributes_raw,
+              projectId,
+              hostId,
+              dockerHostId,
+              podmanHostId,
+              kubernetesClusterId,
+              serverlessFunctionId,
+              cloudResourceId,
+              rumApplicationId,
+              entityRefs: resourceEntityRefs,
+            });
+          const serviceName: string = serviceMetadata.serviceName;
+
+          serviceDictionary[serviceName] = serviceMetadata;
+
+          const stampHostName: string | null =
+            OtelIngestBaseService.getStringAttribute(
+              resourceAttributes_raw,
+              "host.name",
+            );
+          const stampClusterName: string | null =
+            OtelIngestBaseService.getClusterNameFromAttributes(
+              resourceAttributes_raw,
+            );
 
           const resourceAttributes: Dictionary<
             AttributeType | Array<AttributeType>
           > = {
-            ...TelemetryUtil.getAttributesForServiceIdAndServiceName({
-              serviceId: serviceDictionary[serviceName]!.serviceId!,
-              serviceName: serviceName,
-            }),
+            ...(serviceMetadata.primaryEntityType === ServiceType.OpenTelemetry
+              ? TelemetryUtil.getAttributesForServiceIdAndServiceName({
+                  serviceId: serviceMetadata.primaryEntityId!,
+                  serviceName: serviceName,
+                })
+              : {}),
+            ...(hostId && stampHostName
+              ? TelemetryUtil.getAttributesForHostIdAndHostName({
+                  hostId,
+                  hostName: stampHostName,
+                })
+              : {}),
+            ...(dockerHostId && stampHostName
+              ? TelemetryUtil.getAttributesForDockerHostIdAndHostName({
+                  dockerHostId,
+                  hostName: stampHostName,
+                })
+              : {}),
+            ...(podmanHostId && stampHostName
+              ? TelemetryUtil.getAttributesForPodmanHostIdAndHostName({
+                  podmanHostId,
+                  hostName: stampHostName,
+                })
+              : {}),
+            ...(kubernetesClusterId && stampClusterName
+              ? TelemetryUtil.getAttributesForKubernetesClusterIdAndName({
+                  kubernetesClusterId,
+                  clusterName: stampClusterName,
+                })
+              : {}),
             ...TelemetryUtil.getAttributes({
               items: resourceAttributes_raw,
               prefixKeysWithString: "resource",
@@ -344,11 +462,18 @@ export default class OtelTracesIngestService extends OtelIngestBaseService {
                     }
                   }
 
+                  /*
+                   * Stored as a ClickHouse Array column and only read
+                   * back as an unordered set. Skip the sort the shared
+                   * TelemetryUtil.getAttributeKeys helper does — it's
+                   * an O(N log N) cost per record that the downstream
+                   * consumers do not depend on.
+                   */
                   const attributeKeys: Array<string> =
-                    TelemetryUtil.getAttributeKeys(spanAttributes);
+                    Object.keys(spanAttributes);
 
-                  const serviceId: ObjectID =
-                    serviceDictionary[serviceName]!.serviceId!;
+                  const primaryEntityId: ObjectID =
+                    serviceDictionary[serviceName]!.primaryEntityId!;
 
                   const spanId: string = this.convertBase64ToHexSafe(
                     span["spanId"] as string | undefined,
@@ -411,16 +536,16 @@ export default class OtelTracesIngestService extends OtelIngestBaseService {
                       span["events"] as JSONArray,
                       {
                         projectId: projectId,
-                        serviceId: serviceId,
+                        primaryEntityId: primaryEntityId,
                         spanId: spanId,
                         traceId: traceId,
                         spanStatusCode: statusCode,
                         spanName: spanName,
                         resourceAttributes: resourceAttributes,
-                        dataRententionInDays:
-                          serviceDictionary[serviceName]!.dataRententionInDays,
+                        serviceMetadata: serviceDictionary[serviceName]!,
                       },
                       dbExceptions,
+                      pendingExceptionUpserts,
                     );
                     spanEvents = spanEventsResult.events;
                     hasException = spanEventsResult.hasException;
@@ -443,7 +568,7 @@ export default class OtelTracesIngestService extends OtelIngestBaseService {
 
                   let spanRow: JSONObject = this.buildSpanRow({
                     projectId: projectId,
-                    serviceId: serviceId,
+                    primaryEntityId: primaryEntityId,
                     attributes: spanAttributes,
                     attributeKeys: attributeKeys,
                     traceId: traceId,
@@ -461,8 +586,7 @@ export default class OtelTracesIngestService extends OtelIngestBaseService {
                     links: spanLinks,
                     hasException: hasException,
                     isRootSpan: !parentSpanId || parentSpanId === "",
-                    dataRententionInDays:
-                      serviceDictionary[serviceName]!.dataRententionInDays,
+                    serviceMetadata: serviceDictionary[serviceName]!,
                   });
 
                   /*
@@ -524,6 +648,26 @@ export default class OtelTracesIngestService extends OtelIngestBaseService {
       await Promise.all([
         this.flushSpansBuffer(dbSpans, true),
         this.flushExceptionsBuffer(dbExceptions, true),
+        /*
+         * Flush the Postgres TelemetryException upserts in one
+         * batched ON CONFLICT statement (chunked internally). Wrap
+         * in a local try so a Postgres outage cannot fail the whole
+         * worker job — the ClickHouse-side ExceptionInstance rows
+         * have already been queued in `dbExceptions` above and are
+         * the source of truth; the TelemetryException Postgres
+         * table is a denormalised summary used by the dashboard.
+         * Losing one flush under failure produces a stale dashboard
+         * count, not lost telemetry data.
+         */
+        ExceptionUtil.saveOrUpdateTelemetryExceptionsBatch(
+          pendingExceptionUpserts,
+        ).catch((err: Error) => {
+          logger.error(
+            "Telemetry exception batch upsert failed; dashboard counts may lag this batch.",
+            getLogAttributesFromRequest(req as RequestLike),
+          );
+          logger.error(err);
+        }),
       ]);
 
       if (totalSpansProcessed === 0) {
@@ -538,6 +682,7 @@ export default class OtelTracesIngestService extends OtelIngestBaseService {
       try {
         dbSpans.length = 0;
         dbExceptions.length = 0;
+        pendingExceptionUpserts.length = 0;
         if (req.body) {
           req.body = null;
         }
@@ -577,15 +722,16 @@ export default class OtelTracesIngestService extends OtelIngestBaseService {
     events: JSONArray,
     spanContext: {
       projectId: ObjectID;
-      serviceId: ObjectID;
+      primaryEntityId: ObjectID;
       spanId: string;
       traceId: string;
       spanStatusCode: SpanStatus;
       spanName: string;
       resourceAttributes: Dictionary<AttributeType | Array<AttributeType>>;
-      dataRententionInDays: number;
+      serviceMetadata: TelemetryServiceMetadata;
     },
     dbExceptions: Array<JSONObject>,
+    pendingExceptionUpserts: Array<TelemetryExceptionPayload>,
   ): { events: Array<JSONObject>; hasException: boolean } {
     const spanEvents: Array<JSONObject> = [];
     let hasException: boolean = false;
@@ -638,7 +784,7 @@ export default class OtelTracesIngestService extends OtelIngestBaseService {
 
               const fingerprint: string = ExceptionUtil.getFingerprint({
                 projectId: spanContext.projectId,
-                serviceId: spanContext.serviceId,
+                primaryEntityId: spanContext.primaryEntityId,
                 message: message,
                 stackTrace: stackTrace,
                 exceptionType: exceptionType,
@@ -668,7 +814,7 @@ export default class OtelTracesIngestService extends OtelIngestBaseService {
 
               const exceptionData: ExceptionEventPayload = {
                 projectId: spanContext.projectId,
-                serviceId: spanContext.serviceId,
+                primaryEntityId: spanContext.primaryEntityId,
                 spanId: spanContext.spanId,
                 traceId: spanContext.traceId,
                 spanStatusCode: spanContext.spanStatusCode,
@@ -683,15 +829,36 @@ export default class OtelTracesIngestService extends OtelIngestBaseService {
                 release: release,
                 environment: environment,
                 parsedFrames: parsedFramesJson,
-                dataRententionInDays: spanContext.dataRententionInDays,
+                serviceMetadata: spanContext.serviceMetadata,
               };
 
               dbExceptions.push(this.buildExceptionRow(exceptionData));
 
-              ExceptionUtil.saveOrUpdateTelemetryException({
+              /*
+               * Buffer the Postgres upsert payload for the batched
+               * flush at the end of the worker job (see
+               * pendingExceptionUpserts in processTracesAsync). The
+               * legacy code called
+               * ExceptionUtil.saveOrUpdateTelemetryException here
+               * fire-and-forget per event, which produced one
+               * Postgres round-trip per exception and lost
+               * occuranceCount increments under concurrent writes.
+               * Aggregation by fingerprint + atomic increment now
+               * happens inside saveOrUpdateTelemetryExceptionsBatch.
+               *
+               * Every primaryEntityType gets a TelemetryException summary row.
+               * The table's primaryEntityId is polymorphic now (the FK to
+               * Service was dropped), so exceptions from Host /
+               * DockerHost / KubernetesCluster and unattributed (Unknown)
+               * telemetry land in the Issues list too — attributed by
+               * primaryEntityType — instead of being dropped from the summary.
+               */
+              pendingExceptionUpserts.push({
                 fingerprint: fingerprint,
                 projectId: spanContext.projectId,
-                serviceId: spanContext.serviceId,
+                primaryEntityId: spanContext.primaryEntityId,
+                primaryEntityType:
+                  spanContext.serviceMetadata.primaryEntityType,
                 ...(exceptionType
                   ? {
                       exceptionType: exceptionType,
@@ -717,9 +884,6 @@ export default class OtelTracesIngestService extends OtelIngestBaseService {
                       environment: environment,
                     }
                   : {}),
-              }).catch((err: Error) => {
-                logger.error("Error saving/updating telemetry exception:");
-                logger.error(err);
               });
             } catch (exceptionError) {
               logger.warn(
@@ -770,7 +934,7 @@ export default class OtelTracesIngestService extends OtelIngestBaseService {
 
   private static buildSpanRow(data: {
     projectId: ObjectID;
-    serviceId: ObjectID;
+    primaryEntityId: ObjectID;
     attributes: Dictionary<AttributeType | Array<AttributeType>>;
     attributeKeys: Array<string>;
     traceId: string;
@@ -788,22 +952,32 @@ export default class OtelTracesIngestService extends OtelIngestBaseService {
     links: Array<JSONObject>;
     hasException: boolean;
     isRootSpan: boolean;
-    dataRententionInDays: number;
+    serviceMetadata: TelemetryServiceMetadata;
   }): JSONObject {
     const ingestionDate: Date = OneUptimeDate.getCurrentDate();
     const ingestionTimestamp: string =
       OneUptimeDate.toClickhouseDateTime(ingestionDate);
+    const retentionDays: number = resolveTelemetryRetentionInDays({
+      pillar: "traces",
+      bucketKey: data.statusCode,
+      serviceConfig: data.serviceMetadata.serviceRetentionConfig,
+      serviceRetentionInDays: data.serviceMetadata.serviceRetentionInDays,
+      projectConfig: data.serviceMetadata.projectRetentionConfig,
+      projectRetentionInDays: data.serviceMetadata.projectRetentionInDays,
+    });
     const retentionDate: Date = OneUptimeDate.addRemoveDays(
       ingestionDate,
-      data.dataRententionInDays || 15,
+      retentionDays,
     );
 
     return {
-      _id: ObjectID.generate().toString(),
+      _id: ObjectID.generateTimeOrdered().toString(),
       createdAt: ingestionTimestamp,
-      updatedAt: ingestionTimestamp,
       projectId: data.projectId.toString(),
-      serviceId: data.serviceId.toString(),
+      primaryEntityId: data.primaryEntityId.toString(),
+      primaryEntityType: data.serviceMetadata.primaryEntityType,
+      entityKeys: data.serviceMetadata.entityKeys || [],
+      ...getScalarEntityKeyColumns(data.serviceMetadata),
       startTime: OneUptimeDate.toClickhouseDateTime(data.startTime.date),
       endTime: OneUptimeDate.toClickhouseDateTime(data.endTime.date),
       startTimeUnixNano: data.startTime.nano,
@@ -831,17 +1005,27 @@ export default class OtelTracesIngestService extends OtelIngestBaseService {
     const ingestionDate: Date = OneUptimeDate.getCurrentDate();
     const ingestionTimestamp: string =
       OneUptimeDate.toClickhouseDateTime(ingestionDate);
+    const retentionDays: number = resolveTelemetryRetentionInDays({
+      pillar: "traces",
+      bucketKey: data.spanStatusCode,
+      serviceConfig: data.serviceMetadata.serviceRetentionConfig,
+      serviceRetentionInDays: data.serviceMetadata.serviceRetentionInDays,
+      projectConfig: data.serviceMetadata.projectRetentionConfig,
+      projectRetentionInDays: data.serviceMetadata.projectRetentionInDays,
+    });
     const retentionDate: Date = OneUptimeDate.addRemoveDays(
       ingestionDate,
-      data.dataRententionInDays || 15,
+      retentionDays,
     );
 
     return {
-      _id: ObjectID.generate().toString(),
+      _id: ObjectID.generateTimeOrdered().toString(),
       createdAt: ingestionTimestamp,
-      updatedAt: ingestionTimestamp,
       projectId: data.projectId.toString(),
-      serviceId: data.serviceId.toString(),
+      primaryEntityId: data.primaryEntityId.toString(),
+      primaryEntityType: data.serviceMetadata.primaryEntityType,
+      entityKeys: data.serviceMetadata.entityKeys || [],
+      ...getScalarEntityKeyColumns(data.serviceMetadata),
       time: OneUptimeDate.toClickhouseDateTime(data.time.date),
       timeUnixNano: data.time.nano,
       exceptionType: data.exceptionType || "",
@@ -916,16 +1100,13 @@ export default class OtelTracesIngestService extends OtelIngestBaseService {
     return duration.toString();
   }
 
+  /*
+   * OTLP/JSON sends trace/span ids as 16/32-char hex, OTLP/protobuf as
+   * base64 — Text.convertOtlpIdToHex tells them apart so hex ids are
+   * never base64-decoded into garbage.
+   */
   private static convertBase64ToHexSafe(value: string | undefined): string {
-    if (!value) {
-      return "";
-    }
-
-    try {
-      return Text.convertBase64ToHex(value);
-    } catch {
-      return "";
-    }
+    return Text.convertOtlpIdToHex(value);
   }
 
   private static toBoolean(value: unknown): boolean | null {

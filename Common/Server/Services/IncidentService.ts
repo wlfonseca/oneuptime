@@ -28,6 +28,11 @@ import Typeof from "../../Types/Typeof";
 import { applyIncidentSelfPrivacyFilter } from "../Utils/Incident/IncidentPrivacyFilter";
 import UserNotificationEventType from "../../Types/UserNotification/UserNotificationEventType";
 import StatusPageSubscriberNotificationStatus from "../../Types/StatusPage/StatusPageSubscriberNotificationStatus";
+import DockerHost from "../../Models/DatabaseModels/DockerHost";
+import PodmanHost from "../../Models/DatabaseModels/PodmanHost";
+import Host from "../../Models/DatabaseModels/Host";
+import KubernetesCluster from "../../Models/DatabaseModels/KubernetesCluster";
+import ServiceModel from "../../Models/DatabaseModels/Service";
 import Model from "../../Models/DatabaseModels/Incident";
 import IncidentOwnerTeam from "../../Models/DatabaseModels/IncidentOwnerTeam";
 import IncidentOwnerUser from "../../Models/DatabaseModels/IncidentOwnerUser";
@@ -42,10 +47,8 @@ import MetricService from "./MetricService";
 import GlobalConfigService from "./GlobalConfigService";
 import GlobalConfig from "../../Models/DatabaseModels/GlobalConfig";
 import IncidentMetricType from "../../Types/Incident/IncidentMetricType";
-import Metric, {
-  MetricPointType,
-  ServiceType,
-} from "../../Models/AnalyticsModels/Metric";
+import Metric, { MetricPointType } from "../../Models/AnalyticsModels/Metric";
+import ServiceType from "../../Types/Telemetry/ServiceType";
 import OneUptimeDate from "../../Types/Date";
 import TelemetryUtil from "../Utils/Telemetry/Telemetry";
 import logger, { LogAttributes } from "../Utils/Logger";
@@ -543,7 +546,16 @@ export class Service extends DatabaseService<Model> {
         );
       }
     } else if (createBy.data.createdIncidentTemplateId) {
-      // If created from a template, check if template has a custom initial state
+      /*
+       * Created from a template — pull every field we may want to
+       * inherit and apply each one only if the caller didn't already
+       * provide it. The dashboard pre-fills these on the client, so in
+       * the UI flow this is a no-op; the gain is for API consumers
+       * that just send `createdIncidentTemplateId` and expect the
+       * server to materialize the rest. `undefined` means "not set by
+       * the caller" — an explicit empty array or empty string is
+       * treated as an intentional override and we leave it alone.
+       */
       const incidentTemplate: IncidentTemplate | null =
         await IncidentTemplateService.findOneBy({
           query: {
@@ -552,6 +564,18 @@ export class Service extends DatabaseService<Model> {
           },
           select: {
             initialIncidentStateId: true,
+            incidentSeverityId: true,
+            changeMonitorStatusToId: true,
+            title: true,
+            description: true,
+            monitors: { _id: true },
+            hosts: { _id: true },
+            kubernetesClusters: { _id: true },
+            dockerHosts: { _id: true },
+            podmanHosts: { _id: true },
+            services: { _id: true },
+            onCallDutyPolicies: { _id: true },
+            labels: { _id: true },
           },
           props: {
             isRoot: true,
@@ -579,6 +603,129 @@ export class Service extends DatabaseService<Model> {
         if (!templateState) {
           // Fall back to default if template state is invalid
           initialIncidentStateId = undefined;
+        }
+      }
+
+      if (incidentTemplate) {
+        if (
+          createBy.data.incidentSeverityId === undefined &&
+          incidentTemplate.incidentSeverityId
+        ) {
+          createBy.data.incidentSeverityId =
+            incidentTemplate.incidentSeverityId;
+        }
+        if (
+          createBy.data.changeMonitorStatusToId === undefined &&
+          incidentTemplate.changeMonitorStatusToId
+        ) {
+          createBy.data.changeMonitorStatusToId =
+            incidentTemplate.changeMonitorStatusToId;
+        }
+        if (
+          createBy.data.title === undefined &&
+          typeof incidentTemplate.title === "string"
+        ) {
+          createBy.data.title = incidentTemplate.title;
+        }
+        if (
+          createBy.data.description === undefined &&
+          typeof incidentTemplate.description === "string"
+        ) {
+          createBy.data.description = incidentTemplate.description;
+        }
+
+        const stubBy: <T extends { _id?: string | undefined }>(
+          ctor: new () => T,
+          rows: Array<{ _id?: string | undefined }> | undefined,
+        ) => Array<T> | undefined = <T extends { _id?: string | undefined }>(
+          ctor: new () => T,
+          rows: Array<{ _id?: string | undefined }> | undefined,
+        ): Array<T> | undefined => {
+          if (!rows) {
+            return undefined;
+          }
+          return rows
+            .filter((row: { _id?: string | undefined }): boolean => {
+              return Boolean(row._id);
+            })
+            .map((row: { _id?: string | undefined }): T => {
+              const stub: T = new ctor();
+              stub._id = String(row._id);
+              return stub;
+            });
+        };
+
+        if (createBy.data.monitors === undefined) {
+          const stubs: Array<Monitor> | undefined = stubBy(
+            Monitor,
+            incidentTemplate.monitors,
+          );
+          if (stubs && stubs.length > 0) {
+            createBy.data.monitors = stubs;
+          }
+        }
+        if (createBy.data.hosts === undefined) {
+          const stubs: Array<Host> | undefined = stubBy(
+            Host,
+            incidentTemplate.hosts,
+          );
+          if (stubs && stubs.length > 0) {
+            createBy.data.hosts = stubs;
+          }
+        }
+        if (createBy.data.kubernetesClusters === undefined) {
+          const stubs: Array<KubernetesCluster> | undefined = stubBy(
+            KubernetesCluster,
+            incidentTemplate.kubernetesClusters,
+          );
+          if (stubs && stubs.length > 0) {
+            createBy.data.kubernetesClusters = stubs;
+          }
+        }
+        if (createBy.data.dockerHosts === undefined) {
+          const stubs: Array<DockerHost> | undefined = stubBy(
+            DockerHost,
+            incidentTemplate.dockerHosts,
+          );
+          if (stubs && stubs.length > 0) {
+            createBy.data.dockerHosts = stubs;
+          }
+        }
+        if (createBy.data.podmanHosts === undefined) {
+          const stubs: Array<PodmanHost> | undefined = stubBy(
+            PodmanHost,
+            incidentTemplate.podmanHosts,
+          );
+          if (stubs && stubs.length > 0) {
+            createBy.data.podmanHosts = stubs;
+          }
+        }
+        if (createBy.data.services === undefined) {
+          const stubs: Array<ServiceModel> | undefined = stubBy(
+            ServiceModel,
+            incidentTemplate.services,
+          );
+          if (stubs && stubs.length > 0) {
+            createBy.data.services = stubs;
+          }
+        }
+        if (createBy.data.onCallDutyPolicies === undefined) {
+          const stubs: Array<OnCallDutyPolicy> | undefined = stubBy(
+            OnCallDutyPolicy,
+            incidentTemplate.onCallDutyPolicies,
+          );
+          if (stubs && stubs.length > 0) {
+            createBy.data.onCallDutyPolicies = stubs;
+          }
+        }
+        if (createBy.data.labels === undefined) {
+          const stubs: Array<Label> | undefined = stubBy(
+            Label,
+            incidentTemplate.labels,
+          );
+          if (stubs && stubs.length > 0) {
+            createBy.data.labels = stubs;
+          }
         }
       }
     }
@@ -1581,8 +1728,8 @@ ${incident.remediationNotes || "No remediation notes provided."}
             if (resolvedTimeline && resolvedTimeline.startsAt) {
               const postmortemMetric: Metric = new Metric();
               postmortemMetric.projectId = projectId;
-              postmortemMetric.serviceId = incidentId;
-              postmortemMetric.serviceType = ServiceType.Incident;
+              postmortemMetric.primaryEntityId = incidentId;
+              postmortemMetric.primaryEntityType = ServiceType.Incident;
               postmortemMetric.name =
                 IncidentMetricType.PostmortemCompletionTime;
               postmortemMetric.value = OneUptimeDate.getDifferenceInSeconds(
@@ -1835,8 +1982,8 @@ ${incidentSeverity.name}
             try {
               const severityChangeMetric: Metric = new Metric();
               severityChangeMetric.projectId = projectId;
-              severityChangeMetric.serviceId = incidentId;
-              severityChangeMetric.serviceType = ServiceType.Incident;
+              severityChangeMetric.primaryEntityId = incidentId;
+              severityChangeMetric.primaryEntityType = ServiceType.Incident;
               severityChangeMetric.name = IncidentMetricType.SeverityChange;
               severityChangeMetric.value = 1;
               severityChangeMetric.attributes = {
@@ -2309,7 +2456,7 @@ ${incidentSeverity.name}
           await MetricService.deleteBy({
             query: {
               projectId: incident.projectId,
-              serviceId: incident.id,
+              primaryEntityId: incident.id,
             },
             props: {
               isRoot: true,
@@ -2583,7 +2730,7 @@ ${incidentSeverity.name}
      * ones (TimeToAcknowledge / TimeToResolve / IncidentDuration /
      * TimeInState) get rewritten with the latest state-timeline values
      * on this refresh. IncidentCount is excluded from the delete: it is
-     * a constant `value = 1` keyed by `serviceId + bucketTime` that
+     * a constant `value = 1` keyed by `primaryEntityId + bucketTime` that
      * never changes. Re-emitting it across refreshes inflated the
      * 1-minute aggregating materialized view (`MetricItemAggMV1m_mv`),
      * because the MV trigger only fires on inserts — ALTER DELETE
@@ -2595,7 +2742,7 @@ ${incidentSeverity.name}
     await MetricService.deleteBy({
       query: {
         projectId: incident.projectId,
-        serviceId: data.incidentId,
+        primaryEntityId: data.incidentId,
         name: new NotEqual<string>(IncidentMetricType.IncidentCount),
       },
       props: {
@@ -2653,32 +2800,30 @@ ${incidentSeverity.name}
 
     /*
      * Only emit IncidentCount on the very first refresh (i.e. when no
-     * existing IncidentCount row is present for this serviceId). See
+     * existing IncidentCount row is present for this primaryEntityId). See
      * the delete comment above — emitting it on every refresh would
      * accumulate phantom `sumState` entries in the MV that ALTER
      * DELETE can't undo. By keeping the original row alive and never
      * re-emitting, the dashboard Sum stays equal to the true count of
      * distinct incidents.
      */
-    const existingIncidentCount: PositiveNumber = await MetricService.countBy({
+    const incidentCountMetricExists: boolean = await MetricService.existsBy({
       query: {
         projectId: incident.projectId,
-        serviceId: data.incidentId,
+        primaryEntityId: data.incidentId,
         name: IncidentMetricType.IncidentCount,
       },
-      skip: 0,
-      limit: 1,
       props: {
         isRoot: true,
       },
     });
 
-    if (existingIncidentCount.toNumber() === 0) {
+    if (!incidentCountMetricExists) {
       const incidentCountMetric: Metric = new Metric();
 
       incidentCountMetric.projectId = incident.projectId;
-      incidentCountMetric.serviceId = incident.id!;
-      incidentCountMetric.serviceType = ServiceType.Incident;
+      incidentCountMetric.primaryEntityId = incident.id!;
+      incidentCountMetric.primaryEntityType = ServiceType.Incident;
       incidentCountMetric.name = IncidentMetricType.IncidentCount;
       incidentCountMetric.value = 1;
       incidentCountMetric.attributes = { ...baseMetricAttributes };
@@ -2722,8 +2867,8 @@ ${incidentSeverity.name}
         const timeToAcknowledgeMetric: Metric = new Metric();
 
         timeToAcknowledgeMetric.projectId = incident.projectId;
-        timeToAcknowledgeMetric.serviceId = incident.id!;
-        timeToAcknowledgeMetric.serviceType = ServiceType.Incident;
+        timeToAcknowledgeMetric.primaryEntityId = incident.id!;
+        timeToAcknowledgeMetric.primaryEntityType = ServiceType.Incident;
         timeToAcknowledgeMetric.name = IncidentMetricType.TimeToAcknowledge;
         timeToAcknowledgeMetric.value = OneUptimeDate.getDifferenceInSeconds(
           ackIncidentStateTimeline?.startsAt || OneUptimeDate.getCurrentDate(),
@@ -2775,8 +2920,8 @@ ${incidentSeverity.name}
         const timeToResolveMetric: Metric = new Metric();
 
         timeToResolveMetric.projectId = incident.projectId;
-        timeToResolveMetric.serviceId = incident.id!;
-        timeToResolveMetric.serviceType = ServiceType.Incident;
+        timeToResolveMetric.primaryEntityId = incident.id!;
+        timeToResolveMetric.primaryEntityType = ServiceType.Incident;
         timeToResolveMetric.name = IncidentMetricType.TimeToResolve;
         timeToResolveMetric.value = OneUptimeDate.getDifferenceInSeconds(
           resolvedIncidentStateTimeline?.startsAt ||
@@ -2825,8 +2970,8 @@ ${incidentSeverity.name}
       // save metric.
 
       incidentDurationMetric.projectId = incident.projectId;
-      incidentDurationMetric.serviceId = incident.id!;
-      incidentDurationMetric.serviceType = ServiceType.Incident;
+      incidentDurationMetric.primaryEntityId = incident.id!;
+      incidentDurationMetric.primaryEntityType = ServiceType.Incident;
       incidentDurationMetric.name = IncidentMetricType.IncidentDuration;
       incidentDurationMetric.value = OneUptimeDate.getDifferenceInSeconds(
         incidentEndsAt,
@@ -2872,8 +3017,8 @@ ${incidentSeverity.name}
       const timeInStateMetric: Metric = new Metric();
 
       timeInStateMetric.projectId = incident.projectId;
-      timeInStateMetric.serviceId = incident.id!;
-      timeInStateMetric.serviceType = ServiceType.Incident;
+      timeInStateMetric.primaryEntityId = incident.id!;
+      timeInStateMetric.primaryEntityType = ServiceType.Incident;
       timeInStateMetric.name = IncidentMetricType.TimeInState;
       timeInStateMetric.value = OneUptimeDate.getDifferenceInSeconds(
         timeline.endsAt,

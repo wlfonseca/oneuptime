@@ -30,6 +30,7 @@ import ManualTrigger from "./Manual";
 import MicrosoftTeamsSendMessageToChannel from "./MicrosoftTeams/SendMessageToChannel";
 import Schedule from "./Schedule";
 import SlackSendMessageToChannel from "./Slack/SendMessageToChannel";
+import Sleep from "./Sleep";
 import TelegramSendMessageToChat from "./Telegram/SendMessageToChat";
 import WebhookTrigger from "./Webhook";
 import ExecuteWorkflow from "./Workflow";
@@ -63,6 +64,7 @@ const Components: Dictionary<ComponentCode> = {
   [ComponentID.SendEmail]: new Email(),
   [ComponentID.IfElse]: new IfElse(),
   [ComponentID.WorkflowRun]: new ExecuteWorkflow(),
+  [ComponentID.Sleep]: new Sleep(),
 };
 
 for (const baseModelService of Services) {

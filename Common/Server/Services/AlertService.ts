@@ -38,10 +38,8 @@ import MetricService from "./MetricService";
 import GlobalConfigService from "./GlobalConfigService";
 import GlobalConfig from "../../Models/DatabaseModels/GlobalConfig";
 import OneUptimeDate from "../../Types/Date";
-import Metric, {
-  MetricPointType,
-  ServiceType,
-} from "../../Models/AnalyticsModels/Metric";
+import Metric, { MetricPointType } from "../../Models/AnalyticsModels/Metric";
+import ServiceType from "../../Types/Telemetry/ServiceType";
 import AlertMetricType from "../../Types/Alerts/AlertMetricType";
 import AlertFeedService from "./AlertFeedService";
 import { AlertFeedEventType } from "../../Models/DatabaseModels/AlertFeed";
@@ -1319,7 +1317,7 @@ ${alertSeverity.name}
     // delete all the alert metrics with this alert id because it's a refresh
     await MetricService.deleteBy({
       query: {
-        serviceId: data.alertId,
+        primaryEntityId: data.alertId,
       },
       props: {
         isRoot: true,
@@ -1344,8 +1342,8 @@ ${alertSeverity.name}
     const alertCountMetric: Metric = new Metric();
 
     alertCountMetric.projectId = alert.projectId;
-    alertCountMetric.serviceId = alert.id!;
-    alertCountMetric.serviceType = ServiceType.Alert;
+    alertCountMetric.primaryEntityId = alert.id!;
+    alertCountMetric.primaryEntityType = ServiceType.Alert;
     alertCountMetric.name = AlertMetricType.AlertCount;
     alertCountMetric.value = 1;
     alertCountMetric.attributes = {
@@ -1393,8 +1391,8 @@ ${alertSeverity.name}
         const timeToAcknowledgeMetric: Metric = new Metric();
 
         timeToAcknowledgeMetric.projectId = alert.projectId;
-        timeToAcknowledgeMetric.serviceId = alert.id!;
-        timeToAcknowledgeMetric.serviceType = ServiceType.Alert;
+        timeToAcknowledgeMetric.primaryEntityId = alert.id!;
+        timeToAcknowledgeMetric.primaryEntityType = ServiceType.Alert;
         timeToAcknowledgeMetric.name = AlertMetricType.TimeToAcknowledge;
         timeToAcknowledgeMetric.value = OneUptimeDate.getDifferenceInSeconds(
           ackAlertStateTimeline?.startsAt || OneUptimeDate.getCurrentDate(),
@@ -1449,8 +1447,8 @@ ${alertSeverity.name}
         const timeToResolveMetric: Metric = new Metric();
 
         timeToResolveMetric.projectId = alert.projectId;
-        timeToResolveMetric.serviceId = alert.id!;
-        timeToResolveMetric.serviceType = ServiceType.Alert;
+        timeToResolveMetric.primaryEntityId = alert.id!;
+        timeToResolveMetric.primaryEntityType = ServiceType.Alert;
         timeToResolveMetric.name = AlertMetricType.TimeToResolve;
         timeToResolveMetric.value = OneUptimeDate.getDifferenceInSeconds(
           resolvedAlertStateTimeline?.startsAt ||
@@ -1500,8 +1498,8 @@ ${alertSeverity.name}
         lastAlertStateTimeline.startsAt || OneUptimeDate.getCurrentDate();
 
       alertDurationMetric.projectId = alert.projectId;
-      alertDurationMetric.serviceId = alert.id!;
-      alertDurationMetric.serviceType = ServiceType.Alert;
+      alertDurationMetric.primaryEntityId = alert.id!;
+      alertDurationMetric.primaryEntityType = ServiceType.Alert;
       alertDurationMetric.name = AlertMetricType.AlertDuration;
       alertDurationMetric.value = OneUptimeDate.getDifferenceInSeconds(
         alertEndsAt,

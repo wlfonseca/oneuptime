@@ -12,6 +12,8 @@ import CommonModel, {
   RecordValue,
 } from "../../../Models/AnalyticsModels/AnalyticsBaseModel/CommonModel";
 import AnalyticsTableColumn, {
+  ColumnCodecConfig,
+  ColumnCodecValue,
   SkipIndexType,
 } from "../../../Types/AnalyticsDatabase/TableColumn";
 import TableColumnType from "../../../Types/AnalyticsDatabase/TableColumnType";
@@ -44,6 +46,20 @@ import AggregateBy, {
 } from "../../Types/AnalyticsDatabase/AggregateBy";
 import CaptureSpan from "../Telemetry/CaptureSpan";
 import { getPercentileLevel } from "../../../Types/BaseDatabase/AggregationType";
+
+/**
+ * Value carried under the synthetic query key "entityScope": the
+ * entity-membership read with an attribute OR-fallback. Rows stamped with
+ * `entityKeys` are matched via the bloom-indexed membership column; rows
+ * ingested before the column existed (empty array, no backfill by decision)
+ * still match via the resource attribute. See
+ * Internal/Docs/OpenTelemetryEntities.md (phase-4 read-switch).
+ */
+export interface EntityScopeQueryValue {
+  entityKeys: Array<string>;
+  attributeKey: string;
+  attributeValue: string;
+}
 
 export default class StatementGenerator<TBaseModel extends AnalyticsBaseModel> {
   public model!: TBaseModel;
@@ -266,6 +282,10 @@ export default class StatementGenerator<TBaseModel extends AnalyticsBaseModel> {
       value = `CAST(${this.escapeStringLiteral(value.toString())} AS Int128)`;
     }
 
+    if (column.type === TableColumnType.UInt64) {
+      value = `CAST(${this.escapeStringLiteral(value.toString())} AS UInt64)`;
+    }
+
     if (column.type === TableColumnType.BigNumber) {
       if (typeof value === "string") {
         value = parseInt(value);
@@ -410,6 +430,88 @@ export default class StatementGenerator<TBaseModel extends AnalyticsBaseModel> {
         continue;
       }
 
+      /*
+       * "entityScope" is a synthetic query key (not a column):
+       * { entityKeys, attributeKey, attributeValue } compiles to
+       *   (hasAny(entityKeys, [...]) OR attributes['k'] = 'v')
+       * so new rows ride the bloom-indexed `entityKeys` membership column
+       * while pre-column rows (empty array — no backfill by decision) still
+       * match via the resource attribute. Both sides are parameter-bound:
+       * the array exactly like the Includes/hasAny path above, the
+       * attribute lookup exactly like the map-equality fast path below.
+       * Ignored (no predicate, no throw) for models without an
+       * `entityKeys` Array(String) column.
+       */
+      if (key === "entityScope") {
+        const scope: EntityScopeQueryValue | undefined = value as
+          | EntityScopeQueryValue
+          | undefined;
+
+        const entityKeysColumn: AnalyticsTableColumn | null =
+          this.model.getTableColumn("entityKeys");
+
+        if (
+          !scope ||
+          !entityKeysColumn ||
+          entityKeysColumn.type !== TableColumnType.ArrayText
+        ) {
+          continue;
+        }
+
+        const scopeEntityKeys: Array<string> = scope.entityKeys || [];
+
+        const attributesColumn: AnalyticsTableColumn | null =
+          this.model.getTableColumn("attributes");
+        const hasAttributeFallback: boolean =
+          Boolean(scope.attributeKey) &&
+          Boolean(attributesColumn) &&
+          attributesColumn!.type === TableColumnType.MapStringString;
+
+        if (scopeEntityKeys.length === 0 && !hasAttributeFallback) {
+          continue;
+        }
+
+        if (first) {
+          first = false;
+        } else {
+          whereStatement.append(SQL` `);
+        }
+
+        if (scopeEntityKeys.length > 0 && hasAttributeFallback) {
+          whereStatement.append(
+            SQL`AND (hasAny(${entityKeysColumn.key}, ${{
+              value: scopeEntityKeys,
+              type: TableColumnType.ArrayText,
+            }}) OR ${attributesColumn!.key}[${{
+              value: scope.attributeKey,
+              type: TableColumnType.Text,
+            }}] = ${{
+              value: String(scope.attributeValue ?? ""),
+              type: TableColumnType.Text,
+            }})`,
+          );
+        } else if (scopeEntityKeys.length > 0) {
+          whereStatement.append(
+            SQL`AND hasAny(${entityKeysColumn.key}, ${{
+              value: scopeEntityKeys,
+              type: TableColumnType.ArrayText,
+            }})`,
+          );
+        } else {
+          whereStatement.append(
+            SQL`AND ${attributesColumn!.key}[${{
+              value: scope.attributeKey,
+              type: TableColumnType.Text,
+            }}] = ${{
+              value: String(scope.attributeValue ?? ""),
+              type: TableColumnType.Text,
+            }}`,
+          );
+        }
+
+        continue;
+      }
+
       const tableColumn: AnalyticsTableColumn | null =
         this.model.getTableColumn(key);
 
@@ -496,6 +598,29 @@ export default class StatementGenerator<TBaseModel extends AnalyticsBaseModel> {
             type: tableColumn.type,
           }}`,
         );
+      } else if (
+        value instanceof Includes &&
+        tableColumn.type === TableColumnType.ArrayText
+      ) {
+        /*
+         * Array(String) membership (e.g. `entityKeys` / `attributeKeys`):
+         * `hasAny(col, [v1, v2])` — true when the row's array contains any
+         * of the values. Repurposes Includes for array columns, where the
+         * scalar `col IN (...)` form is invalid. The bloom_filter skip index
+         * on these columns prunes granules for this predicate. An empty
+         * Includes drops to no predicate (mirrors the map-Includes behavior),
+         * never `hasAny(col, [])`.
+         */
+        const arrayIncludeValues: Array<string> =
+          ((value as Includes).values as Array<string>) || [];
+        if (arrayIncludeValues.length > 0) {
+          whereStatement.append(
+            SQL`AND hasAny(${key}, ${{
+              value: arrayIncludeValues,
+              type: TableColumnType.ArrayText,
+            }})`,
+          );
+        }
       } else if (value instanceof Includes) {
         whereStatement.append(
           SQL`AND ${key} IN ${{
@@ -994,30 +1119,16 @@ export default class StatementGenerator<TBaseModel extends AnalyticsBaseModel> {
        */
       const keyStatement: string = column.key;
 
-      /*
-       * ClickHouse rejects `Nullable(AggregateFunction(...))`, so
-       * AggregateFunction columns always emit unwrapped — the engine
-       * already handles "no state yet" cases via the empty initial
-       * state of each aggregate function.
-       */
-      const isAggregateFunction: boolean =
-        column.type === TableColumnType.AggregateFunction;
       columns
         .append(keyStatement)
         .append(SQL` `)
-        .append(
-          column.required || isAggregateFunction
-            ? this.toColumnType(column)
-            : SQL`Nullable(`.append(this.toColumnType(column)).append(SQL`)`),
-        );
+        .append(this.toFullColumnType(column));
 
       // Append CODEC if specified
       if (column.codec) {
-        const codecStr: string =
-          column.codec.level !== undefined
-            ? `${column.codec.codec}(${column.codec.level})`
-            : column.codec.codec;
-        columns.append(` CODEC(${codecStr})`);
+        columns.append(
+          ` CODEC(${StatementGenerator.buildCodecString(column.codec)})`,
+        );
       }
     }
 
@@ -1066,6 +1177,7 @@ export default class StatementGenerator<TBaseModel extends AnalyticsBaseModel> {
       Int32: TableColumnType.Number,
       Int64: TableColumnType.BigNumber,
       Int128: TableColumnType.LongNumber,
+      UInt64: TableColumnType.UInt64,
       Float32: TableColumnType.Decimal,
       Float64: TableColumnType.Decimal,
       DateTime: TableColumnType.Date,
@@ -1117,6 +1229,7 @@ export default class StatementGenerator<TBaseModel extends AnalyticsBaseModel> {
       [TableColumnType.BigNumber]: SQL`Int64`,
       [TableColumnType.MapStringString]: SQL`Map(String, String)`,
       [TableColumnType.UInt8]: SQL`UInt8`,
+      [TableColumnType.UInt64]: SQL`UInt64`,
     }[column.type];
 
     if (!statement) {
@@ -1126,6 +1239,51 @@ export default class StatementGenerator<TBaseModel extends AnalyticsBaseModel> {
     }
 
     return statement;
+  }
+
+  /**
+   * Full ClickHouse type for a column, including the Nullable and
+   * LowCardinality wrappers. Wrapping order matters:
+   * `LowCardinality(Nullable(String))` — LowCardinality is the outermost
+   * wrapper. AggregateFunction columns are never wrapped (ClickHouse rejects
+   * `Nullable(AggregateFunction(...))`, and the engine already handles the
+   * empty initial state).
+   */
+  public toFullColumnType(column: AnalyticsTableColumn): Statement {
+    const isAggregateFunction: boolean =
+      column.type === TableColumnType.AggregateFunction;
+
+    let typeStatement: Statement = this.toColumnType(column);
+
+    if (!(column.required || isAggregateFunction)) {
+      typeStatement = SQL`Nullable(`.append(typeStatement).append(SQL`)`);
+    }
+
+    if (column.isLowCardinality && !isAggregateFunction) {
+      typeStatement = SQL`LowCardinality(`.append(typeStatement).append(SQL`)`);
+    }
+
+    return typeStatement;
+  }
+
+  /**
+   * Renders a column's codec into the string that goes inside CODEC(...).
+   * Accepts a single codec or an ordered pipeline; the pipeline is joined
+   * with ", " so [{codec:"DoubleDelta"},{codec:"ZSTD",level:1}] becomes
+   * "DoubleDelta, ZSTD(1)".
+   */
+  public static buildCodecString(codec: ColumnCodecValue): string {
+    const specs: Array<ColumnCodecConfig> = Array.isArray(codec)
+      ? codec
+      : [codec];
+
+    return specs
+      .map((spec: ColumnCodecConfig) => {
+        return spec.level !== undefined
+          ? `${spec.codec}(${spec.level})`
+          : spec.codec;
+      })
+      .join(", ");
   }
 
   public toDoesColumnExistStatement(columnName: string): string {
@@ -1144,23 +1302,15 @@ export default class StatementGenerator<TBaseModel extends AnalyticsBaseModel> {
     // Build column definition without skip index (indexes must be added separately via ADD INDEX)
     const columnDef: Statement = new Statement();
 
-    const isAggregateFunction: boolean =
-      column.type === TableColumnType.AggregateFunction;
     columnDef
       .append(column.key)
       .append(SQL` `)
-      .append(
-        column.required || isAggregateFunction
-          ? this.toColumnType(column)
-          : SQL`Nullable(`.append(this.toColumnType(column)).append(SQL`)`),
-      );
+      .append(this.toFullColumnType(column));
 
     if (column.codec) {
-      const codecStr: string =
-        column.codec.level !== undefined
-          ? `${column.codec.codec}(${column.codec.level})`
-          : column.codec.codec;
-      columnDef.append(` CODEC(${codecStr})`);
+      columnDef.append(
+        ` CODEC(${StatementGenerator.buildCodecString(column.codec)})`,
+      );
     }
 
     const statement: Statement = SQL`
@@ -1277,6 +1427,14 @@ export default class StatementGenerator<TBaseModel extends AnalyticsBaseModel> {
     // Append TTL if specified
     if (this.model.ttlExpression) {
       statement.append(`\nTTL ${this.model.ttlExpression}`);
+    }
+
+    /*
+     * Append table-level SETTINGS if specified (e.g. ttl_only_drop_parts = 1
+     * so TTL drops whole time-partitions instead of rewriting parts).
+     */
+    if (this.model.tableSettings) {
+      statement.append(`\nSETTINGS ${this.model.tableSettings}`);
     }
 
     /* eslint-enable prettier/prettier */

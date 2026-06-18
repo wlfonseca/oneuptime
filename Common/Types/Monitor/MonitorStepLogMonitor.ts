@@ -16,6 +16,12 @@ export default interface MonitorStepLogMonitor {
   bodyRegex: boolean;
   severityTexts: Array<LogSeverity>;
   telemetryServiceIds: Array<ObjectID>;
+  /*
+   * Stable telemetry entity keys (host / pod / container / ...) — scopes
+   * the monitor to logs carrying any of these in their entityKeys column.
+   * Optional: monitors saved before this field existed have it undefined.
+   */
+  entityKeys?: Array<string> | undefined;
   lastXSecondsOfLogs: number;
 }
 
@@ -29,7 +35,17 @@ export class MonitorStepLogMonitorUtil {
       monitorStepLogMonitor.telemetryServiceIds &&
       monitorStepLogMonitor.telemetryServiceIds.length > 0
     ) {
-      query.serviceId = new Includes(monitorStepLogMonitor.telemetryServiceIds);
+      query.primaryEntityId = new Includes(
+        monitorStepLogMonitor.telemetryServiceIds,
+      );
+    }
+
+    // Compiles to hasAny(entityKeys, [...]) server-side. Undefined/empty is a no-op.
+    if (
+      monitorStepLogMonitor.entityKeys &&
+      monitorStepLogMonitor.entityKeys.length > 0
+    ) {
+      query.entityKeys = new Includes(monitorStepLogMonitor.entityKeys);
     }
 
     if (
@@ -73,6 +89,7 @@ export class MonitorStepLogMonitorUtil {
       bodyRegex: false,
       severityTexts: [],
       telemetryServiceIds: [],
+      entityKeys: [],
       lastXSecondsOfLogs: 60,
     };
   }
@@ -87,6 +104,7 @@ export class MonitorStepLogMonitorUtil {
       telemetryServiceIds: ObjectID.fromJSONArray(
         json["telemetryServiceIds"] as Array<JSONObject>,
       ),
+      entityKeys: (json["entityKeys"] as Array<string>) || [],
       lastXSecondsOfLogs: json["lastXSecondsOfLogs"] as number,
     };
   }
@@ -98,6 +116,7 @@ export class MonitorStepLogMonitorUtil {
       bodyRegex: monitor.bodyRegex,
       severityTexts: monitor.severityTexts,
       telemetryServiceIds: ObjectID.toJSONArray(monitor.telemetryServiceIds),
+      entityKeys: monitor.entityKeys || [],
       lastXSecondsOfLogs: monitor.lastXSecondsOfLogs,
     };
   }

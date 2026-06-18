@@ -1,11 +1,19 @@
+import CephCluster from "../../../Models/DatabaseModels/CephCluster";
+import DockerSwarmCluster from "../../../Models/DatabaseModels/DockerSwarmCluster";
+import DockerHost from "../../../Models/DatabaseModels/DockerHost";
 import Host from "../../../Models/DatabaseModels/Host";
 import Incident from "../../../Models/DatabaseModels/Incident";
 import IncidentSeverity from "../../../Models/DatabaseModels/IncidentSeverity";
 import IncidentStateTimeline from "../../../Models/DatabaseModels/IncidentStateTimeline";
 import IncidentMember from "../../../Models/DatabaseModels/IncidentMember";
+import KubernetesCluster from "../../../Models/DatabaseModels/KubernetesCluster";
 import Label from "../../../Models/DatabaseModels/Label";
 import Monitor from "../../../Models/DatabaseModels/Monitor";
 import OnCallDutyPolicy from "../../../Models/DatabaseModels/OnCallDutyPolicy";
+import PodmanHost from "../../../Models/DatabaseModels/PodmanHost";
+import ProxmoxCluster from "../../../Models/DatabaseModels/ProxmoxCluster";
+import Service from "../../../Models/DatabaseModels/Service";
+import Includes from "../../../Types/BaseDatabase/Includes";
 import SortOrder from "../../../Types/BaseDatabase/SortOrder";
 import { LIMIT_PER_PROJECT } from "../../../Types/Database/LimitMax";
 import Dictionary from "../../../Types/Dictionary";
@@ -16,8 +24,14 @@ import ObjectID from "../../../Types/ObjectID";
 import ProbeMonitorResponse from "../../../Types/Probe/ProbeMonitorResponse";
 import { TelemetryQuery } from "../../../Types/Telemetry/TelemetryQuery";
 import { DisableAutomaticIncidentCreation } from "../../EnvironmentConfig";
+import CephClusterService from "../../Services/CephClusterService";
+import DockerHostService from "../../Services/DockerHostService";
 import HostService from "../../Services/HostService";
 import IncidentService from "../../Services/IncidentService";
+import KubernetesClusterService from "../../Services/KubernetesClusterService";
+import PodmanHostService from "../../Services/PodmanHostService";
+import ProxmoxClusterService from "../../Services/ProxmoxClusterService";
+import ServiceService from "../../Services/ServiceService";
 import IncidentSeverityService from "../../Services/IncidentSeverityService";
 import IncidentStateTimelineService from "../../Services/IncidentStateTimelineService";
 import IncidentMemberService from "../../Services/IncidentMemberService";
@@ -30,6 +44,12 @@ import OneUptimeDate from "../../../Types/Date";
 import MonitorEvaluationSummary from "../../../Types/Monitor/MonitorEvaluationSummary";
 import { IncidentMemberRoleAssignment } from "../../../Types/Monitor/CriteriaIncident";
 import { PerSeriesCriteriaMatch } from "../../../Types/Probe/ProbeApiIngestResponse";
+import MonitorClusterContextUtil, {
+  MonitorClusterContext,
+} from "./MonitorClusterContext";
+import SeriesResourceLabels, {
+  SeriesResourceRefs,
+} from "./SeriesResourceLabels";
 
 export default class MonitorIncident {
   @CaptureSpan()
@@ -136,6 +156,14 @@ export default class MonitorIncident {
      * reference `{{host.name}}` etc. via the template engine.
      */
     matchesPerSeries?: Array<PerSeriesCriteriaMatch> | undefined;
+    /**
+     * Series fingerprints whose underlying resource (host, docker host,
+     * kubernetes cluster, or service) is inside an ongoing scheduled
+     * maintenance window. The monitor itself keeps evaluating — it is
+     * not attached to the maintenance — but incidents for these series
+     * are suppressed at creation time. See MonitorMaintenanceSuppression.
+     */
+    suppressedSeriesFingerprints?: Set<string> | undefined;
   }): Promise<void> {
     const incidentLogAttributes: LogAttributes = {
       projectId: input.monitor.projectId?.toString(),
@@ -179,6 +207,19 @@ export default class MonitorIncident {
     }
 
     /*
+     * Proxmox/Ceph monitors: resolve the monitored cluster once per
+     * evaluation (lookup-only, from the step config's clusterIdentifier)
+     * so every incident created below is attached to it. Series labels
+     * cannot supply this — they carry datapoint labels (`id`,
+     * `ceph_daemon`, `pool_id`), not cluster identity, and ungrouped
+     * templates have no series at all. No-op for other monitor types.
+     */
+    const clusterContext: MonitorClusterContext =
+      await MonitorClusterContextUtil.resolveClusterContextForMonitor({
+        monitor: input.monitor,
+      });
+
+    /*
      * Series-less path: one incident per criteriaIncident template as
      * before. Series-aware path: one incident per (series × template).
      */
@@ -194,6 +235,37 @@ export default class MonitorIncident {
         const seriesLabels: JSONObject | undefined = seriesMatch?.labels;
         const seriesRootCause: string =
           seriesMatch?.rootCause || input.rootCause;
+
+        /*
+         * Per-series scheduled-maintenance suppression: this series'
+         * resource is inside an ongoing maintenance window, so skip
+         * creating an incident for it. Other series on the same monitor
+         * whose resources are not under maintenance still get incidents.
+         * Note: we only suppress *new* creation — any incident already
+         * open for this series is left to the normal resolve path
+         * (checkOpenIncidentsAndCloseIfResolved still sees the full
+         * breaching set), so a real incident raised before maintenance
+         * is not silently closed.
+         */
+        if (
+          seriesFingerprint &&
+          input.suppressedSeriesFingerprints?.has(seriesFingerprint)
+        ) {
+          logger.debug(
+            `${input.monitor.id?.toString()} - Skipping incident for series ${seriesFingerprint}: its resource is under an active scheduled maintenance window.`,
+            incidentLogAttributes,
+          );
+
+          input.evaluationSummary?.events.push({
+            type: "incident-skipped",
+            title: "Incident suppressed by scheduled maintenance",
+            message:
+              "Skipped creating an incident because the resource for this series is under an active scheduled maintenance window.",
+            relatedCriteriaId: input.criteriaInstance.data?.id,
+            at: OneUptimeDate.getCurrentDate(),
+          });
+          continue;
+        }
 
         const alreadyOpenIncident: Incident | undefined = openIncidents.find(
           (incident: Incident) => {
@@ -306,9 +378,21 @@ export default class MonitorIncident {
           JSON.stringify(input.dataToProcess, null, 2),
         );
 
-        incident.createdCriteriaId = input.criteriaInstance.data.id.toString();
+        /*
+         * Guard against missing ids — these are optional reference fields and
+         * must not crash incident creation (which runs inside the probe /
+         * telemetry queue workers). A missing id previously threw
+         * "Cannot read properties of undefined (reading 'toString')" and failed
+         * the job on every cycle for the affected monitor.
+         */
+        if (input.criteriaInstance.data?.id) {
+          incident.createdCriteriaId =
+            input.criteriaInstance.data.id.toString();
+        }
 
-        incident.createdIncidentTemplateId = criteriaIncident.id.toString();
+        if (criteriaIncident.id) {
+          incident.createdIncidentTemplateId = criteriaIncident.id.toString();
+        }
 
         if (seriesFingerprint) {
           incident.seriesFingerprint = seriesFingerprint;
@@ -316,41 +400,21 @@ export default class MonitorIncident {
         if (seriesLabels && Object.keys(seriesLabels).length > 0) {
           incident.seriesLabels = seriesLabels;
 
-          /*
-           * Link the incident to the Host that emitted this series, if
-           * the metric carried a `host.name` resource attribute. The
-           * Host record was auto-discovered during OTel ingestion.
-           * Metric attributes are stored with the `resource.` prefix in
-           * ClickHouse, so the group-by dropdown surfaces
-           * `resource.host.name` — but accept the bare `host.name` too
-           * for any non-OTel ingest paths.
-           */
-          const hostName: string | undefined =
-            typeof seriesLabels["resource.host.name"] === "string"
-              ? (seriesLabels["resource.host.name"] as string)
-              : typeof seriesLabels["host.name"] === "string"
-                ? (seriesLabels["host.name"] as string)
-                : undefined;
-
-          if (hostName) {
-            const host: Host | null = await HostService.findOneBy({
-              query: {
-                projectId: input.monitor.projectId!,
-                hostIdentifier: hostName,
-              },
-              select: {
-                _id: true,
-              },
-              props: {
-                isRoot: true,
-              },
-            });
-
-            if (host) {
-              incident.hosts = [host];
-            }
-          }
+          await this.linkResourceContextFromSeries({
+            incident,
+            seriesLabels,
+            projectId: input.monitor.projectId!,
+          });
         }
+
+        /*
+         * Deterministic Proxmox/Ceph cluster link from the monitor's
+         * step config (resolved once above). Runs for both grouped and
+         * ungrouped incidents and merges with anything the series-label
+         * path resolved, so the per-cluster Activity tabs always see
+         * monitor-created incidents.
+         */
+        this.attachClusterContext({ incident, clusterContext });
 
         incident.onCallDutyPolicies =
           criteriaIncident.onCallPolicyIds?.map((id: ObjectID) => {
@@ -492,6 +556,299 @@ export default class MonitorIncident {
         });
       }
     }
+  }
+
+  /*
+   * Pull every host / docker-host / k8s-cluster / proxmox-cluster /
+   * ceph-cluster / service identifier out of the series labels and
+   * attach the matching project-scoped records to the incident. The
+   * label-key → resource-type mapping lives in SeriesResourceLabels
+   * (shared with the scheduled-maintenance suppression path so the two
+   * never disagree about which labels identify which resource). Lookups
+   * are always project-scoped so a stale or hostile stamp can't pull in
+   * a record from another tenant.
+   */
+  private static async linkResourceContextFromSeries(input: {
+    incident: Incident;
+    seriesLabels: JSONObject;
+    projectId: ObjectID;
+  }): Promise<void> {
+    const refs: SeriesResourceRefs = SeriesResourceLabels.extractResourceRefs(
+      input.seriesLabels,
+    );
+
+    const [
+      resolvedHosts,
+      resolvedDockerHosts,
+      resolvedPodmanHosts,
+      resolvedClusters,
+      resolvedServices,
+      resolvedProxmoxClusters,
+      resolvedCephClusters,
+    ] = await Promise.all([
+      this.resolveResourceIds({
+        ids: refs.hostIds,
+        names: refs.hostNames,
+        nameColumn: "hostIdentifier",
+        projectId: input.projectId,
+        findBy: HostService.findBy.bind(HostService),
+      }),
+      this.resolveResourceIds({
+        ids: refs.dockerHostIds,
+        names: refs.dockerHostNames,
+        nameColumn: "hostIdentifier",
+        projectId: input.projectId,
+        findBy: DockerHostService.findBy.bind(DockerHostService),
+      }),
+      this.resolveResourceIds({
+        ids: refs.podmanHostIds,
+        names: refs.podmanHostNames,
+        nameColumn: "hostIdentifier",
+        projectId: input.projectId,
+        findBy: PodmanHostService.findBy.bind(PodmanHostService),
+      }),
+      this.resolveResourceIds({
+        ids: refs.kubernetesClusterIds,
+        names: refs.kubernetesClusterNames,
+        nameColumn: "clusterIdentifier",
+        projectId: input.projectId,
+        findBy: KubernetesClusterService.findBy.bind(KubernetesClusterService),
+      }),
+      this.resolveResourceIds({
+        ids: refs.serviceIds,
+        names: refs.serviceNames,
+        nameColumn: "name",
+        projectId: input.projectId,
+        findBy: ServiceService.findBy.bind(ServiceService),
+      }),
+      this.resolveResourceIds({
+        ids: [],
+        names: refs.proxmoxClusterNames,
+        nameColumn: "name",
+        projectId: input.projectId,
+        findBy: ProxmoxClusterService.findBy.bind(ProxmoxClusterService),
+      }),
+      this.resolveResourceIds({
+        ids: [],
+        names: refs.cephClusterNames,
+        nameColumn: "name",
+        projectId: input.projectId,
+        findBy: CephClusterService.findBy.bind(CephClusterService),
+      }),
+    ]);
+
+    if (resolvedHosts.length > 0) {
+      input.incident.hosts = resolvedHosts.map((id: string): Host => {
+        const host: Host = new Host();
+        host._id = id;
+        return host;
+      });
+    }
+    if (resolvedDockerHosts.length > 0) {
+      input.incident.dockerHosts = resolvedDockerHosts.map(
+        (id: string): DockerHost => {
+          const dockerHost: DockerHost = new DockerHost();
+          dockerHost._id = id;
+          return dockerHost;
+        },
+      );
+    }
+    if (resolvedPodmanHosts.length > 0) {
+      input.incident.podmanHosts = resolvedPodmanHosts.map(
+        (id: string): PodmanHost => {
+          const podmanHost: PodmanHost = new PodmanHost();
+          podmanHost._id = id;
+          return podmanHost;
+        },
+      );
+    }
+    if (resolvedClusters.length > 0) {
+      input.incident.kubernetesClusters = resolvedClusters.map(
+        (id: string): KubernetesCluster => {
+          const cluster: KubernetesCluster = new KubernetesCluster();
+          cluster._id = id;
+          return cluster;
+        },
+      );
+    }
+    if (resolvedServices.length > 0) {
+      input.incident.services = resolvedServices.map((id: string): Service => {
+        const service: Service = new Service();
+        service._id = id;
+        return service;
+      });
+    }
+    if (resolvedProxmoxClusters.length > 0) {
+      input.incident.proxmoxClusters = resolvedProxmoxClusters.map(
+        (id: string): ProxmoxCluster => {
+          const cluster: ProxmoxCluster = new ProxmoxCluster();
+          cluster._id = id;
+          return cluster;
+        },
+      );
+    }
+    if (resolvedCephClusters.length > 0) {
+      input.incident.cephClusters = resolvedCephClusters.map(
+        (id: string): CephCluster => {
+          const cluster: CephCluster = new CephCluster();
+          cluster._id = id;
+          return cluster;
+        },
+      );
+    }
+  }
+
+  /*
+   * Attach the monitor-step-resolved Proxmox/Ceph cluster ids to the
+   * incident, merging with (never overwriting) anything the
+   * series-label path already linked. Both paths can resolve the same
+   * cluster, so dedupe by id.
+   */
+  private static attachClusterContext(input: {
+    incident: Incident;
+    clusterContext: MonitorClusterContext;
+  }): void {
+    if (input.clusterContext.proxmoxClusterIds.length > 0) {
+      const existingIds: Set<string> = new Set<string>(
+        (input.incident.proxmoxClusters || []).map(
+          (cluster: ProxmoxCluster) => {
+            return String(cluster._id);
+          },
+        ),
+      );
+
+      const merged: Array<ProxmoxCluster> = [
+        ...(input.incident.proxmoxClusters || []),
+      ];
+
+      for (const id of input.clusterContext.proxmoxClusterIds) {
+        if (existingIds.has(id)) {
+          continue;
+        }
+        const cluster: ProxmoxCluster = new ProxmoxCluster();
+        cluster._id = id;
+        merged.push(cluster);
+      }
+
+      input.incident.proxmoxClusters = merged;
+    }
+
+    if (input.clusterContext.cephClusterIds.length > 0) {
+      const existingIds: Set<string> = new Set<string>(
+        (input.incident.cephClusters || []).map((cluster: CephCluster) => {
+          return String(cluster._id);
+        }),
+      );
+
+      const merged: Array<CephCluster> = [
+        ...(input.incident.cephClusters || []),
+      ];
+
+      for (const id of input.clusterContext.cephClusterIds) {
+        if (existingIds.has(id)) {
+          continue;
+        }
+        const cluster: CephCluster = new CephCluster();
+        cluster._id = id;
+        merged.push(cluster);
+      }
+
+      input.incident.cephClusters = merged;
+    }
+
+    if (input.clusterContext.dockerSwarmClusterIds.length > 0) {
+      const existingIds: Set<string> = new Set<string>(
+        (input.incident.dockerSwarmClusters || []).map(
+          (cluster: DockerSwarmCluster) => {
+            return String(cluster._id);
+          },
+        ),
+      );
+
+      const merged: Array<DockerSwarmCluster> = [
+        ...(input.incident.dockerSwarmClusters || []),
+      ];
+
+      for (const id of input.clusterContext.dockerSwarmClusterIds) {
+        if (existingIds.has(id)) {
+          continue;
+        }
+        const cluster: DockerSwarmCluster = new DockerSwarmCluster();
+        cluster._id = id;
+        merged.push(cluster);
+      }
+
+      input.incident.dockerSwarmClusters = merged;
+    }
+  }
+
+  /*
+   * Resolve a mix of ids and names to a deduped set of database ids
+   * for one resource type, project-scoped. Either or both lists may
+   * be empty; if both are empty the method short-circuits with no DB
+   * round-trip.
+   */
+  private static async resolveResourceIds(input: {
+    ids: Array<string>;
+    names: Array<string>;
+    nameColumn: string;
+    projectId: ObjectID;
+    /*
+     * Loosely typed because the three resource services (Host,
+     * DockerHost, KubernetesCluster) each have their own
+     * `Query<TBaseModel>` shape and we deliberately abstract over
+     * them. We only need the row's `_id` back, which every model
+     * exposes via `DatabaseBaseModel`.
+     */
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    findBy: (args: any) => Promise<Array<{ _id?: string | undefined }>>;
+  }): Promise<Array<string>> {
+    if (input.ids.length === 0 && input.names.length === 0) {
+      return [];
+    }
+
+    const resolved: Set<string> = new Set<string>();
+
+    const lookups: Array<Promise<Array<{ _id?: string | undefined }>>> = [];
+    if (input.ids.length > 0) {
+      lookups.push(
+        input.findBy({
+          query: {
+            projectId: input.projectId,
+            _id: new Includes(input.ids),
+          },
+          select: { _id: true },
+          skip: 0,
+          limit: LIMIT_PER_PROJECT,
+          props: { isRoot: true },
+        }),
+      );
+    }
+    if (input.names.length > 0) {
+      lookups.push(
+        input.findBy({
+          query: {
+            projectId: input.projectId,
+            [input.nameColumn]: new Includes(input.names),
+          },
+          select: { _id: true },
+          skip: 0,
+          limit: LIMIT_PER_PROJECT,
+          props: { isRoot: true },
+        }),
+      );
+    }
+
+    const buckets: Array<Array<{ _id?: string | undefined }>> =
+      await Promise.all(lookups);
+    for (const bucket of buckets) {
+      for (const row of bucket) {
+        if (row._id) {
+          resolved.add(String(row._id));
+        }
+      }
+    }
+    return Array.from(resolved);
   }
 
   private static async resolveOpenIncident(input: {

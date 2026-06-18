@@ -281,6 +281,11 @@ enum Permission {
   EditMonitorCustomField = "EditMonitorCustomField",
   ReadMonitorCustomField = "ReadMonitorCustomField",
 
+  CreateTeamCustomField = "CreateTeamCustomField",
+  DeleteTeamCustomField = "DeleteTeamCustomField",
+  EditTeamCustomField = "EditTeamCustomField",
+  ReadTeamCustomField = "ReadTeamCustomField",
+
   CreateOnCallDutyPolicyCustomField = "CreateOnCallDutyPolicyCustomField",
   DeleteOnCallDutyPolicyCustomField = "DeleteOnCallDutyPolicyCustomField",
   EditOnCallDutyPolicyCustomField = "EditOnCallDutyPolicyCustomField",
@@ -500,11 +505,23 @@ enum Permission {
   EditDockerHostOwnerRule = "EditDockerHostOwnerRule",
   ReadDockerHostOwnerRule = "ReadDockerHostOwnerRule",
 
+  // Podman Host Owner Rule Permissions
+  CreatePodmanHostOwnerRule = "CreatePodmanHostOwnerRule",
+  DeletePodmanHostOwnerRule = "DeletePodmanHostOwnerRule",
+  EditPodmanHostOwnerRule = "EditPodmanHostOwnerRule",
+  ReadPodmanHostOwnerRule = "ReadPodmanHostOwnerRule",
+
   // Docker Host Label Rule Permissions
   CreateDockerHostLabelRule = "CreateDockerHostLabelRule",
   DeleteDockerHostLabelRule = "DeleteDockerHostLabelRule",
   EditDockerHostLabelRule = "EditDockerHostLabelRule",
   ReadDockerHostLabelRule = "ReadDockerHostLabelRule",
+
+  // Podman Host Label Rule Permissions
+  CreatePodmanHostLabelRule = "CreatePodmanHostLabelRule",
+  DeletePodmanHostLabelRule = "DeletePodmanHostLabelRule",
+  EditPodmanHostLabelRule = "EditPodmanHostLabelRule",
+  ReadPodmanHostLabelRule = "ReadPodmanHostLabelRule",
 
   // Kubernetes Cluster Owner Rule Permissions
   CreateKubernetesClusterOwnerRule = "CreateKubernetesClusterOwnerRule",
@@ -517,6 +534,44 @@ enum Permission {
   DeleteKubernetesClusterLabelRule = "DeleteKubernetesClusterLabelRule",
   EditKubernetesClusterLabelRule = "EditKubernetesClusterLabelRule",
   ReadKubernetesClusterLabelRule = "ReadKubernetesClusterLabelRule",
+
+  /*
+   * Proxmox Cluster Owner Rule Permissions
+   * Docker Swarm Cluster Owner Rule Permissions
+   */
+  CreateProxmoxClusterOwnerRule = "CreateProxmoxClusterOwnerRule",
+  CreateDockerSwarmClusterOwnerRule = "CreateDockerSwarmClusterOwnerRule",
+  DeleteProxmoxClusterOwnerRule = "DeleteProxmoxClusterOwnerRule",
+  DeleteDockerSwarmClusterOwnerRule = "DeleteDockerSwarmClusterOwnerRule",
+  EditProxmoxClusterOwnerRule = "EditProxmoxClusterOwnerRule",
+  EditDockerSwarmClusterOwnerRule = "EditDockerSwarmClusterOwnerRule",
+  ReadProxmoxClusterOwnerRule = "ReadProxmoxClusterOwnerRule",
+  ReadDockerSwarmClusterOwnerRule = "ReadDockerSwarmClusterOwnerRule",
+
+  /*
+   * Proxmox Cluster Label Rule Permissions
+   * Docker Swarm Cluster Label Rule Permissions
+   */
+  CreateProxmoxClusterLabelRule = "CreateProxmoxClusterLabelRule",
+  CreateDockerSwarmClusterLabelRule = "CreateDockerSwarmClusterLabelRule",
+  DeleteProxmoxClusterLabelRule = "DeleteProxmoxClusterLabelRule",
+  DeleteDockerSwarmClusterLabelRule = "DeleteDockerSwarmClusterLabelRule",
+  EditProxmoxClusterLabelRule = "EditProxmoxClusterLabelRule",
+  EditDockerSwarmClusterLabelRule = "EditDockerSwarmClusterLabelRule",
+  ReadProxmoxClusterLabelRule = "ReadProxmoxClusterLabelRule",
+  ReadDockerSwarmClusterLabelRule = "ReadDockerSwarmClusterLabelRule",
+
+  // Ceph Cluster Owner Rule Permissions
+  CreateCephClusterOwnerRule = "CreateCephClusterOwnerRule",
+  DeleteCephClusterOwnerRule = "DeleteCephClusterOwnerRule",
+  EditCephClusterOwnerRule = "EditCephClusterOwnerRule",
+  ReadCephClusterOwnerRule = "ReadCephClusterOwnerRule",
+
+  // Ceph Cluster Label Rule Permissions
+  CreateCephClusterLabelRule = "CreateCephClusterLabelRule",
+  DeleteCephClusterLabelRule = "DeleteCephClusterLabelRule",
+  EditCephClusterLabelRule = "EditCephClusterLabelRule",
+  ReadCephClusterLabelRule = "ReadCephClusterLabelRule",
 
   // Runbook Owner Rule Permissions
   CreateRunbookOwnerRule = "CreateRunbookOwnerRule",
@@ -1094,15 +1149,72 @@ enum Permission {
   EditDockerHost = "EditDockerHost",
   ReadDockerHost = "ReadDockerHost",
 
+  CreatePodmanHost = "CreatePodmanHost",
+  DeletePodmanHost = "DeletePodmanHost",
+  EditPodmanHost = "EditPodmanHost",
+  ReadPodmanHost = "ReadPodmanHost",
+
   CreateDockerHostOwnerTeam = "CreateDockerHostOwnerTeam",
   DeleteDockerHostOwnerTeam = "DeleteDockerHostOwnerTeam",
   EditDockerHostOwnerTeam = "EditDockerHostOwnerTeam",
   ReadDockerHostOwnerTeam = "ReadDockerHostOwnerTeam",
 
+  CreatePodmanHostOwnerTeam = "CreatePodmanHostOwnerTeam",
+  DeletePodmanHostOwnerTeam = "DeletePodmanHostOwnerTeam",
+  EditPodmanHostOwnerTeam = "EditPodmanHostOwnerTeam",
+  ReadPodmanHostOwnerTeam = "ReadPodmanHostOwnerTeam",
+
   CreateDockerHostOwnerUser = "CreateDockerHostOwnerUser",
   DeleteDockerHostOwnerUser = "DeleteDockerHostOwnerUser",
   EditDockerHostOwnerUser = "EditDockerHostOwnerUser",
   ReadDockerHostOwnerUser = "ReadDockerHostOwnerUser",
+
+  CreatePodmanHostOwnerUser = "CreatePodmanHostOwnerUser",
+  DeletePodmanHostOwnerUser = "DeletePodmanHostOwnerUser",
+  EditPodmanHostOwnerUser = "EditPodmanHostOwnerUser",
+  ReadPodmanHostOwnerUser = "ReadPodmanHostOwnerUser",
+
+  CreateProxmoxCluster = "CreateProxmoxCluster",
+  CreateDockerSwarmCluster = "CreateDockerSwarmCluster",
+  DeleteProxmoxCluster = "DeleteProxmoxCluster",
+  DeleteDockerSwarmCluster = "DeleteDockerSwarmCluster",
+  EditProxmoxCluster = "EditProxmoxCluster",
+  EditDockerSwarmCluster = "EditDockerSwarmCluster",
+  ReadProxmoxCluster = "ReadProxmoxCluster",
+  ReadDockerSwarmCluster = "ReadDockerSwarmCluster",
+
+  CreateCephCluster = "CreateCephCluster",
+  DeleteCephCluster = "DeleteCephCluster",
+  EditCephCluster = "EditCephCluster",
+  ReadCephCluster = "ReadCephCluster",
+
+  CreateProxmoxClusterOwnerTeam = "CreateProxmoxClusterOwnerTeam",
+  CreateDockerSwarmClusterOwnerTeam = "CreateDockerSwarmClusterOwnerTeam",
+  DeleteProxmoxClusterOwnerTeam = "DeleteProxmoxClusterOwnerTeam",
+  DeleteDockerSwarmClusterOwnerTeam = "DeleteDockerSwarmClusterOwnerTeam",
+  EditProxmoxClusterOwnerTeam = "EditProxmoxClusterOwnerTeam",
+  EditDockerSwarmClusterOwnerTeam = "EditDockerSwarmClusterOwnerTeam",
+  ReadProxmoxClusterOwnerTeam = "ReadProxmoxClusterOwnerTeam",
+  ReadDockerSwarmClusterOwnerTeam = "ReadDockerSwarmClusterOwnerTeam",
+
+  CreateProxmoxClusterOwnerUser = "CreateProxmoxClusterOwnerUser",
+  CreateDockerSwarmClusterOwnerUser = "CreateDockerSwarmClusterOwnerUser",
+  DeleteProxmoxClusterOwnerUser = "DeleteProxmoxClusterOwnerUser",
+  DeleteDockerSwarmClusterOwnerUser = "DeleteDockerSwarmClusterOwnerUser",
+  EditProxmoxClusterOwnerUser = "EditProxmoxClusterOwnerUser",
+  EditDockerSwarmClusterOwnerUser = "EditDockerSwarmClusterOwnerUser",
+  ReadProxmoxClusterOwnerUser = "ReadProxmoxClusterOwnerUser",
+  ReadDockerSwarmClusterOwnerUser = "ReadDockerSwarmClusterOwnerUser",
+
+  CreateCephClusterOwnerTeam = "CreateCephClusterOwnerTeam",
+  DeleteCephClusterOwnerTeam = "DeleteCephClusterOwnerTeam",
+  EditCephClusterOwnerTeam = "EditCephClusterOwnerTeam",
+  ReadCephClusterOwnerTeam = "ReadCephClusterOwnerTeam",
+
+  CreateCephClusterOwnerUser = "CreateCephClusterOwnerUser",
+  DeleteCephClusterOwnerUser = "DeleteCephClusterOwnerUser",
+  EditCephClusterOwnerUser = "EditCephClusterOwnerUser",
+  ReadCephClusterOwnerUser = "ReadCephClusterOwnerUser",
 
   CreateHost = "CreateHost",
   DeleteHost = "DeleteHost",
@@ -1119,20 +1231,85 @@ enum Permission {
   EditHostOwnerUser = "EditHostOwnerUser",
   ReadHostOwnerUser = "ReadHostOwnerUser",
 
+  CreateServerlessFunction = "CreateServerlessFunction",
+  DeleteServerlessFunction = "DeleteServerlessFunction",
+  EditServerlessFunction = "EditServerlessFunction",
+  ReadServerlessFunction = "ReadServerlessFunction",
+
+  CreateServerlessFunctionOwnerTeam = "CreateServerlessFunctionOwnerTeam",
+  DeleteServerlessFunctionOwnerTeam = "DeleteServerlessFunctionOwnerTeam",
+  EditServerlessFunctionOwnerTeam = "EditServerlessFunctionOwnerTeam",
+  ReadServerlessFunctionOwnerTeam = "ReadServerlessFunctionOwnerTeam",
+
+  CreateServerlessFunctionOwnerUser = "CreateServerlessFunctionOwnerUser",
+  DeleteServerlessFunctionOwnerUser = "DeleteServerlessFunctionOwnerUser",
+  EditServerlessFunctionOwnerUser = "EditServerlessFunctionOwnerUser",
+  ReadServerlessFunctionOwnerUser = "ReadServerlessFunctionOwnerUser",
+
+  CreateCloudResource = "CreateCloudResource",
+  DeleteCloudResource = "DeleteCloudResource",
+  EditCloudResource = "EditCloudResource",
+  ReadCloudResource = "ReadCloudResource",
+
+  CreateCloudResourceOwnerTeam = "CreateCloudResourceOwnerTeam",
+  DeleteCloudResourceOwnerTeam = "DeleteCloudResourceOwnerTeam",
+  EditCloudResourceOwnerTeam = "EditCloudResourceOwnerTeam",
+  ReadCloudResourceOwnerTeam = "ReadCloudResourceOwnerTeam",
+
+  CreateCloudResourceOwnerUser = "CreateCloudResourceOwnerUser",
+  DeleteCloudResourceOwnerUser = "DeleteCloudResourceOwnerUser",
+  EditCloudResourceOwnerUser = "EditCloudResourceOwnerUser",
+  ReadCloudResourceOwnerUser = "ReadCloudResourceOwnerUser",
+
+  CreateRumApplication = "CreateRumApplication",
+  DeleteRumApplication = "DeleteRumApplication",
+  EditRumApplication = "EditRumApplication",
+  ReadRumApplication = "ReadRumApplication",
+
+  CreateRumApplicationOwnerTeam = "CreateRumApplicationOwnerTeam",
+  DeleteRumApplicationOwnerTeam = "DeleteRumApplicationOwnerTeam",
+  EditRumApplicationOwnerTeam = "EditRumApplicationOwnerTeam",
+  ReadRumApplicationOwnerTeam = "ReadRumApplicationOwnerTeam",
+
+  CreateRumApplicationOwnerUser = "CreateRumApplicationOwnerUser",
+  DeleteRumApplicationOwnerUser = "DeleteRumApplicationOwnerUser",
+  EditRumApplicationOwnerUser = "EditRumApplicationOwnerUser",
+  ReadRumApplicationOwnerUser = "ReadRumApplicationOwnerUser",
+
+  CreateServerlessFunctionLabelRule = "CreateServerlessFunctionLabelRule",
+  DeleteServerlessFunctionLabelRule = "DeleteServerlessFunctionLabelRule",
+  EditServerlessFunctionLabelRule = "EditServerlessFunctionLabelRule",
+  ReadServerlessFunctionLabelRule = "ReadServerlessFunctionLabelRule",
+
+  CreateServerlessFunctionOwnerRule = "CreateServerlessFunctionOwnerRule",
+  DeleteServerlessFunctionOwnerRule = "DeleteServerlessFunctionOwnerRule",
+  EditServerlessFunctionOwnerRule = "EditServerlessFunctionOwnerRule",
+  ReadServerlessFunctionOwnerRule = "ReadServerlessFunctionOwnerRule",
+
+  CreateCloudResourceLabelRule = "CreateCloudResourceLabelRule",
+  DeleteCloudResourceLabelRule = "DeleteCloudResourceLabelRule",
+  EditCloudResourceLabelRule = "EditCloudResourceLabelRule",
+  ReadCloudResourceLabelRule = "ReadCloudResourceLabelRule",
+
+  CreateCloudResourceOwnerRule = "CreateCloudResourceOwnerRule",
+  DeleteCloudResourceOwnerRule = "DeleteCloudResourceOwnerRule",
+  EditCloudResourceOwnerRule = "EditCloudResourceOwnerRule",
+  ReadCloudResourceOwnerRule = "ReadCloudResourceOwnerRule",
+
+  CreateRumApplicationLabelRule = "CreateRumApplicationLabelRule",
+  DeleteRumApplicationLabelRule = "DeleteRumApplicationLabelRule",
+  EditRumApplicationLabelRule = "EditRumApplicationLabelRule",
+  ReadRumApplicationLabelRule = "ReadRumApplicationLabelRule",
+
+  CreateRumApplicationOwnerRule = "CreateRumApplicationOwnerRule",
+  DeleteRumApplicationOwnerRule = "DeleteRumApplicationOwnerRule",
+  EditRumApplicationOwnerRule = "EditRumApplicationOwnerRule",
+  ReadRumApplicationOwnerRule = "ReadRumApplicationOwnerRule",
+
   CreateService = "CreateService",
   DeleteService = "DeleteService",
   EditService = "EditService",
   ReadService = "ReadService",
-
-  CreateServiceDependency = "CreateServiceDependency",
-  DeleteServiceDependency = "DeleteServiceDependency",
-  EditServiceDependency = "EditServiceDependency",
-  ReadServiceDependency = "ReadServiceDependency",
-
-  CreateServiceMonitor = "CreateServiceMonitor",
-  DeleteServiceMonitor = "DeleteServiceMonitor",
-  EditServiceMonitor = "EditServiceMonitor",
-  ReadServiceMonitor = "ReadServiceMonitor",
 
   CreateServiceTelemetryService = "CreateServiceTelemetryService",
   DeleteServiceTelemetryService = "DeleteServiceTelemetryService",
@@ -1480,29 +1657,62 @@ export class PermissionHelper {
     );
   }
 
+  /*
+   * Returns permissions that grant access WITHOUT a label restriction.
+   * A permission row grants unrestricted access when:
+   *   - scope === All, OR
+   *   - scope is unset/undefined AND labelIds is empty (legacy: empty
+   *     labels meant no restriction regardless of the permission type).
+   *
+   * Owned-scoped rows are NOT unrestricted — they restrict to owned
+   * resources via OwnedScopePermission — but they also don't contribute
+   * a label filter, so they are excluded here. AccessControlPermission's
+   * early return treats "any unrestricted row" as a broader grant; Owned
+   * rows must not trigger that path.
+   *
+   * We intentionally do NOT consult `isAccessControlPermission` here.
+   * The UI allows attaching labels to role permissions like
+   * IncidentViewer via the role-based form (with scope=Labels); honoring
+   * that requires the filter to look at `scope` + `labelIds`, not the
+   * legacy per-permission flag.
+   */
   public static getNonAccessControlPermissions(
     userPermissions: Array<UserPermission>,
   ): Array<Permission> {
     return userPermissions
       .filter((i: UserPermission) => {
-        return (
-          i.labelIds.length === 0 ||
-          !PermissionHelper.isAccessControlPermission(i.permission)
-        );
+        if (i.scope === PermissionScope.All) {
+          return true;
+        }
+        if (i.scope === PermissionScope.Owned) {
+          return false;
+        }
+        // scope === Labels OR scope === undefined (legacy default)
+        return i.labelIds.length === 0;
       })
       .map((i: UserPermission) => {
         return i.permission;
       });
   }
 
+  /*
+   * Returns permission rows that apply a label-based restriction. Rows
+   * count as label-restricting when they have at least one labelId AND
+   * the scope is `Labels` (explicitly) or unset (legacy default).
+   * All/Owned scopes are excluded — All grants unconditionally and Owned
+   * is handled separately by OwnedScopePermission.
+   */
   public static getAccessControlPermissions(
     userPermissions: Array<UserPermission>,
   ): Array<UserPermission> {
     return userPermissions.filter((i: UserPermission) => {
-      return (
-        i.labelIds.length > 0 &&
-        PermissionHelper.isAccessControlPermission(i.permission)
-      );
+      if (
+        i.scope === PermissionScope.All ||
+        i.scope === PermissionScope.Owned
+      ) {
+        return false;
+      }
+      return i.labelIds.length > 0;
     });
   }
 
@@ -6115,6 +6325,47 @@ export class PermissionHelper {
       },
 
       {
+        permission: Permission.CreateTeamCustomField,
+        title: "Create Team Custom Field",
+        description:
+          "This permission can create Team Custom Field this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Team,
+      },
+      {
+        permission: Permission.DeleteTeamCustomField,
+        title: "Delete Team Custom Field",
+        description:
+          "This permission can delete Team Custom Field of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Team,
+      },
+      {
+        permission: Permission.EditTeamCustomField,
+        title: "Edit Team Custom Field",
+        description:
+          "This permission can edit Team Custom Field of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Team,
+      },
+      {
+        permission: Permission.ReadTeamCustomField,
+        title: "Read Team Custom Field",
+        description:
+          "This permission can read Team Custom Field of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Team,
+      },
+
+      {
         permission: Permission.CreateIncidentCustomField,
         title: "Create Incident Custom Field",
         description:
@@ -7207,6 +7458,778 @@ export class PermissionHelper {
         isRolePermission: false,
         group: PermissionGroup.Telemetry,
       },
+      {
+        permission: Permission.CreatePodmanHost,
+        title: "Create Podman Host",
+        description: "This permission can create Podman Host in this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.DeletePodmanHost,
+        title: "Delete Podman Host",
+        description: "This permission can delete Podman Host of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: true,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.EditPodmanHost,
+        title: "Edit Podman Host",
+        description: "This permission can edit Podman Host of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: true,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.ReadPodmanHost,
+        title: "Read Podman Host",
+        description: "This permission can read Podman Host of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: true,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+
+      {
+        permission: Permission.CreateProxmoxCluster,
+        title: "Create Proxmox Cluster",
+        description:
+          "This permission can create Proxmox Cluster in this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.CreateDockerSwarmCluster,
+        title: "Create Docker Swarm Cluster",
+        description:
+          "This permission can create Docker Swarm Cluster in this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.DeleteProxmoxCluster,
+        title: "Delete Proxmox Cluster",
+        description:
+          "This permission can delete Proxmox Cluster of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: true,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.DeleteDockerSwarmCluster,
+        title: "Delete Docker Swarm Cluster",
+        description:
+          "This permission can delete Docker Swarm Cluster of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: true,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.EditProxmoxCluster,
+        title: "Edit Proxmox Cluster",
+        description:
+          "This permission can edit Proxmox Cluster of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: true,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.EditDockerSwarmCluster,
+        title: "Edit Docker Swarm Cluster",
+        description:
+          "This permission can edit Docker Swarm Cluster of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: true,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.ReadProxmoxCluster,
+        title: "Read Proxmox Cluster",
+        description:
+          "This permission can read Proxmox Cluster of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: true,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.ReadDockerSwarmCluster,
+        title: "Read Docker Swarm Cluster",
+        description:
+          "This permission can read Docker Swarm Cluster of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: true,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+
+      {
+        permission: Permission.CreateCephCluster,
+        title: "Create Ceph Cluster",
+        description: "This permission can create Ceph Cluster in this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.DeleteCephCluster,
+        title: "Delete Ceph Cluster",
+        description: "This permission can delete Ceph Cluster of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: true,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.EditCephCluster,
+        title: "Edit Ceph Cluster",
+        description: "This permission can edit Ceph Cluster of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: true,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.ReadCephCluster,
+        title: "Read Ceph Cluster",
+        description: "This permission can read Ceph Cluster of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: true,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+    ];
+
+    /*
+     * Split into a second array (concatenated below) so the single array
+     * literal stays under TypeScript's union-complexity ceiling (TS2590).
+     * The full list had grown large enough that adding the FaaS / Cloud / RUM
+     * telemetry-resource permissions tipped one giant literal over the limit.
+     */
+    const morePermissionProps: Array<PermissionProps> = [
+      {
+        permission: Permission.CreateServerlessFunction,
+        title: "Create Serverless Function",
+        description:
+          "This permission can create Serverless Function of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: true,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.DeleteServerlessFunction,
+        title: "Delete Serverless Function",
+        description:
+          "This permission can delete Serverless Function of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: true,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.EditServerlessFunction,
+        title: "Edit Serverless Function",
+        description:
+          "This permission can edit Serverless Function of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: true,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.ReadServerlessFunction,
+        title: "Read Serverless Function",
+        description:
+          "This permission can read Serverless Function of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: true,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+
+      {
+        permission: Permission.CreateServerlessFunctionOwnerTeam,
+        title: "Create Serverless Function Team Owner",
+        description:
+          "This permission can create Serverless Function Team Owner of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.DeleteServerlessFunctionOwnerTeam,
+        title: "Delete Serverless Function Team Owner",
+        description:
+          "This permission can delete Serverless Function Team Owner of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.EditServerlessFunctionOwnerTeam,
+        title: "Edit Serverless Function Team Owner",
+        description:
+          "This permission can edit Serverless Function Team Owner of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.ReadServerlessFunctionOwnerTeam,
+        title: "Read Serverless Function Team Owner",
+        description:
+          "This permission can read Serverless Function Team Owner of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+
+      {
+        permission: Permission.CreateServerlessFunctionOwnerUser,
+        title: "Create Serverless Function User Owner",
+        description:
+          "This permission can create Serverless Function User Owner of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.DeleteServerlessFunctionOwnerUser,
+        title: "Delete Serverless Function User Owner",
+        description:
+          "This permission can delete Serverless Function User Owner of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.EditServerlessFunctionOwnerUser,
+        title: "Edit Serverless Function User Owner",
+        description:
+          "This permission can edit Serverless Function User Owner of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.ReadServerlessFunctionOwnerUser,
+        title: "Read Serverless Function User Owner",
+        description:
+          "This permission can read Serverless Function User Owner of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+
+      {
+        permission: Permission.CreateCloudResource,
+        title: "Create Cloud Resource",
+        description:
+          "This permission can create Cloud Resource of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: true,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.DeleteCloudResource,
+        title: "Delete Cloud Resource",
+        description:
+          "This permission can delete Cloud Resource of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: true,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.EditCloudResource,
+        title: "Edit Cloud Resource",
+        description: "This permission can edit Cloud Resource of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: true,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.ReadCloudResource,
+        title: "Read Cloud Resource",
+        description: "This permission can read Cloud Resource of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: true,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+
+      {
+        permission: Permission.CreateCloudResourceOwnerTeam,
+        title: "Create Cloud Resource Team Owner",
+        description:
+          "This permission can create Cloud Resource Team Owner of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.DeleteCloudResourceOwnerTeam,
+        title: "Delete Cloud Resource Team Owner",
+        description:
+          "This permission can delete Cloud Resource Team Owner of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.EditCloudResourceOwnerTeam,
+        title: "Edit Cloud Resource Team Owner",
+        description:
+          "This permission can edit Cloud Resource Team Owner of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.ReadCloudResourceOwnerTeam,
+        title: "Read Cloud Resource Team Owner",
+        description:
+          "This permission can read Cloud Resource Team Owner of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+
+      {
+        permission: Permission.CreateCloudResourceOwnerUser,
+        title: "Create Cloud Resource User Owner",
+        description:
+          "This permission can create Cloud Resource User Owner of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.DeleteCloudResourceOwnerUser,
+        title: "Delete Cloud Resource User Owner",
+        description:
+          "This permission can delete Cloud Resource User Owner of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.EditCloudResourceOwnerUser,
+        title: "Edit Cloud Resource User Owner",
+        description:
+          "This permission can edit Cloud Resource User Owner of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.ReadCloudResourceOwnerUser,
+        title: "Read Cloud Resource User Owner",
+        description:
+          "This permission can read Cloud Resource User Owner of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+
+      {
+        permission: Permission.CreateRumApplication,
+        title: "Create RUM Application",
+        description:
+          "This permission can create RUM Application of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: true,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.DeleteRumApplication,
+        title: "Delete RUM Application",
+        description:
+          "This permission can delete RUM Application of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: true,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.EditRumApplication,
+        title: "Edit RUM Application",
+        description:
+          "This permission can edit RUM Application of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: true,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.ReadRumApplication,
+        title: "Read RUM Application",
+        description:
+          "This permission can read RUM Application of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: true,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+
+      {
+        permission: Permission.CreateRumApplicationOwnerTeam,
+        title: "Create RUM Application Team Owner",
+        description:
+          "This permission can create RUM Application Team Owner of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.DeleteRumApplicationOwnerTeam,
+        title: "Delete RUM Application Team Owner",
+        description:
+          "This permission can delete RUM Application Team Owner of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.EditRumApplicationOwnerTeam,
+        title: "Edit RUM Application Team Owner",
+        description:
+          "This permission can edit RUM Application Team Owner of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.ReadRumApplicationOwnerTeam,
+        title: "Read RUM Application Team Owner",
+        description:
+          "This permission can read RUM Application Team Owner of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+
+      {
+        permission: Permission.CreateRumApplicationOwnerUser,
+        title: "Create RUM Application User Owner",
+        description:
+          "This permission can create RUM Application User Owner of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.DeleteRumApplicationOwnerUser,
+        title: "Delete RUM Application User Owner",
+        description:
+          "This permission can delete RUM Application User Owner of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.EditRumApplicationOwnerUser,
+        title: "Edit RUM Application User Owner",
+        description:
+          "This permission can edit RUM Application User Owner of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.ReadRumApplicationOwnerUser,
+        title: "Read RUM Application User Owner",
+        description:
+          "This permission can read RUM Application User Owner of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+
+      {
+        permission: Permission.CreateServerlessFunctionLabelRule,
+        title: "Create Serverless Function Label Rule",
+        description:
+          "This permission can create Serverless Function Label Rule of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.DeleteServerlessFunctionLabelRule,
+        title: "Delete Serverless Function Label Rule",
+        description:
+          "This permission can delete Serverless Function Label Rule of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.EditServerlessFunctionLabelRule,
+        title: "Edit Serverless Function Label Rule",
+        description:
+          "This permission can edit Serverless Function Label Rule of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.ReadServerlessFunctionLabelRule,
+        title: "Read Serverless Function Label Rule",
+        description:
+          "This permission can read Serverless Function Label Rule of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.CreateServerlessFunctionOwnerRule,
+        title: "Create Serverless Function Owner Rule",
+        description:
+          "This permission can create Serverless Function Owner Rule of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.DeleteServerlessFunctionOwnerRule,
+        title: "Delete Serverless Function Owner Rule",
+        description:
+          "This permission can delete Serverless Function Owner Rule of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.EditServerlessFunctionOwnerRule,
+        title: "Edit Serverless Function Owner Rule",
+        description:
+          "This permission can edit Serverless Function Owner Rule of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.ReadServerlessFunctionOwnerRule,
+        title: "Read Serverless Function Owner Rule",
+        description:
+          "This permission can read Serverless Function Owner Rule of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+
+      {
+        permission: Permission.CreateCloudResourceLabelRule,
+        title: "Create Cloud Resource Label Rule",
+        description:
+          "This permission can create Cloud Resource Label Rule of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.DeleteCloudResourceLabelRule,
+        title: "Delete Cloud Resource Label Rule",
+        description:
+          "This permission can delete Cloud Resource Label Rule of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.EditCloudResourceLabelRule,
+        title: "Edit Cloud Resource Label Rule",
+        description:
+          "This permission can edit Cloud Resource Label Rule of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.ReadCloudResourceLabelRule,
+        title: "Read Cloud Resource Label Rule",
+        description:
+          "This permission can read Cloud Resource Label Rule of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.CreateCloudResourceOwnerRule,
+        title: "Create Cloud Resource Owner Rule",
+        description:
+          "This permission can create Cloud Resource Owner Rule of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.DeleteCloudResourceOwnerRule,
+        title: "Delete Cloud Resource Owner Rule",
+        description:
+          "This permission can delete Cloud Resource Owner Rule of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.EditCloudResourceOwnerRule,
+        title: "Edit Cloud Resource Owner Rule",
+        description:
+          "This permission can edit Cloud Resource Owner Rule of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.ReadCloudResourceOwnerRule,
+        title: "Read Cloud Resource Owner Rule",
+        description:
+          "This permission can read Cloud Resource Owner Rule of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+
+      {
+        permission: Permission.CreateRumApplicationLabelRule,
+        title: "Create RUM Application Label Rule",
+        description:
+          "This permission can create RUM Application Label Rule of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.DeleteRumApplicationLabelRule,
+        title: "Delete RUM Application Label Rule",
+        description:
+          "This permission can delete RUM Application Label Rule of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.EditRumApplicationLabelRule,
+        title: "Edit RUM Application Label Rule",
+        description:
+          "This permission can edit RUM Application Label Rule of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.ReadRumApplicationLabelRule,
+        title: "Read RUM Application Label Rule",
+        description:
+          "This permission can read RUM Application Label Rule of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.CreateRumApplicationOwnerRule,
+        title: "Create RUM Application Owner Rule",
+        description:
+          "This permission can create RUM Application Owner Rule of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.DeleteRumApplicationOwnerRule,
+        title: "Delete RUM Application Owner Rule",
+        description:
+          "This permission can delete RUM Application Owner Rule of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.EditRumApplicationOwnerRule,
+        title: "Edit RUM Application Owner Rule",
+        description:
+          "This permission can edit RUM Application Owner Rule of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.ReadRumApplicationOwnerRule,
+        title: "Read RUM Application Owner Rule",
+        description:
+          "This permission can read RUM Application Owner Rule of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
 
       {
         permission: Permission.CreateKubernetesClusterOwnerTeam,
@@ -7291,6 +8314,250 @@ export class PermissionHelper {
       },
 
       {
+        permission: Permission.CreateProxmoxClusterOwnerTeam,
+        title: "Create Proxmox Cluster Team Owner",
+        description:
+          "This permission can create Proxmox Cluster Team Owner of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.CreateDockerSwarmClusterOwnerTeam,
+        title: "Create Docker Swarm Cluster Team Owner",
+        description:
+          "This permission can create Docker Swarm Cluster Team Owner of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.DeleteProxmoxClusterOwnerTeam,
+        title: "Delete Proxmox Cluster Team Owner",
+        description:
+          "This permission can delete Proxmox Cluster Team Owner of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.DeleteDockerSwarmClusterOwnerTeam,
+        title: "Delete Docker Swarm Cluster Team Owner",
+        description:
+          "This permission can delete Docker Swarm Cluster Team Owner of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.EditProxmoxClusterOwnerTeam,
+        title: "Edit Proxmox Cluster Team Owner",
+        description:
+          "This permission can edit Proxmox Cluster Team Owner of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.EditDockerSwarmClusterOwnerTeam,
+        title: "Edit Docker Swarm Cluster Team Owner",
+        description:
+          "This permission can edit Docker Swarm Cluster Team Owner of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.ReadProxmoxClusterOwnerTeam,
+        title: "Read Proxmox Cluster Team Owner",
+        description:
+          "This permission can read Proxmox Cluster Team Owner of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.ReadDockerSwarmClusterOwnerTeam,
+        title: "Read Docker Swarm Cluster Team Owner",
+        description:
+          "This permission can read Docker Swarm Cluster Team Owner of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+
+      {
+        permission: Permission.CreateProxmoxClusterOwnerUser,
+        title: "Create Proxmox Cluster User Owner",
+        description:
+          "This permission can create Proxmox Cluster User Owner of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.CreateDockerSwarmClusterOwnerUser,
+        title: "Create Docker Swarm Cluster User Owner",
+        description:
+          "This permission can create Docker Swarm Cluster User Owner of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.DeleteProxmoxClusterOwnerUser,
+        title: "Delete Proxmox Cluster User Owner",
+        description:
+          "This permission can delete Proxmox Cluster User Owner of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.DeleteDockerSwarmClusterOwnerUser,
+        title: "Delete Docker Swarm Cluster User Owner",
+        description:
+          "This permission can delete Docker Swarm Cluster User Owner of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.EditProxmoxClusterOwnerUser,
+        title: "Edit Proxmox Cluster User Owner",
+        description:
+          "This permission can edit Proxmox Cluster User Owner of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.EditDockerSwarmClusterOwnerUser,
+        title: "Edit Docker Swarm Cluster User Owner",
+        description:
+          "This permission can edit Docker Swarm Cluster User Owner of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.ReadProxmoxClusterOwnerUser,
+        title: "Read Proxmox Cluster User Owner",
+        description:
+          "This permission can read Proxmox Cluster User Owner of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.ReadDockerSwarmClusterOwnerUser,
+        title: "Read Docker Swarm Cluster User Owner",
+        description:
+          "This permission can read Docker Swarm Cluster User Owner of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+
+      {
+        permission: Permission.CreateCephClusterOwnerTeam,
+        title: "Create Ceph Cluster Team Owner",
+        description:
+          "This permission can create Ceph Cluster Team Owner of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.DeleteCephClusterOwnerTeam,
+        title: "Delete Ceph Cluster Team Owner",
+        description:
+          "This permission can delete Ceph Cluster Team Owner of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.EditCephClusterOwnerTeam,
+        title: "Edit Ceph Cluster Team Owner",
+        description:
+          "This permission can edit Ceph Cluster Team Owner of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.ReadCephClusterOwnerTeam,
+        title: "Read Ceph Cluster Team Owner",
+        description:
+          "This permission can read Ceph Cluster Team Owner of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+
+      {
+        permission: Permission.CreateCephClusterOwnerUser,
+        title: "Create Ceph Cluster User Owner",
+        description:
+          "This permission can create Ceph Cluster User Owner of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.DeleteCephClusterOwnerUser,
+        title: "Delete Ceph Cluster User Owner",
+        description:
+          "This permission can delete Ceph Cluster User Owner of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.EditCephClusterOwnerUser,
+        title: "Edit Ceph Cluster User Owner",
+        description:
+          "This permission can edit Ceph Cluster User Owner of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.ReadCephClusterOwnerUser,
+        title: "Read Ceph Cluster User Owner",
+        description:
+          "This permission can read Ceph Cluster User Owner of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+
+      {
         permission: Permission.CreateDockerHostOwnerTeam,
         title: "Create Docker Host Team Owner",
         description:
@@ -7332,6 +8599,47 @@ export class PermissionHelper {
       },
 
       {
+        permission: Permission.CreatePodmanHostOwnerTeam,
+        title: "Create Podman Host Team Owner",
+        description:
+          "This permission can create Podman Host Team Owner of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.DeletePodmanHostOwnerTeam,
+        title: "Delete Podman Host Team Owner",
+        description:
+          "This permission can delete Podman Host Team Owner of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.EditPodmanHostOwnerTeam,
+        title: "Edit Podman Host Team Owner",
+        description:
+          "This permission can edit Podman Host Team Owner of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.ReadPodmanHostOwnerTeam,
+        title: "Read Podman Host Team Owner",
+        description:
+          "This permission can read Podman Host Team Owner of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+
+      {
         permission: Permission.CreateDockerHostOwnerUser,
         title: "Create Docker Host User Owner",
         description:
@@ -7366,6 +8674,47 @@ export class PermissionHelper {
         title: "Read Docker Host User Owner",
         description:
           "This permission can read Docker Host User Owner of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+
+      {
+        permission: Permission.CreatePodmanHostOwnerUser,
+        title: "Create Podman Host User Owner",
+        description:
+          "This permission can create Podman Host User Owner of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.DeletePodmanHostOwnerUser,
+        title: "Delete Podman Host User Owner",
+        description:
+          "This permission can delete Podman Host User Owner of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.EditPodmanHostOwnerUser,
+        title: "Edit Podman Host User Owner",
+        description:
+          "This permission can edit Podman Host User Owner of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.ReadPodmanHostOwnerUser,
+        title: "Read Podman Host User Owner",
+        description:
+          "This permission can read Podman Host User Owner of this project.",
         isAssignableToTenant: true,
         isAccessControlPermission: false,
         isRolePermission: false,
@@ -7524,88 +8873,6 @@ export class PermissionHelper {
         description: "This permission can read Service of this project.",
         isAssignableToTenant: true,
         isAccessControlPermission: true,
-        isRolePermission: false,
-        group: PermissionGroup.ServiceCatalog,
-      },
-
-      {
-        permission: Permission.CreateServiceDependency,
-        title: "Create Service Dependency",
-        description:
-          "This permission can create Service Dependencies in this project.",
-        isAssignableToTenant: true,
-        isAccessControlPermission: false,
-        isRolePermission: false,
-        group: PermissionGroup.ServiceCatalog,
-      },
-      {
-        permission: Permission.DeleteServiceDependency,
-        title: "Delete Service Dependency",
-        description:
-          "This permission can delete Service Dependencies of this project.",
-        isAssignableToTenant: true,
-        isAccessControlPermission: false,
-        isRolePermission: false,
-        group: PermissionGroup.ServiceCatalog,
-      },
-      {
-        permission: Permission.EditServiceDependency,
-        title: "Edit Service Dependency",
-        description:
-          "This permission can edit Service Dependencies of this project.",
-        isAssignableToTenant: true,
-        isAccessControlPermission: false,
-        isRolePermission: false,
-        group: PermissionGroup.ServiceCatalog,
-      },
-      {
-        permission: Permission.ReadServiceDependency,
-        title: "Read Service Dependency",
-        description:
-          "This permission can read Service Dependencies of this project.",
-        isAssignableToTenant: true,
-        isAccessControlPermission: false,
-        isRolePermission: false,
-        group: PermissionGroup.ServiceCatalog,
-      },
-
-      {
-        permission: Permission.CreateServiceMonitor,
-        title: "Create Service Monitor",
-        description:
-          "This permission can create Service Monitor in this project.",
-        isAssignableToTenant: true,
-        isAccessControlPermission: false,
-        isRolePermission: false,
-        group: PermissionGroup.ServiceCatalog,
-      },
-      {
-        permission: Permission.DeleteServiceMonitor,
-        title: "Delete Service Monitor",
-        description:
-          "This permission can delete Service Monitor of this project.",
-        isAssignableToTenant: true,
-        isAccessControlPermission: false,
-        isRolePermission: false,
-        group: PermissionGroup.ServiceCatalog,
-      },
-      {
-        permission: Permission.EditServiceMonitor,
-        title: "Edit Service Monitor",
-        description:
-          "This permission can edit Service Monitor of this project.",
-        isAssignableToTenant: true,
-        isAccessControlPermission: false,
-        isRolePermission: false,
-        group: PermissionGroup.ServiceCatalog,
-      },
-      {
-        permission: Permission.ReadServiceMonitor,
-        title: "Read Service Monitor",
-        description:
-          "This permission can read Service Monitor of this project.",
-        isAssignableToTenant: true,
-        isAccessControlPermission: false,
         isRolePermission: false,
         group: PermissionGroup.ServiceCatalog,
       },
@@ -9217,6 +10484,48 @@ export class PermissionHelper {
         group: PermissionGroup.Telemetry,
       },
 
+      // Podman Host Owner Rule Permissions
+      {
+        permission: Permission.CreatePodmanHostOwnerRule,
+        title: "Create Podman Host Owner Rule",
+        description:
+          "This permission can create Podman Host Owner Rules in this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.DeletePodmanHostOwnerRule,
+        title: "Delete Podman Host Owner Rule",
+        description:
+          "This permission can delete Podman Host Owner Rules of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.EditPodmanHostOwnerRule,
+        title: "Edit Podman Host Owner Rule",
+        description:
+          "This permission can edit Podman Host Owner Rules of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.ReadPodmanHostOwnerRule,
+        title: "Read Podman Host Owner Rule",
+        description:
+          "This permission can read Podman Host Owner Rules of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+
       // Docker Host Label Rule Permissions
       {
         permission: Permission.CreateDockerHostLabelRule,
@@ -9253,6 +10562,48 @@ export class PermissionHelper {
         title: "Read Docker Host Label Rule",
         description:
           "This permission can read Docker Host Label Rules of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+
+      // Podman Host Label Rule Permissions
+      {
+        permission: Permission.CreatePodmanHostLabelRule,
+        title: "Create Podman Host Label Rule",
+        description:
+          "This permission can create Podman Host Label Rules in this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.DeletePodmanHostLabelRule,
+        title: "Delete Podman Host Label Rule",
+        description:
+          "This permission can delete Podman Host Label Rules of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.EditPodmanHostLabelRule,
+        title: "Edit Podman Host Label Rule",
+        description:
+          "This permission can edit Podman Host Label Rules of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.ReadPodmanHostLabelRule,
+        title: "Read Podman Host Label Rule",
+        description:
+          "This permission can read Podman Host Label Rules of this project.",
         isAssignableToTenant: true,
         isAccessControlPermission: false,
         isRolePermission: false,
@@ -9337,6 +10688,260 @@ export class PermissionHelper {
         title: "Read Kubernetes Cluster Label Rule",
         description:
           "This permission can read Kubernetes Cluster Label Rules of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+
+      /*
+       * Proxmox Cluster Owner Rule Permissions
+       * Docker Swarm Cluster Owner Rule Permissions
+       */
+      {
+        permission: Permission.CreateProxmoxClusterOwnerRule,
+        title: "Create Proxmox Cluster Owner Rule",
+        description:
+          "This permission can create Proxmox Cluster Owner Rules in this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.CreateDockerSwarmClusterOwnerRule,
+        title: "Create Docker Swarm Cluster Owner Rule",
+        description:
+          "This permission can create Docker Swarm Cluster Owner Rules in this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.DeleteProxmoxClusterOwnerRule,
+        title: "Delete Proxmox Cluster Owner Rule",
+        description:
+          "This permission can delete Proxmox Cluster Owner Rules of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.DeleteDockerSwarmClusterOwnerRule,
+        title: "Delete Docker Swarm Cluster Owner Rule",
+        description:
+          "This permission can delete Docker Swarm Cluster Owner Rules of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.EditProxmoxClusterOwnerRule,
+        title: "Edit Proxmox Cluster Owner Rule",
+        description:
+          "This permission can edit Proxmox Cluster Owner Rules of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.EditDockerSwarmClusterOwnerRule,
+        title: "Edit Docker Swarm Cluster Owner Rule",
+        description:
+          "This permission can edit Docker Swarm Cluster Owner Rules of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.ReadProxmoxClusterOwnerRule,
+        title: "Read Proxmox Cluster Owner Rule",
+        description:
+          "This permission can read Proxmox Cluster Owner Rules of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.ReadDockerSwarmClusterOwnerRule,
+        title: "Read Docker Swarm Cluster Owner Rule",
+        description:
+          "This permission can read Docker Swarm Cluster Owner Rules of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+
+      /*
+       * Proxmox Cluster Label Rule Permissions
+       * Docker Swarm Cluster Label Rule Permissions
+       */
+      {
+        permission: Permission.CreateProxmoxClusterLabelRule,
+        title: "Create Proxmox Cluster Label Rule",
+        description:
+          "This permission can create Proxmox Cluster Label Rules in this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.CreateDockerSwarmClusterLabelRule,
+        title: "Create Docker Swarm Cluster Label Rule",
+        description:
+          "This permission can create Docker Swarm Cluster Label Rules in this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.DeleteProxmoxClusterLabelRule,
+        title: "Delete Proxmox Cluster Label Rule",
+        description:
+          "This permission can delete Proxmox Cluster Label Rules of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.DeleteDockerSwarmClusterLabelRule,
+        title: "Delete Docker Swarm Cluster Label Rule",
+        description:
+          "This permission can delete Docker Swarm Cluster Label Rules of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.EditProxmoxClusterLabelRule,
+        title: "Edit Proxmox Cluster Label Rule",
+        description:
+          "This permission can edit Proxmox Cluster Label Rules of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.EditDockerSwarmClusterLabelRule,
+        title: "Edit Docker Swarm Cluster Label Rule",
+        description:
+          "This permission can edit Docker Swarm Cluster Label Rules of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.ReadProxmoxClusterLabelRule,
+        title: "Read Proxmox Cluster Label Rule",
+        description:
+          "This permission can read Proxmox Cluster Label Rules of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.ReadDockerSwarmClusterLabelRule,
+        title: "Read Docker Swarm Cluster Label Rule",
+        description:
+          "This permission can read Docker Swarm Cluster Label Rules of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+
+      // Ceph Cluster Owner Rule Permissions
+      {
+        permission: Permission.CreateCephClusterOwnerRule,
+        title: "Create Ceph Cluster Owner Rule",
+        description:
+          "This permission can create Ceph Cluster Owner Rules in this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.DeleteCephClusterOwnerRule,
+        title: "Delete Ceph Cluster Owner Rule",
+        description:
+          "This permission can delete Ceph Cluster Owner Rules of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.EditCephClusterOwnerRule,
+        title: "Edit Ceph Cluster Owner Rule",
+        description:
+          "This permission can edit Ceph Cluster Owner Rules of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.ReadCephClusterOwnerRule,
+        title: "Read Ceph Cluster Owner Rule",
+        description:
+          "This permission can read Ceph Cluster Owner Rules of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+
+      // Ceph Cluster Label Rule Permissions
+      {
+        permission: Permission.CreateCephClusterLabelRule,
+        title: "Create Ceph Cluster Label Rule",
+        description:
+          "This permission can create Ceph Cluster Label Rules in this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.DeleteCephClusterLabelRule,
+        title: "Delete Ceph Cluster Label Rule",
+        description:
+          "This permission can delete Ceph Cluster Label Rules of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.EditCephClusterLabelRule,
+        title: "Edit Ceph Cluster Label Rule",
+        description:
+          "This permission can edit Ceph Cluster Label Rules of this project.",
+        isAssignableToTenant: true,
+        isAccessControlPermission: false,
+        isRolePermission: false,
+        group: PermissionGroup.Telemetry,
+      },
+      {
+        permission: Permission.ReadCephClusterLabelRule,
+        title: "Read Ceph Cluster Label Rule",
+        description:
+          "This permission can read Ceph Cluster Label Rules of this project.",
         isAssignableToTenant: true,
         isAccessControlPermission: false,
         isRolePermission: false,
@@ -11652,7 +13257,7 @@ export class PermissionHelper {
       },
     ];
 
-    return permissions;
+    return [...permissions, ...morePermissionProps];
   }
 
   public static getPermissionsByGroup(

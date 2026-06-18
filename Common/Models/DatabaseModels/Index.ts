@@ -9,9 +9,43 @@ import DockerHost from "./DockerHost";
 import DockerHostOwnerTeam from "./DockerHostOwnerTeam";
 import DockerHostOwnerUser from "./DockerHostOwnerUser";
 import DockerResource from "./DockerResource";
+import PodmanHost from "./PodmanHost";
+import PodmanHostOwnerTeam from "./PodmanHostOwnerTeam";
+import PodmanHostOwnerUser from "./PodmanHostOwnerUser";
+import PodmanResource from "./PodmanResource";
+import ProxmoxCluster from "./ProxmoxCluster";
+import DockerSwarmCluster from "./DockerSwarmCluster";
+import ProxmoxClusterOwnerTeam from "./ProxmoxClusterOwnerTeam";
+import DockerSwarmClusterOwnerTeam from "./DockerSwarmClusterOwnerTeam";
+import ProxmoxClusterOwnerUser from "./ProxmoxClusterOwnerUser";
+import DockerSwarmClusterOwnerUser from "./DockerSwarmClusterOwnerUser";
+import ProxmoxResource from "./ProxmoxResource";
+import DockerSwarmResource from "./DockerSwarmResource";
+import CephCluster from "./CephCluster";
+import CephClusterOwnerTeam from "./CephClusterOwnerTeam";
+import CephClusterOwnerUser from "./CephClusterOwnerUser";
+import CephResource from "./CephResource";
 import Host from "./Host";
 import HostOwnerTeam from "./HostOwnerTeam";
 import HostOwnerUser from "./HostOwnerUser";
+import ServerlessFunction from "./ServerlessFunction";
+import ServerlessFunctionOwnerTeam from "./ServerlessFunctionOwnerTeam";
+import ServerlessFunctionOwnerUser from "./ServerlessFunctionOwnerUser";
+import ServerlessFunctionLabelRule from "./ServerlessFunctionLabelRule";
+import ServerlessFunctionOwnerRule from "./ServerlessFunctionOwnerRule";
+import CloudResource from "./CloudResource";
+import CloudResourceOwnerTeam from "./CloudResourceOwnerTeam";
+import CloudResourceOwnerUser from "./CloudResourceOwnerUser";
+import CloudResourceLabelRule from "./CloudResourceLabelRule";
+import CloudResourceOwnerRule from "./CloudResourceOwnerRule";
+import RumApplication from "./RumApplication";
+import RumApplicationOwnerTeam from "./RumApplicationOwnerTeam";
+import RumApplicationOwnerUser from "./RumApplicationOwnerUser";
+import RumApplicationLabelRule from "./RumApplicationLabelRule";
+import RumApplicationOwnerRule from "./RumApplicationOwnerRule";
+import ServerlessFunctionInstance from "./ServerlessFunctionInstance";
+import CloudResourceInstance from "./CloudResourceInstance";
+import RumApplicationClient from "./RumApplicationClient";
 // API Keys
 import ApiKey from "./ApiKey";
 import ApiKeyPermission from "./ApiKeyPermission";
@@ -49,6 +83,8 @@ import IncidentTemplateOwnerUser from "./IncidentTemplateOwnerUser";
 //Labels.
 import Label from "./Label";
 import LogSavedView from "./LogSavedView";
+import MetricSavedView from "./MetricSavedView";
+import TraceSavedView from "./TraceSavedView";
 import LogPipeline from "./LogPipeline";
 import LogPipelineProcessor from "./LogPipelineProcessor";
 import LogDropFilter from "./LogDropFilter";
@@ -188,6 +224,7 @@ import StatusPageSubscriberNotificationTemplate from "./StatusPageSubscriberNoti
 import StatusPageSubscriberNotificationTemplateStatusPage from "./StatusPageSubscriberNotificationTemplateStatusPage";
 // Team
 import Team from "./Team";
+import TeamCustomField from "./TeamCustomField";
 import TeamMember from "./TeamMember";
 import TeamMemberCustomField from "./TeamMemberCustomField";
 import TeamPermission from "./TeamPermission";
@@ -226,8 +263,6 @@ import RunbookExecution from "./RunbookExecution";
 import RunbookOwnerTeam from "./RunbookOwnerTeam";
 import RunbookOwnerUser from "./RunbookOwnerUser";
 import RunbookRule from "./RunbookRule";
-import ServiceDependency from "./ServiceDependency";
-import ServiceMonitor from "./ServiceMonitor";
 
 import UserTotpAuth from "./UserTotpAuth";
 import UserWebAuthn from "./UserWebAuthn";
@@ -235,6 +270,8 @@ import UserWebAuthn from "./UserWebAuthn";
 import TelemetryIngestionKey from "./TelemetryIngestionKey";
 
 import TelemetryException from "./TelemetryException";
+import TelemetryEntity from "./TelemetryEntity";
+import TelemetryEntityRelationship from "./TelemetryEntityRelationship";
 import ScheduledMaintenanceTemplate from "./ScheduledMaintenanceTemplate";
 import ScheduledMaintenanceTemplateOwnerTeam from "./ScheduledMaintenanceTemplateOwnerTeam";
 import ScheduledMaintenanceTemplateOwnerUser from "./ScheduledMaintenanceTemplateOwnerUser";
@@ -301,8 +338,16 @@ import ServiceOwnerRule from "./ServiceOwnerRule";
 import ServiceLabelRule from "./ServiceLabelRule";
 import DockerHostOwnerRule from "./DockerHostOwnerRule";
 import DockerHostLabelRule from "./DockerHostLabelRule";
+import PodmanHostOwnerRule from "./PodmanHostOwnerRule";
+import PodmanHostLabelRule from "./PodmanHostLabelRule";
 import KubernetesClusterOwnerRule from "./KubernetesClusterOwnerRule";
 import KubernetesClusterLabelRule from "./KubernetesClusterLabelRule";
+import ProxmoxClusterOwnerRule from "./ProxmoxClusterOwnerRule";
+import DockerSwarmClusterOwnerRule from "./DockerSwarmClusterOwnerRule";
+import ProxmoxClusterLabelRule from "./ProxmoxClusterLabelRule";
+import DockerSwarmClusterLabelRule from "./DockerSwarmClusterLabelRule";
+import CephClusterOwnerRule from "./CephClusterOwnerRule";
+import CephClusterLabelRule from "./CephClusterLabelRule";
 import RunbookOwnerRule from "./RunbookOwnerRule";
 import RunbookLabelRule from "./RunbookLabelRule";
 import WorkflowOwnerRule from "./WorkflowOwnerRule";
@@ -342,6 +387,7 @@ const AllModelTypes: Array<{
   Project,
   EmailVerificationToken,
   Team,
+  TeamCustomField,
   TeamMember,
   TeamMemberCustomField,
   TeamPermission,
@@ -349,6 +395,8 @@ const AllModelTypes: Array<{
   ApiKey,
   Label,
   LogSavedView,
+  MetricSavedView,
+  TraceSavedView,
   LogPipeline,
   LogPipelineProcessor,
   LogDropFilter,
@@ -464,8 +512,16 @@ const AllModelTypes: Array<{
   ServiceLabelRule,
   DockerHostOwnerRule,
   DockerHostLabelRule,
+  PodmanHostOwnerRule,
+  PodmanHostLabelRule,
   KubernetesClusterOwnerRule,
   KubernetesClusterLabelRule,
+  ProxmoxClusterOwnerRule,
+  DockerSwarmClusterOwnerRule,
+  ProxmoxClusterLabelRule,
+  DockerSwarmClusterLabelRule,
+  CephClusterOwnerRule,
+  CephClusterLabelRule,
   RunbookOwnerRule,
   RunbookLabelRule,
   WorkflowOwnerRule,
@@ -618,8 +674,6 @@ const AllModelTypes: Array<{
   Service,
   ServiceOwnerTeam,
   ServiceOwnerUser,
-  ServiceDependency,
-  ServiceMonitor,
   ServiceCodeRepository,
 
   // Code Repository
@@ -646,6 +700,8 @@ const AllModelTypes: Array<{
   TelemetryIngestionKey,
 
   TelemetryException,
+  TelemetryEntity,
+  TelemetryEntityRelationship,
 
   TableView,
 
@@ -680,9 +736,43 @@ const AllModelTypes: Array<{
   DockerHostOwnerTeam,
   DockerHostOwnerUser,
   DockerResource,
+  PodmanHost,
+  PodmanHostOwnerTeam,
+  PodmanHostOwnerUser,
+  PodmanResource,
+  ProxmoxCluster,
+  DockerSwarmCluster,
+  ProxmoxClusterOwnerTeam,
+  DockerSwarmClusterOwnerTeam,
+  ProxmoxClusterOwnerUser,
+  DockerSwarmClusterOwnerUser,
+  ProxmoxResource,
+  DockerSwarmResource,
+  CephCluster,
+  CephClusterOwnerTeam,
+  CephClusterOwnerUser,
+  CephResource,
   Host,
   HostOwnerTeam,
   HostOwnerUser,
+  ServerlessFunction,
+  ServerlessFunctionOwnerTeam,
+  ServerlessFunctionOwnerUser,
+  ServerlessFunctionLabelRule,
+  ServerlessFunctionOwnerRule,
+  CloudResource,
+  CloudResourceOwnerTeam,
+  CloudResourceOwnerUser,
+  CloudResourceLabelRule,
+  CloudResourceOwnerRule,
+  RumApplication,
+  RumApplicationOwnerTeam,
+  RumApplicationOwnerUser,
+  RumApplicationLabelRule,
+  RumApplicationOwnerRule,
+  ServerlessFunctionInstance,
+  CloudResourceInstance,
+  RumApplicationClient,
 ];
 
 const modelTypeMap: { [key: string]: { new (): BaseModel } } = {};

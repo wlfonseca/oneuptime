@@ -129,6 +129,12 @@ spec:
               value: {{ $.Values.app.enableProfiling | quote }}
             - name: TELEMETRY_CONCURRENCY
               value: {{ $.Values.app.telemetryConcurrency | default 100 | squote }}
+            # When the dedicated worker deployment is enabled, the app stops
+            # consuming BullMQ queues so heavy background/telemetry processing
+            # can't stall API requests on the shared event loop. Flips
+            # atomically with worker.enabled — never leaves jobs un-consumed.
+            - name: DISABLE_QUEUE_WORKERS
+              value: {{ $.Values.worker.enabled | default false | quote }}
             {{- include "oneuptime.env.registerProbeKey" (dict "Values" $.Values "Release" $.Release) | nindent 12 }}
           ports:
             - containerPort: {{ $.Values.app.ports.http }}

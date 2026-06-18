@@ -25,7 +25,7 @@ const DashboardNavbar: FunctionComponent<ComponentProps> = (
 
   const essentialsCategory: string = t("navbar.categories.essentials");
   const observabilityCategory: string = t("navbar.categories.observability");
-  const infrastructureCategory: string = t("navbar.categories.infrastructure");
+  const resourcesCategory: string = t("navbar.categories.resources");
   const analyticsAutomationCategory: string = t(
     "navbar.categories.analyticsAutomation",
   );
@@ -166,6 +166,26 @@ const DashboardNavbar: FunctionComponent<ComponentProps> = (
       iconColor: "orange",
       category: observabilityCategory,
     },
+    /*
+     * {
+     *   title: t("navbar.items.entitiesTitle"),
+     *   description: t("navbar.items.entitiesDescription"),
+     *   route: RouteUtil.populateRouteParams(RouteMap[PageMap.ENTITIES] as Route),
+     *   activeRoute: RouteMap[PageMap.ENTITIES],
+     *   icon: IconProp.Cube,
+     *   iconColor: "blue",
+     *   category: observabilityCategory,
+     * },
+     * {
+     *   title: t("navbar.items.topologyTitle"),
+     *   description: t("navbar.items.topologyDescription"),
+     *   route: RouteUtil.populateRouteParams(RouteMap[PageMap.TOPOLOGY] as Route),
+     *   activeRoute: RouteMap[PageMap.TOPOLOGY],
+     *   icon: IconProp.FlowDiagram,
+     *   iconColor: "indigo",
+     *   category: observabilityCategory,
+     * },
+     */
     {
       title: t("navbar.items.servicesTitle"),
       description: t("navbar.items.servicesDescription"),
@@ -173,7 +193,7 @@ const DashboardNavbar: FunctionComponent<ComponentProps> = (
       activeRoute: RouteMap[PageMap.SERVICES],
       icon: IconProp.SquareStack,
       iconColor: "indigo",
-      category: observabilityCategory,
+      category: resourcesCategory,
     },
     {
       title: t("navbar.items.kubernetesTitle"),
@@ -184,7 +204,7 @@ const DashboardNavbar: FunctionComponent<ComponentProps> = (
       activeRoute: RouteMap[PageMap.KUBERNETES_CLUSTERS],
       icon: IconProp.Kubernetes,
       iconColor: "blue",
-      category: infrastructureCategory,
+      category: resourcesCategory,
     },
     {
       title: t("navbar.items.dockerTitle"),
@@ -195,7 +215,60 @@ const DashboardNavbar: FunctionComponent<ComponentProps> = (
       activeRoute: RouteMap[PageMap.DOCKER_HOSTS],
       icon: IconProp.Docker,
       iconColor: "blue",
-      category: infrastructureCategory,
+      category: resourcesCategory,
+    },
+    {
+      title: t("navbar.items.podmanTitle"),
+      description: t("navbar.items.podmanDescription"),
+      route: RouteUtil.populateRouteParams(
+        RouteMap[PageMap.PODMAN_HOSTS] as Route,
+      ),
+      activeRoute: RouteMap[PageMap.PODMAN_HOSTS],
+      icon: IconProp.Podman,
+      iconColor: "blue",
+      category: resourcesCategory,
+    },
+    {
+      title: t("navbar.items.proxmoxTitle", "Proxmox"),
+      description: t(
+        "navbar.items.proxmoxDescription",
+        "Monitor Proxmox clusters, nodes and guests.",
+      ),
+      route: RouteUtil.populateRouteParams(
+        RouteMap[PageMap.PROXMOX_CLUSTERS] as Route,
+      ),
+      activeRoute: RouteMap[PageMap.PROXMOX_CLUSTERS],
+      icon: IconProp.ServerStack,
+      iconColor: "blue",
+      category: resourcesCategory,
+    },
+    {
+      title: t("navbar.items.cephTitle", "Ceph"),
+      description: t(
+        "navbar.items.cephDescription",
+        "Monitor Ceph clusters, OSDs and pools.",
+      ),
+      route: RouteUtil.populateRouteParams(
+        RouteMap[PageMap.CEPH_CLUSTERS] as Route,
+      ),
+      activeRoute: RouteMap[PageMap.CEPH_CLUSTERS],
+      icon: IconProp.Database,
+      iconColor: "blue",
+      category: resourcesCategory,
+    },
+    {
+      title: t("navbar.items.dockerSwarmTitle", "Docker Swarm"),
+      description: t(
+        "navbar.items.dockerSwarmDescription",
+        "Monitor Docker Swarm clusters, nodes, services and tasks.",
+      ),
+      route: RouteUtil.populateRouteParams(
+        RouteMap[PageMap.DOCKER_SWARM_CLUSTERS] as Route,
+      ),
+      activeRoute: RouteMap[PageMap.DOCKER_SWARM_CLUSTERS],
+      icon: IconProp.ServerStack,
+      iconColor: "blue",
+      category: resourcesCategory,
     },
     {
       title: t("navbar.items.hostsTitle"),
@@ -204,7 +277,40 @@ const DashboardNavbar: FunctionComponent<ComponentProps> = (
       activeRoute: RouteMap[PageMap.HOSTS],
       icon: IconProp.Server,
       iconColor: "slate",
-      category: infrastructureCategory,
+      category: resourcesCategory,
+    },
+    {
+      title: t("navbar.items.serverlessTitle"),
+      description: t("navbar.items.serverlessDescription"),
+      route: RouteUtil.populateRouteParams(
+        RouteMap[PageMap.SERVERLESS_FUNCTIONS] as Route,
+      ),
+      activeRoute: RouteMap[PageMap.SERVERLESS_FUNCTIONS],
+      icon: IconProp.Bolt,
+      iconColor: "blue",
+      category: resourcesCategory,
+    },
+    {
+      title: t("navbar.items.cloudTitle"),
+      description: t("navbar.items.cloudDescription"),
+      route: RouteUtil.populateRouteParams(
+        RouteMap[PageMap.CLOUD_RESOURCES] as Route,
+      ),
+      activeRoute: RouteMap[PageMap.CLOUD_RESOURCES],
+      icon: IconProp.Cloud,
+      iconColor: "blue",
+      category: resourcesCategory,
+    },
+    {
+      title: t("navbar.items.rumTitle"),
+      description: t("navbar.items.rumDescription"),
+      route: RouteUtil.populateRouteParams(
+        RouteMap[PageMap.RUM_APPLICATIONS] as Route,
+      ),
+      activeRoute: RouteMap[PageMap.RUM_APPLICATIONS],
+      icon: IconProp.Globe,
+      iconColor: "blue",
+      category: resourcesCategory,
     },
     // Automation & Analytics
     {
@@ -262,6 +368,24 @@ const DashboardNavbar: FunctionComponent<ComponentProps> = (
     },
     // Settings
     {
+      title: t("navbar.items.usersTitle"),
+      description: t("navbar.items.usersDescription"),
+      route: RouteUtil.populateRouteParams(RouteMap[PageMap.USERS] as Route),
+      activeRoute: RouteMap[PageMap.USERS],
+      icon: IconProp.User,
+      iconColor: "blue",
+      category: settingsCategory,
+    },
+    {
+      title: t("navbar.items.teamsTitle"),
+      description: t("navbar.items.teamsDescription"),
+      route: RouteUtil.populateRouteParams(RouteMap[PageMap.TEAMS] as Route),
+      activeRoute: RouteMap[PageMap.TEAMS],
+      icon: IconProp.Team,
+      iconColor: "emerald",
+      category: settingsCategory,
+    },
+    {
       title: t("navbar.items.projectSettingsTitle"),
       description: t("navbar.items.projectSettingsDescription"),
       route: RouteUtil.populateRouteParams(RouteMap[PageMap.SETTINGS] as Route),
@@ -298,6 +422,10 @@ const DashboardNavbar: FunctionComponent<ComponentProps> = (
       rightElement={rightElement}
       moreMenuItems={moreMenuItems}
       moreMenuFooter={moreMenuFooter}
+      moreMenuSearchPlaceholder={t("navbar.search.placeholder")}
+      moreMenuNoResultsText={t("navbar.search.noResults")}
+      moreMenuKeyboardHint={t("navbar.search.hint")}
+      moreMenuRecentLabel={t("navbar.search.recent")}
     />
   );
 };
