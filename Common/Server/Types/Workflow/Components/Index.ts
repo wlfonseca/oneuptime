@@ -37,6 +37,8 @@ import Dictionary from "../../../../Types/Dictionary";
 import Text from "../../../../Types/Text";
 import ComponentID from "../../../../Types/Workflow/ComponentID";
 import ApiPatch from "./API/Patch";
+import ClickUpCreateTask from "./ClickUp/CreateTask";
+import ClickUpUpdateTask from "./ClickUp/UpdateTask";
 
 const Components: Dictionary<ComponentCode> = {
   [ComponentID.Webhook]: new WebhookTrigger(),
@@ -61,6 +63,8 @@ const Components: Dictionary<ComponentCode> = {
   [ComponentID.IfElse]: new IfElse(),
   [ComponentID.WorkflowRun]: new ExecuteWorkflow(),
   [ComponentID.Sleep]: new Sleep(),
+  [ComponentID.ClickUpCreateTask]: new ClickUpCreateTask(),
+  [ComponentID.ClickUpUpdateTask]: new ClickUpUpdateTask(),
 };
 
 for (const baseModelService of Services) {
