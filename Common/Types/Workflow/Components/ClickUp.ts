@@ -10,7 +10,7 @@ const components: Array<ComponentMetadata> = [
     id: ComponentID.ClickUpCreateTask,
     title: "Create ClickUp Task",
     category: "ClickUp",
-    description: "Create a task in ClickUp from workflow",
+    description: "Create a task in ClickUp when a workflow is triggered.",
     iconProp: IconProp.Bookmark,
     componentType: ComponentType.Component,
     arguments: [
@@ -24,247 +24,68 @@ const components: Array<ComponentMetadata> = [
         placeholder: "pk_1234567890_ABCDEFGHIJKLMNOPQRSTUVWXYZ",
       },
       {
-        id: "list-url",
-        name: "List URL",
+        id: "list-id",
+        name: "List ID",
         description:
-          "URL of the ClickUp list where the task will be created. Example: https://app.clickup.com/123456/v/li/987654",
-        type: ComponentInputType.URL,
+          "The ClickUp list ID where the task will be created. Find it in the list URL: https://app.clickup.com/{workspace}/v/li/{listId}",
+        type: ComponentInputType.Text,
         required: true,
-        placeholder: "https://app.clickup.com/123456/v/li/987654",
+        placeholder: "901234567890",
       },
       {
         id: "task-name",
         name: "Task Name",
-        description: "Name of the task to create in ClickUp.",
+        description: "Name of the task to create.",
         type: ComponentInputType.Text,
         required: true,
-        placeholder: "Incident: Server Down",
+        placeholder: "Incident: {{trigger.name}}",
       },
       {
         id: "task-description",
         name: "Task Description",
-        description: "Description of the task to create in ClickUp.",
+        description: "Markdown description for the task.",
         type: ComponentInputType.LongText,
         required: false,
-        placeholder: "Describe the incident details here...",
+        placeholder: "Incident details...",
       },
       {
         id: "status",
         name: "Status",
         description:
-          "The status of the task (e.g., 'To do', 'In progress', 'Done'). Leave empty for list default.",
+          "Initial task status (e.g., 'To Do', 'In Progress'). Leave empty for list default.",
         type: ComponentInputType.Text,
         required: false,
-        placeholder: "To do",
+        placeholder: "To Do",
       },
       {
         id: "priority",
         name: "Priority",
         description:
-          "Task priority: 1 = Urgent, 2 = High, 3 = Normal, 4 = Low. Leave empty for default.",
+          "Task priority: 1 = Urgent, 2 = High, 3 = Normal, 4 = Low.",
         type: ComponentInputType.Number,
         required: false,
         placeholder: "3",
       },
-      {
-        id: "dedup-key",
-        name: "Deduplication Key",
-        description:
-          "Unique key to identify duplicate events (e.g. {{Incident.id}}). If same key exists, a new task is NOT created — the counter is incremented instead.",
-        type: ComponentInputType.Text,
-        required: false,
-        placeholder: "{{Incident.id}}",
-      },
-      {
-        id: "dedup-field-id",
-        name: "Dedup Hash Field",
-        description:
-          "ClickUp custom text field where the deduplication key is stored. Required if Deduplication Key is set.",
-        type: ComponentInputType.ClickUpListField,
-        required: false,
-        placeholder: "Selecione o campo para armazenar a chave de dedup...",
-      },
-      {
-        id: "counter-field-id",
-        name: "Event Counter Field",
-        description:
-          "ClickUp custom number field for the event counter (incremented on each duplicate). Automatically populated with fields from your selected list.",
-        type: ComponentInputType.ClickUpListField,
-        required: false,
-        placeholder: "Selecione o campo para o contador de eventos...",
-      },
-      {
-        id: "custom-fields",
-        name: "Custom Fields (JSON)",
-        description:
-          'Additional custom fields in JSON format: {"field_id": "value", ...}. Field IDs are in the ClickUp list URL when editing custom fields.',
-        type: ComponentInputType.LongText,
-        required: false,
-        placeholder: '{"ec7b4451-060e-42d2-a515-e65f0294f9d1": "OneUptime"}',
-      },
     ],
     returnValues: [
       {
         id: "task-id",
         name: "Task ID",
-        description: "The ID of the created or existing task in ClickUp.",
+        description: "The ID of the created task.",
         type: ComponentInputType.Text,
         required: false,
       },
       {
         id: "task-url",
         name: "Task URL",
-        description: "The URL of the created or existing task in ClickUp.",
+        description: "The URL of the created task.",
         type: ComponentInputType.URL,
-        required: false,
-      },
-      {
-        id: "duplicate",
-        name: "Duplicate",
-        description:
-          "True if an existing task was found and no new task was created.",
-        type: ComponentInputType.Boolean,
-        required: false,
-      },
-      {
-        id: "event-count",
-        name: "Event Count",
-        description: "Current event count for this deduplication key.",
-        type: ComponentInputType.Number,
         required: false,
       },
       {
         id: "error",
         name: "Error",
-        description: "Error, if there is any.",
-        type: ComponentInputType.Text,
-        required: false,
-      },
-    ],
-    inPorts: [
-      {
-        title: "In",
-        description:
-          "Please connect components to this port for this component to work.",
-        id: "in",
-      },
-    ],
-    outPorts: [
-      {
-        title: "Created",
-        description: "A new task was created",
-        id: "success",
-      },
-      {
-        title: "Duplicate",
-        description: "Task already exists, only counter was incremented",
-        id: "duplicate",
-      },
-      {
-        title: "Error",
-        description: "This is executed when there is an error",
-        id: "error",
-      },
-    ],
-  },
-  {
-    id: ComponentID.ClickUpUpdateTask,
-    title: "Update ClickUp Task",
-    category: "ClickUp",
-    description:
-      "Update a task in ClickUp (e.g. change status to resolved/closed)",
-    iconProp: IconProp.Bookmark,
-    componentType: ComponentType.Component,
-    arguments: [
-      {
-        id: "api-token",
-        name: "ClickUp API Token",
-        description:
-          "Your ClickUp personal API token. Generate one from ClickUp Settings > Apps > API Token.",
-        type: ComponentInputType.Password,
-        required: true,
-        placeholder: "pk_1234567890_ABCDEFGHIJKLMNOPQRSTUVWXYZ",
-      },
-      {
-        id: "task-url",
-        name: "Task URL",
-        description:
-          "URL of the ClickUp task to update. You can use the task-url output from 'Create ClickUp Task' component.",
-        type: ComponentInputType.URL,
-        required: true,
-        placeholder: "https://app.clickup.com/t/86ahk2zrg",
-      },
-      {
-        id: "status",
-        name: "Status",
-        description:
-          "The new status for the task (e.g., 'Done', 'Resolved', 'Closed').",
-        type: ComponentInputType.Text,
-        required: true,
-        placeholder: "Done",
-      },
-      {
-        id: "comment",
-        name: "Comment",
-        description: "Optional comment to add when updating the task status.",
-        type: ComponentInputType.LongText,
-        required: false,
-        placeholder: "Incident resolved in OneUptime",
-      },
-      {
-        id: "dedup-key",
-        name: "Deduplication Key",
-        description:
-          "Alternative to Task URL: find the task by dedup key and close it.",
-        type: ComponentInputType.Text,
-        required: false,
-        placeholder: "{{Incident.id}}",
-      },
-      {
-        id: "dedup-field-id",
-        name: "Dedup Hash Field",
-        description:
-          "ClickUp custom text field where the dedup key is stored. Required if using Deduplication Key.",
-        type: ComponentInputType.ClickUpListField,
-        required: false,
-        placeholder: "Selecione o campo para a chave de dedup...",
-      },
-      {
-        id: "list-url",
-        name: "List URL",
-        description:
-          "ClickUp list URL. Required if using Deduplication Key to find the task.",
-        type: ComponentInputType.URL,
-        required: false,
-        placeholder: "https://app.clickup.com/123456/v/li/987654",
-      },
-    ],
-    returnValues: [
-      {
-        id: "task-id",
-        name: "Task ID",
-        description: "The ID of the updated task in ClickUp.",
-        type: ComponentInputType.Text,
-        required: false,
-      },
-      {
-        id: "task-url",
-        name: "Task URL",
-        description: "The URL of the updated task in ClickUp.",
-        type: ComponentInputType.URL,
-        required: false,
-      },
-      {
-        id: "not-found",
-        name: "Not Found",
-        description: "True if the task was not found.",
-        type: ComponentInputType.Boolean,
-        required: false,
-      },
-      {
-        id: "error",
-        name: "Error",
-        description: "Error, if there is any.",
+        description: "Error message if the request failed.",
         type: ComponentInputType.Text,
         required: false,
       },
@@ -280,17 +101,99 @@ const components: Array<ComponentMetadata> = [
     outPorts: [
       {
         title: "Success",
-        description: "This is executed when the task is successfully updated",
+        description: "Task was created successfully.",
         id: "success",
       },
       {
-        title: "Not Found",
-        description: "This is executed when the task was not found",
-        id: "not-found",
+        title: "Error",
+        description: "An error occurred while creating the task.",
+        id: "error",
+      },
+    ],
+  },
+  {
+    id: ComponentID.ClickUpUpdateTask,
+    title: "Update ClickUp Task",
+    category: "ClickUp",
+    description: "Update a task status in ClickUp.",
+    iconProp: IconProp.Bookmark,
+    componentType: ComponentType.Component,
+    arguments: [
+      {
+        id: "api-token",
+        name: "ClickUp API Token",
+        description:
+          "Your ClickUp personal API token. Generate one from ClickUp Settings > Apps > API Token.",
+        type: ComponentInputType.Password,
+        required: true,
+        placeholder: "pk_1234567890_ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+      },
+      {
+        id: "task-id",
+        name: "Task ID",
+        description:
+          "The ClickUp task ID to update. You can use the task-id output from the Create ClickUp Task component.",
+        type: ComponentInputType.Text,
+        required: true,
+        placeholder: "86ahk2zrg",
+      },
+      {
+        id: "status",
+        name: "Status",
+        description: "The new status for the task.",
+        type: ComponentInputType.Text,
+        required: true,
+        placeholder: "Done",
+      },
+      {
+        id: "comment",
+        name: "Comment",
+        description: "Optional comment to add when updating the task.",
+        type: ComponentInputType.LongText,
+        required: false,
+        placeholder: "Incident resolved automatically.",
+      },
+    ],
+    returnValues: [
+      {
+        id: "task-id",
+        name: "Task ID",
+        description: "The ID of the updated task.",
+        type: ComponentInputType.Text,
+        required: false,
+      },
+      {
+        id: "task-url",
+        name: "Task URL",
+        description: "The URL of the updated task.",
+        type: ComponentInputType.URL,
+        required: false,
+      },
+      {
+        id: "error",
+        name: "Error",
+        description: "Error message if the request failed.",
+        type: ComponentInputType.Text,
+        required: false,
+      },
+    ],
+    inPorts: [
+      {
+        title: "In",
+        description:
+          "Please connect components to this port for this component to work.",
+        id: "in",
+      },
+    ],
+    outPorts: [
+      {
+        title: "Success",
+        description: "Task was updated successfully.",
+        id: "success",
       },
       {
         title: "Error",
-        description: "This is executed when there is an error",
+        description: "An error occurred while updating the task.",
         id: "error",
       },
     ],

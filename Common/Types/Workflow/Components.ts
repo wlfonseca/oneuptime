@@ -100,6 +100,11 @@ export const Categories: Array<ComponentCategory> = [
     icon: IconProp.Clock,
   },
   {
+    name: "ClickUp",
+    description: "Integrate OneUptime with ClickUp project management.",
+    icon: IconProp.Bookmark,
+  },
+  {
     name: "Utils",
     description: "Utils that make workflow design simpler.",
     icon: IconProp.Window,
