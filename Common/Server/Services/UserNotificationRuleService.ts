@@ -1850,7 +1850,7 @@ export class Service extends DatabaseService<Model> {
 
     const alertIdentifier: string =
       alert.alertNumber !== undefined
-        ? `Alert number ${alert.alertNumber}, ${alert.title || "Alert"}`
+        ? `${t.alertNumberPrefix} ${alert.alertNumber}, ${alert.title || "Alert"}`
         : alert.title || "Alert";
 
     const callRequest: CallRequest = {
@@ -1909,7 +1909,7 @@ export class Service extends DatabaseService<Model> {
 
     const incidentIdentifier: string =
       incident.incidentNumber !== undefined
-        ? `Incident number ${incident.incidentNumberWithPrefix || incident.incidentNumber}, ${incident.title || "Incident"}`
+        ? `${t.incidentNumberPrefix} ${incident.incidentNumberWithPrefix || incident.incidentNumber}, ${incident.title || "Incident"}`
         : incident.title || "Incident";
 
     const callRequest: CallRequest = {
@@ -1967,9 +1967,9 @@ export class Service extends DatabaseService<Model> {
     const t = getCallNotificationStrings(language);
 
     const episodeIdentifier: string = alertEpisode.episodeNumberWithPrefix
-      ? `Alert episode ${alertEpisode.episodeNumberWithPrefix}, ${alertEpisode.title || "Alert Episode"}`
+      ? `${t.alertEpisodePrefix} ${alertEpisode.episodeNumberWithPrefix}, ${alertEpisode.title || "Alert Episode"}`
       : alertEpisode.episodeNumber !== undefined
-        ? `Alert episode number ${alertEpisode.episodeNumber}, ${alertEpisode.title || "Alert Episode"}`
+        ? `${t.alertEpisodeNumberPrefix} ${alertEpisode.episodeNumber}, ${alertEpisode.title || "Alert Episode"}`
         : alertEpisode.title || "Alert Episode";
 
     const callRequest: CallRequest = {

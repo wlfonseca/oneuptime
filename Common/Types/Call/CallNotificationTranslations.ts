@@ -11,6 +11,10 @@ export interface CallNotificationStrings {
   acknowledgedAlertEpisode: string;
   invalidInput: string;
   noInputReceived: string;
+  alertNumberPrefix: string;
+  incidentNumberPrefix: string;
+  alertEpisodePrefix: string;
+  alertEpisodeNumberPrefix: string;
 }
 
 const translations: Record<string, CallNotificationStrings> = {
@@ -29,6 +33,10 @@ const translations: Record<string, CallNotificationStrings> = {
       "You have acknowledged this alert episode. Good bye",
     invalidInput: "Invalid input. Good bye",
     noInputReceived: "You have not entered any input. Good bye",
+    alertNumberPrefix: "Alert number",
+    incidentNumberPrefix: "Incident number",
+    alertEpisodePrefix: "Alert episode",
+    alertEpisodeNumberPrefix: "Alert episode number",
   },
   pt: {
     greeting: "Esta é uma chamada do One Uptime",
@@ -45,6 +53,10 @@ const translations: Record<string, CallNotificationStrings> = {
       "Você reconheceu este episódio de alerta. Até logo",
     invalidInput: "Entrada inválida. Até logo",
     noInputReceived: "Você não digitou nenhuma entrada. Até logo",
+    alertNumberPrefix: "Alerta número",
+    incidentNumberPrefix: "Incidente número",
+    alertEpisodePrefix: "Episódio de alerta",
+    alertEpisodeNumberPrefix: "Episódio de alerta número",
   },
   es: {
     greeting: "Esta es una llamada de One Uptime",
@@ -61,6 +73,10 @@ const translations: Record<string, CallNotificationStrings> = {
       "Ha reconocido este episodio de alerta. Hasta luego",
     invalidInput: "Entrada inválida. Hasta luego",
     noInputReceived: "No ha ingresado ninguna entrada. Hasta luego",
+    alertNumberPrefix: "Alerta número",
+    incidentNumberPrefix: "Incidente número",
+    alertEpisodePrefix: "Episodio de alerta",
+    alertEpisodeNumberPrefix: "Episodio de alerta número",
   },
   fr: {
     greeting: "Ceci est un appel de One Uptime",
@@ -79,6 +95,10 @@ const translations: Record<string, CallNotificationStrings> = {
       "Vous avez accusé réception de cet épisode d'alerte. Au revoir",
     invalidInput: "Entrée invalide. Au revoir",
     noInputReceived: "Vous n'avez entré aucune donnée. Au revoir",
+    alertNumberPrefix: "Alerte numéro",
+    incidentNumberPrefix: "Incident numéro",
+    alertEpisodePrefix: "Épisode d'alerte",
+    alertEpisodeNumberPrefix: "Épisode d'alerte numéro",
   },
   de: {
     greeting: "Dies ist ein Anruf von One Uptime",
@@ -96,6 +116,10 @@ const translations: Record<string, CallNotificationStrings> = {
       "Sie haben diese Alarmepisode bestätigt. Auf Wiederhören",
     invalidInput: "Ungültige Eingabe. Auf Wiederhören",
     noInputReceived: "Sie haben keine Eingabe gemacht. Auf Wiederhören",
+    alertNumberPrefix: "Alarm Nummer",
+    incidentNumberPrefix: "Vorfall Nummer",
+    alertEpisodePrefix: "Alarmepisode",
+    alertEpisodeNumberPrefix: "Alarmepisode Nummer",
   },
   it: {
     greeting: "Questa è una chiamata da One Uptime",
@@ -112,6 +136,10 @@ const translations: Record<string, CallNotificationStrings> = {
       "Hai confermato questo episodio di avviso. Arrivederci",
     invalidInput: "Input non valido. Arrivederci",
     noInputReceived: "Non hai inserito alcun input. Arrivederci",
+    alertNumberPrefix: "Avviso numero",
+    incidentNumberPrefix: "Incidente numero",
+    alertEpisodePrefix: "Episodio di avviso",
+    alertEpisodeNumberPrefix: "Episodio di avviso numero",
   },
   nl: {
     greeting: "Dit is een oproep van One Uptime",
@@ -128,6 +156,10 @@ const translations: Record<string, CallNotificationStrings> = {
       "U hebt deze meldingsepisode bevestigd. Tot ziens",
     invalidInput: "Ongeldige invoer. Tot ziens",
     noInputReceived: "U hebt geen invoer ingevoerd. Tot ziens",
+    alertNumberPrefix: "Melding nummer",
+    incidentNumberPrefix: "Incident nummer",
+    alertEpisodePrefix: "Meldingsepisode",
+    alertEpisodeNumberPrefix: "Meldingsepisode nummer",
   },
 };
 
