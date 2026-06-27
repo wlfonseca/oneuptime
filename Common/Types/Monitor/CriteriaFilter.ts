@@ -44,6 +44,7 @@ export enum CheckOn {
 
   // Log monitors.
   LogCount = "Log Count",
+  LogBodyMatch = "Is Log Body Match",
 
   // Trace monitors.
   SpanCount = "Span Count",
@@ -292,7 +293,8 @@ export class CriteriaFilterUtil {
       checkOn === CheckOn.DnssecDsExists ||
       checkOn === CheckOn.DnssecResolverConsensus ||
       checkOn === CheckOn.DnssecNameserverConsistent ||
-      checkOn === CheckOn.ExternalStatusPageIsOnline
+      checkOn === CheckOn.ExternalStatusPageIsOnline ||
+      checkOn === CheckOn.LogBodyMatch
     ) {
       return false;
     }

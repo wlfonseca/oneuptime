@@ -394,6 +394,25 @@ class User extends UserModel {
 
   @ColumnAccessControl({
     create: [],
+    read: [Permission.CurrentUser],
+    update: [Permission.CurrentUser],
+  })
+  @TableColumn({
+    type: TableColumnType.ShortText,
+    title: "Preferred Call Language",
+    description:
+      "Language code (e.g. 'en', 'pt', 'es') used for voice call notifications.",
+  })
+  @Column({
+    type: ColumnType.ShortText,
+    length: ColumnLength.ShortText,
+    nullable: true,
+    unique: false,
+  })
+  public preferredCallLanguage?: string = undefined;
+
+  @ColumnAccessControl({
+    create: [],
     read: [],
 
     update: [],

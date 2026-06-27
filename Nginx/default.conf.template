@@ -604,7 +604,7 @@ ${PROVISION_SSL_CERTIFICATE_KEY_DIRECTIVE}
 
     location /otlp {
         resolver ${NGINX_RESOLVER} valid=30s;
-        set $backend_app http://${SERVER_APP_HOSTNAME}:${APP_PORT};
+        set $backend_otel http://otel-gateway:4318;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -615,7 +615,7 @@ ${PROVISION_SSL_CERTIFICATE_KEY_DIRECTIVE}
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
 
-        proxy_pass $backend_app;
+        proxy_pass $backend_otel;
     }
 
     # Pyroscope profiling ingestion endpoint
@@ -632,8 +632,8 @@ ${PROVISION_SSL_CERTIFICATE_KEY_DIRECTIVE}
 
     location ~ /opentelemetry.proto.collector* {
         resolver ${NGINX_RESOLVER} valid=30s;
-        set $backend_app_grpc grpc://${SERVER_APP_HOSTNAME}:4317;
-        grpc_pass $backend_app_grpc;
+        set $backend_otel_grpc grpc://otel-gateway:4317;
+        grpc_pass $backend_otel_grpc;
     }
 
     location /notification {

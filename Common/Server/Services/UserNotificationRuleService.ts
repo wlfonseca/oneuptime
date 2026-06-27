@@ -16,12 +16,14 @@ import WhatsAppService from "./WhatsAppService";
 import UserEmailService from "./UserEmailService";
 import UserOnCallLogService from "./UserOnCallLogService";
 import UserOnCallLogTimelineService from "./UserOnCallLogTimelineService";
+import UserService from "./UserService";
 import { AppApiRoute } from "../../ServiceRoute";
 import Hostname from "../../Types/API/Hostname";
 import Protocol from "../../Types/API/Protocol";
 import Route from "../../Types/API/Route";
 import URL from "../../Types/API/URL";
 import CallRequest from "../../Types/Call/CallRequest";
+import { getCallNotificationStrings } from "../../Types/Call/CallNotificationTranslations";
 import { LIMIT_PER_PROJECT } from "../../Types/Database/LimitMax";
 import QueryHelper from "../Types/Database/QueryHelper";
 import OneUptimeDate from "../../Types/Date";
@@ -201,6 +203,17 @@ export class Service extends DatabaseService<Model> {
     if (!notificationRuleItem) {
       throw new BadDataException("Notification rule item not found.");
     }
+
+    // fetch user preferred call language
+    const user: { preferredCallLanguage?: string } | null =
+      await UserService.findOneById({
+        id: notificationRuleItem.userId!,
+        select: { preferredCallLanguage: true } as any,
+        props: { isRoot: true },
+      });
+
+    const callLanguage: string =
+      user?.preferredCallLanguage || "en";
 
     /*
      * If the project has a default Twilio config set, use it for all
@@ -1330,6 +1343,7 @@ export class Service extends DatabaseService<Model> {
             notificationRuleItem.userCall?.phone,
             alert,
             updatedLog.id!,
+            callLanguage,
           );
 
         // send call.
@@ -1383,6 +1397,7 @@ export class Service extends DatabaseService<Model> {
             notificationRuleItem.userCall?.phone,
             incident,
             updatedLog.id!,
+            callLanguage,
           );
 
         // send call.
@@ -1436,6 +1451,7 @@ export class Service extends DatabaseService<Model> {
             notificationRuleItem.userCall?.phone,
             alertEpisode,
             updatedLog.id!,
+            callLanguage,
           );
 
         CallService.makeCall(callRequest, {
@@ -1824,39 +1840,42 @@ export class Service extends DatabaseService<Model> {
     to: Phone,
     alert: Alert,
     userOnCallLogTimelineId: ObjectID,
+    language: string = "en",
   ): Promise<CallRequest> {
     const host: Hostname = await DatabaseConfig.getHost();
 
     const httpProtocol: Protocol = await DatabaseConfig.getHttpProtocol();
 
+    const t = getCallNotificationStrings(language);
+
     const alertIdentifier: string =
       alert.alertNumber !== undefined
-        ? `Alert number ${alert.alertNumber}, ${alert.title || "Alert"}`
+        ? `${t.alertNumberPrefix} ${alert.alertNumber}, ${alert.title || "Alert"}`
         : alert.title || "Alert";
 
     const callRequest: CallRequest = {
       to: to,
       data: [
         {
-          sayMessage: "This is a call from One Uptime",
+          sayMessage: t.greeting,
         },
         {
-          sayMessage: "A new alert has been created",
+          sayMessage: t.newAlertCreated,
         },
         {
           sayMessage: alertIdentifier,
         },
         {
-          introMessage: "To acknowledge this alert press 1",
+          introMessage: t.toAcknowledgeAlertPress1,
           numDigits: 1,
           timeoutInSeconds: 10,
-          noInputMessage: "You have not entered any input. Good bye",
+          noInputMessage: t.noInputReceived,
           onInputCallRequest: {
             "1": {
-              sayMessage: "You have acknowledged this alert. Good bye",
+              sayMessage: t.acknowledgedAlert,
             },
             default: {
-              sayMessage: "Invalid input. Good bye",
+              sayMessage: t.invalidInput,
             },
           },
           responseUrl: new URL(
@@ -1880,39 +1899,42 @@ export class Service extends DatabaseService<Model> {
     to: Phone,
     incident: Incident,
     userOnCallLogTimelineId: ObjectID,
+    language: string = "en",
   ): Promise<CallRequest> {
     const host: Hostname = await DatabaseConfig.getHost();
 
     const httpProtocol: Protocol = await DatabaseConfig.getHttpProtocol();
 
+    const t = getCallNotificationStrings(language);
+
     const incidentIdentifier: string =
       incident.incidentNumber !== undefined
-        ? `Incident number ${incident.incidentNumberWithPrefix || incident.incidentNumber}, ${incident.title || "Incident"}`
+        ? `${t.incidentNumberPrefix} ${incident.incidentNumberWithPrefix || incident.incidentNumber}, ${incident.title || "Incident"}`
         : incident.title || "Incident";
 
     const callRequest: CallRequest = {
       to: to,
       data: [
         {
-          sayMessage: "This is a call from One Uptime",
+          sayMessage: t.greeting,
         },
         {
-          sayMessage: "A new incident has been created",
+          sayMessage: t.newIncidentCreated,
         },
         {
           sayMessage: incidentIdentifier,
         },
         {
-          introMessage: "To acknowledge this incident press 1",
+          introMessage: t.toAcknowledgeIncidentPress1,
           numDigits: 1,
           timeoutInSeconds: 10,
-          noInputMessage: "You have not entered any input. Good bye",
+          noInputMessage: t.noInputReceived,
           onInputCallRequest: {
             "1": {
-              sayMessage: "You have acknowledged this incident. Good bye",
+              sayMessage: t.acknowledgedIncident,
             },
             default: {
-              sayMessage: "Invalid input. Good bye",
+              sayMessage: t.invalidInput,
             },
           },
           responseUrl: new URL(
@@ -1936,40 +1958,43 @@ export class Service extends DatabaseService<Model> {
     to: Phone,
     alertEpisode: AlertEpisode,
     userOnCallLogTimelineId: ObjectID,
+    language: string = "en",
   ): Promise<CallRequest> {
     const host: Hostname = await DatabaseConfig.getHost();
 
     const httpProtocol: Protocol = await DatabaseConfig.getHttpProtocol();
 
+    const t = getCallNotificationStrings(language);
+
     const episodeIdentifier: string = alertEpisode.episodeNumberWithPrefix
-      ? `Alert episode ${alertEpisode.episodeNumberWithPrefix}, ${alertEpisode.title || "Alert Episode"}`
+      ? `${t.alertEpisodePrefix} ${alertEpisode.episodeNumberWithPrefix}, ${alertEpisode.title || "Alert Episode"}`
       : alertEpisode.episodeNumber !== undefined
-        ? `Alert episode number ${alertEpisode.episodeNumber}, ${alertEpisode.title || "Alert Episode"}`
+        ? `${t.alertEpisodeNumberPrefix} ${alertEpisode.episodeNumber}, ${alertEpisode.title || "Alert Episode"}`
         : alertEpisode.title || "Alert Episode";
 
     const callRequest: CallRequest = {
       to: to,
       data: [
         {
-          sayMessage: "This is a call from One Uptime",
+          sayMessage: t.greeting,
         },
         {
-          sayMessage: "A new alert episode has been created",
+          sayMessage: t.newAlertEpisodeCreated,
         },
         {
           sayMessage: episodeIdentifier,
         },
         {
-          introMessage: "To acknowledge this alert episode press 1",
+          introMessage: t.toAcknowledgeAlertEpisodePress1,
           numDigits: 1,
           timeoutInSeconds: 10,
-          noInputMessage: "You have not entered any input. Good bye",
+          noInputMessage: t.noInputReceived,
           onInputCallRequest: {
             "1": {
-              sayMessage: "You have acknowledged this alert episode. Good bye",
+              sayMessage: t.acknowledgedAlertEpisode,
             },
             default: {
-              sayMessage: "Invalid input. Good bye",
+              sayMessage: t.invalidInput,
             },
           },
           responseUrl: new URL(

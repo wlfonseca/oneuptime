@@ -77,6 +77,26 @@ const Home: FunctionComponent<PageComponentProps> = (): ReactElement => {
             required: false,
             title: "Timezone",
           },
+          {
+            field: {
+              preferredCallLanguage: true,
+            },
+            fieldType: FormFieldSchemaType.Dropdown,
+            dropdownOptions: [
+              { value: "en", label: "English" },
+              { value: "pt", label: "Português" },
+              { value: "es", label: "Español" },
+              { value: "fr", label: "Français" },
+              { value: "de", label: "Deutsch" },
+              { value: "it", label: "Italiano" },
+              { value: "nl", label: "Nederlands" },
+            ],
+            placeholder: "Select Language",
+            description:
+              "Language used for voice call notifications (e.g. on-call alerts).",
+            required: false,
+            title: "Call Notification Language",
+          },
         ]}
         modelDetailProps={{
           showDetailsInNumberOfColumns: 2,
@@ -111,6 +131,13 @@ const Home: FunctionComponent<PageComponentProps> = (): ReactElement => {
 
                 return <TimezoneElement timezone={user.timezone} />;
               },
+            },
+            {
+              field: {
+                preferredCallLanguage: true,
+              },
+              title: "Call Notification Language",
+              placeholder: "English (default)",
             },
           ],
 
