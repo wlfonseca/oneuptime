@@ -53,6 +53,7 @@ import UserNotificationStatus from "../../Types/UserNotification/UserNotificatio
 import Incident from "../../Models/DatabaseModels/Incident";
 import IncidentSeverity from "../../Models/DatabaseModels/IncidentSeverity";
 import ShortLink from "../../Models/DatabaseModels/ShortLink";
+import User from "../../Models/DatabaseModels/User";
 import UserEmail from "../../Models/DatabaseModels/UserEmail";
 import Model from "../../Models/DatabaseModels/UserNotificationRule";
 import UserOnCallLog from "../../Models/DatabaseModels/UserOnCallLog";
