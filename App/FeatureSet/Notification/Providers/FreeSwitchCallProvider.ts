@@ -177,7 +177,7 @@ export default class FreeSwitchCallProvider implements ICallProvider {
         req.end();
       });
 
-      fs.writeFileSync(audioPath, audio);
+      fs.writeFileSync(audioPath, new Uint8Array(audio));
       logger.debug(`Piper TTS audio saved to ${audioPath}`, {
         service: "notification",
       });

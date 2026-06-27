@@ -55,6 +55,21 @@ services:
         "NODE_OPTIONS='--max-old-space-size=2048' node --no-node-snapshot --require ts-node/register Index.ts",
       ]
 
+  otel-gateway:
+    image: otel/opentelemetry-collector-contrib:0.116.0
+    restart: always
+    networks:
+      - oneuptime
+    volumes:
+      - ./otel-gateway-config.yaml:/etc/otelcol-contrib/config.yaml:ro
+    depends_on:
+      <<: *common-depends-on
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:13133/"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
   ingress:
     build:
       network: host
