@@ -157,8 +157,8 @@ export default class FreeSwitchCallProvider implements ICallProvider {
             timeout: 15000,
           },
           (res: http.IncomingMessage) => {
-            const chunks: Buffer[] = [];
-            res.on("data", (chunk: Buffer) => chunks.push(chunk));
+            const chunks: Uint8Array[] = [];
+            res.on("data", (chunk: Uint8Array) => chunks.push(chunk));
             res.on("end", () => {
               if (res.statusCode === 200) {
                 resolve(Buffer.concat(chunks));

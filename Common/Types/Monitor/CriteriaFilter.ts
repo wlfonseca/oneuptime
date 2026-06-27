@@ -44,6 +44,7 @@ export enum CheckOn {
 
   // Log monitors.
   LogCount = "Log Count",
+  LogBodyMatch = "Log Body Match",
 
   // Trace monitors.
   SpanCount = "Span Count",
