@@ -205,14 +205,15 @@ export class Service extends DatabaseService<Model> {
     }
 
     // fetch user preferred call language
-    const user: { preferredCallLanguage?: string } | null =
-      await UserService.findOneById({
-        id: notificationRuleItem.userId!,
-        select: { preferredCallLanguage: true } as any,
-        props: { isRoot: true },
-      });
+    const user: User | null = await UserService.findOneById({
+      id: notificationRuleItem.userId!,
+      select: {
+        preferredCallLanguage: true,
+      },
+      props: { isRoot: true },
+    });
 
-    const callLanguage: string =
+    const callLanguage: string = user?.preferredCallLanguage || "en";
       user?.preferredCallLanguage || "en";
 
     /*
