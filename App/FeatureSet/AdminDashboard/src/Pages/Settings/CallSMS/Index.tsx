@@ -57,9 +57,9 @@ const Settings: FunctionComponent = (): ReactElement => {
 
   const getTestCallMessage: GetReactElementFunction = (): string => {
     if (activeTab === "twilio") {
-      return "This is a test call from OneUptime via Twilio.";
+      return "Esta é uma chamada de teste do OneUptime via Twilio.";
     }
-    return "This is a test call from OneUptime using FreeSwitch.";
+    return "Esta é uma chamada de teste do OneUptime usando FreeSwitch.";
   };
 
   const isFreeSwitch: boolean = activeTab !== "twilio";
