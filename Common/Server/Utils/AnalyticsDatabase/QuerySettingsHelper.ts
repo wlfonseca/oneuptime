@@ -16,14 +16,21 @@
 
 export type TimeoutOverflowMode = "break" | "throw";
 
-// 3 GiB.
-export const DEFAULT_MAX_MEMORY_USAGE_IN_BYTES: number = 3221225472;
+/*
+ * 2 GiB. Precisa caber no teto do servidor ClickHouse, que é
+ * max_server_memory_usage_to_ram_ratio (0.9) x RAM disponível ao processo.
+ * Com o container em 3200m o teto fica ~2.81 GiB, então pedir 3 GiB por
+ * query fazia toda leitura pesada falhar com "241 MEMORY_LIMIT_EXCEEDED"
+ * antes mesmo de começar. Ao subir o ClickHouse para uma máquina com mais
+ * RAM, este valor pode voltar a crescer — mas mantendo a folga para o teto.
+ */
+export const DEFAULT_MAX_MEMORY_USAGE_IN_BYTES: number = 2147483648;
 
-// 1.5 GiB — half the memory ceiling so spill kicks in before the cap.
-export const DEFAULT_MAX_BYTES_BEFORE_EXTERNAL_GROUP_BY_IN_BYTES: number = 1610612736;
+// 1 GiB — metade do teto de memória, para o spill começar antes do limite.
+export const DEFAULT_MAX_BYTES_BEFORE_EXTERNAL_GROUP_BY_IN_BYTES: number = 1073741824;
 
-// 1.5 GiB.
-export const DEFAULT_MAX_BYTES_BEFORE_EXTERNAL_SORT_IN_BYTES: number = 1610612736;
+// 1 GiB.
+export const DEFAULT_MAX_BYTES_BEFORE_EXTERNAL_SORT_IN_BYTES: number = 1073741824;
 
 export interface QuerySettingsOptions {
   /**

@@ -107,19 +107,28 @@ export default class MonitorSteps extends DatabaseProperty {
       throw new BadDataException("Invalid monitor steps");
     }
 
-    if (json["_type"] !== "MonitorSteps") {
+    if (json["_type"] && json["_type"] !== "MonitorSteps") {
       throw new BadDataException("Invalid monitor steps");
     }
 
-    if (!json["value"]) {
+    /*
+     * Ver comentário em MonitorStep.fromJSON: monitores criados pela UI/API
+     * chegam serializados (`{_type, value}`) e os criados por
+     * AutoMonitorService chegam no formato interno (`{data}`).
+     */
+    const value: JSONObject | undefined = (json["value"] ?? json["data"]) as
+      | JSONObject
+      | undefined;
+
+    if (!value) {
       throw new BadDataException("Invalid monitor steps");
     }
 
-    if (!(json["value"] as JSONObject)["monitorStepsInstanceArray"]) {
+    if (!value["monitorStepsInstanceArray"]) {
       throw new BadDataException("Invalid monitor steps");
     }
 
-    const monitorStepsInstanceArray: JSONArray = (json["value"] as JSONObject)[
+    const monitorStepsInstanceArray: JSONArray = value[
       "monitorStepsInstanceArray"
     ] as JSONArray;
 
@@ -131,12 +140,8 @@ export default class MonitorSteps extends DatabaseProperty {
           return MonitorStep.fromJSON(json);
         },
       ),
-      defaultMonitorStatusId: (json["value"] as JSONObject)[
-        "defaultMonitorStatusId"
-      ]
-        ? new ObjectID(
-            (json["value"] as JSONObject)["defaultMonitorStatusId"] as string,
-          )
+      defaultMonitorStatusId: value["defaultMonitorStatusId"]
+        ? new ObjectID(value["defaultMonitorStatusId"] as string)
         : undefined,
     };
 

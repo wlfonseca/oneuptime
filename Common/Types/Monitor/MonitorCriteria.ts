@@ -118,25 +118,34 @@ export default class MonitorCriteria extends DatabaseProperty {
       return json;
     }
 
-    if (!json || json["_type"] !== ObjectType.MonitorCriteria) {
-      throw new BadDataException("Invalid monitor criteria");
-    }
-
     if (!json) {
       throw new BadDataException("Invalid monitor criteria");
     }
 
-    if (!json["value"]) {
+    if (json["_type"] && json["_type"] !== ObjectType.MonitorCriteria) {
       throw new BadDataException("Invalid monitor criteria");
     }
 
-    if (!(json["value"] as JSONObject)["monitorCriteriaInstanceArray"]) {
+    /*
+     * Ver comentário em MonitorStep.fromJSON: aceita tanto o formato
+     * serializado (`{_type, value}`) quanto o interno (`{data}`) usado por
+     * AutoMonitorService.
+     */
+    const value: JSONObject | undefined = (json["value"] ?? json["data"]) as
+      | JSONObject
+      | undefined;
+
+    if (!value) {
       throw new BadDataException("Invalid monitor criteria");
     }
 
-    const monitorCriteriaInstanceArray: JSONArray = (
-      json["value"] as JSONObject
-    )["monitorCriteriaInstanceArray"] as JSONArray;
+    if (!value["monitorCriteriaInstanceArray"]) {
+      throw new BadDataException("Invalid monitor criteria");
+    }
+
+    const monitorCriteriaInstanceArray: JSONArray = value[
+      "monitorCriteriaInstanceArray"
+    ] as JSONArray;
 
     const monitorCriteria: MonitorCriteria = new MonitorCriteria();
 

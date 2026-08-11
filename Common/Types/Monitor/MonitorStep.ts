@@ -881,15 +881,31 @@ export default class MonitorStep extends DatabaseProperty {
       return json;
     }
 
-    if (!json || json["_type"] !== "MonitorStep") {
+    if (!json) {
       throw new BadDataException("Invalid monitor step");
     }
 
-    if (!json["value"]) {
+    if (json["_type"] && json["_type"] !== "MonitorStep") {
       throw new BadDataException("Invalid monitor step");
     }
 
-    json = json["value"] as JSONObject;
+    /*
+     * Dois formatos convivem no banco. Monitores criados pela UI/API são
+     * gravados serializados (`{_type, value}`), enquanto os criados por
+     * AutoMonitorService saem no formato interno (`{data}`) — ver
+     * buildErrorLogMonitorStep / buildServerMonitorStep. Aceitar os dois
+     * evita descartar silenciosamente os auto-criados, que antes falhavam
+     * na avaliação com "Log query is missing".
+     */
+    const stepValue: JSONObject | undefined = (json["value"] ?? json["data"]) as
+      | JSONObject
+      | undefined;
+
+    if (!stepValue) {
+      throw new BadDataException("Invalid monitor step");
+    }
+
+    json = stepValue;
 
     let monitorDestination: URL | IP | Hostname | undefined = undefined;
 

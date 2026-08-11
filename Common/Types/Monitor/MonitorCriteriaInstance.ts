@@ -1525,21 +1525,25 @@ export default class MonitorCriteriaInstance extends DatabaseProperty {
       throw new BadDataException("json is null");
     }
 
-    if (!json["_type"]) {
-      throw new BadDataException("json._type is null");
-    }
-
-    if (json["_type"] !== ObjectType.MonitorCriteriaInstance) {
+    if (json["_type"] && json["_type"] !== ObjectType.MonitorCriteriaInstance) {
       throw new BadDataException(
         "json._type should be MonitorCriteriaInstance",
       );
     }
 
-    if (!json["value"]) {
+    /*
+     * Ver comentário em MonitorStep.fromJSON: aceita tanto o formato
+     * serializado (`{_type, value}`) quanto o interno (`{data}`) usado por
+     * AutoMonitorService.
+     */
+    const instanceValue: JSONObject | undefined = (json["value"] ??
+      json["data"]) as JSONObject | undefined;
+
+    if (!instanceValue) {
       throw new BadDataException("json.value is null");
     }
 
-    json = json["value"] as JSONObject;
+    json = instanceValue;
 
     if (!json["filterCondition"]) {
       throw new BadDataException("json.filterCondition is null");
