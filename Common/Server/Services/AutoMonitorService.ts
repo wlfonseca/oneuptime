@@ -11,6 +11,14 @@ import MonitorStatusService from "./MonitorStatusService";
 import logger from "../Utils/Logger";
 import CaptureSpan from "../Utils/Telemetry/CaptureSpan";
 
+/*
+ * Quantas linhas de log de erro (severidade Error/Fatal casando o regex de
+ * erro) precisam aparecer na janela de `lastXSecondsOfLogs` para que o monitor
+ * automático abra incidente. Existe para separar erro esporádico — que todo
+ * container produz — de degradação real.
+ */
+const ERROR_LOG_COUNT_THRESHOLD: number = 10;
+
 export default class AutoMonitorService {
   @CaptureSpan()
   public static async createDefaultLogMonitorForService(data: {
@@ -570,11 +578,20 @@ export default class AutoMonitorService {
                         id: offlineCriteriaId,
                         monitorStatusId: args.offlineMonitorStatusId,
                         filterCondition: FilterCondition.Any,
+                        /*
+                         * LogBodyMatch dispara com `currentLogCount > 0`, ou
+                         * seja, uma única linha de log casando o regex já abre
+                         * incidente — o que gerou 186 incidentes em 4 minutos
+                         * quando estes monitores voltaram a rodar. O logMonitor
+                         * acima já restringe QUAIS logs contam (severidade
+                         * Error/Fatal + regex); aqui exigimos VOLUME para
+                         * separar erro esporádico de problema real.
+                         */
                         filters: [
                           {
-                            checkOn: CheckOn.LogBodyMatch,
-                            filterType: FilterType.True,
-                            value: undefined,
+                            checkOn: CheckOn.LogCount,
+                            filterType: FilterType.GreaterThan,
+                            value: ERROR_LOG_COUNT_THRESHOLD,
                           },
                         ],
                         incidents: [
@@ -610,11 +627,12 @@ export default class AutoMonitorService {
                         id: onlineCriteriaId,
                         monitorStatusId: args.onlineMonitorStatusId,
                         filterCondition: FilterCondition.Any,
+                        // Espelha o limiar do critério offline acima.
                         filters: [
                           {
-                            checkOn: CheckOn.LogBodyMatch,
-                            filterType: FilterType.False,
-                            value: undefined,
+                            checkOn: CheckOn.LogCount,
+                            filterType: FilterType.LessThanOrEqualTo,
+                            value: ERROR_LOG_COUNT_THRESHOLD,
                           },
                         ],
                         incidents: [],
