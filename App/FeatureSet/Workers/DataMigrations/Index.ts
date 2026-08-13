@@ -85,6 +85,7 @@ import AddTelemetryV3ColumnCodecs from "./AddTelemetryV3ColumnCodecs";
 import RebuildMetricBaselineHourlyWithBFloat16Quantiles from "./RebuildMetricBaselineHourlyWithBFloat16Quantiles";
 import AddDedupWindowToTelemetryTables from "./AddDedupWindowToTelemetryTables";
 import DropUnusedTelemetryTables from "./DropUnusedTelemetryTables";
+import RepairEpisodeNotificationRuleSeverity from "./RepairEpisodeNotificationRuleSeverity";
 
 // This is the order in which the migrations will be run. Add new migrations to the end of the array.
 
@@ -193,6 +194,12 @@ const DataMigrations: Array<DataMigrationBase> = [
    * tables to `…_backup` BEFORE upgrading (see the v11 upgrade guide).
    */
   new DropUnusedTelemetryTables(),
+  /*
+   * Repairs the episode notification rules that were created with a NULL severity and so
+   * matched nothing the on-call path ever queried. Fans each NULL row out into one row per
+   * severity in its project and removes the original. Idempotent and restartable.
+   */
+  new RepairEpisodeNotificationRuleSeverity(),
 ];
 
 export default DataMigrations;

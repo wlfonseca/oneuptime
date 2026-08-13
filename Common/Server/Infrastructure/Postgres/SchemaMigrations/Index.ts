@@ -391,6 +391,7 @@ import { AddProxmoxCephActivityAndRules1781600000001 } from "./1781600000001-Add
 import { AddProxmoxCephV3Columns1781700000000 } from "./1781700000000-AddProxmoxCephV3Columns";
 import { MigrationName1781750000000 } from "./1781750000000-MigrationName";
 import { AddPreferredCallLanguageToUser1782000000000 } from "./1782000000000-AddPreferredCallLanguageToUser";
+import { AddOnCallNotificationFallbackColumns1786800000000 } from "./1786800000000-AddOnCallNotificationFallbackColumns";
 
 export default [
   InitialMigration,
@@ -786,4 +787,5 @@ export default [
   AddProxmoxCephV3Columns1781700000000,
   MigrationName1781750000000,
   AddPreferredCallLanguageToUser1782000000000,
+  AddOnCallNotificationFallbackColumns1786800000000,
 ];
