@@ -18,6 +18,112 @@ import AlertEpisodeService from "Common/Server/Services/AlertEpisodeService";
 import IncidentEpisode from "Common/Models/DatabaseModels/IncidentEpisode";
 import IncidentEpisodeService from "Common/Server/Services/IncidentEpisodeService";
 import { LIMIT_PER_PROJECT } from "Common/Types/Database/LimitMax";
+import Dictionary from "Common/Types/Dictionary";
+import GlobalCache from "Common/Server/Infrastructure/GlobalCache";
+
+/*
+ * When several monitors go down at once, each incident creates its own pending
+ * execution. Without any pacing, every one of them fans out in the same tick and
+ * the same person gets a dozen simultaneous phone calls. Two limits fix that:
+ * calls to one user are queued (one per cooldown window, oldest first) and only
+ * a few users are worked on concurrently.
+ *
+ * Only calls are throttled - email, push, SMS and the rest still go out at once.
+ */
+
+type GetEnvNumberFunction = (envVarName: string, defaultValue: number) => number;
+
+const getEnvNumber: GetEnvNumberFunction = (
+  envVarName: string,
+  defaultValue: number,
+): number => {
+  const parsedValue: number = parseInt(process.env[envVarName] || "", 10);
+
+  if (isNaN(parsedValue) || parsedValue < 0) {
+    return defaultValue;
+  }
+
+  return parsedValue;
+};
+
+// Minimum gap between two calls to the same user. 0 disables the throttle.
+const CALL_COOLDOWN_IN_SECONDS: number = getEnvNumber(
+  "ON_CALL_USER_CALL_COOLDOWN_IN_SECONDS",
+  300,
+);
+
+// How many users are notified in parallel within one run. 0 falls back to 10.
+const MAX_CONCURRENT_USERS: number =
+  getEnvNumber("ON_CALL_MAX_CONCURRENT_USER_NOTIFICATIONS", 10) || 10;
+
+const CALL_COOLDOWN_CACHE_NAMESPACE: string = "user-on-call-log-call-cooldown";
+
+/*
+ * Guards calls for a single user. Backed by Redis so the cooldown survives
+ * across cron runs; the in-memory flag covers the current run on its own, so a
+ * cache outage degrades to "one call per user per run" instead of failing shut.
+ */
+type CallThrottle = {
+  canMakeCall: () => Promise<boolean>;
+  markCallMade: () => Promise<void>;
+};
+
+type GetCallThrottleFunction = (userId: string) => CallThrottle;
+
+const getCallThrottleForUser: GetCallThrottleFunction = (
+  userId: string,
+): CallThrottle => {
+  let hasCalledInThisRun: boolean = false;
+
+  return {
+    canMakeCall: async (): Promise<boolean> => {
+      if (CALL_COOLDOWN_IN_SECONDS === 0) {
+        return true;
+      }
+
+      if (hasCalledInThisRun) {
+        return false;
+      }
+
+      try {
+        const lastCallAt: string | null = await GlobalCache.getString(
+          CALL_COOLDOWN_CACHE_NAMESPACE,
+          userId,
+        );
+
+        return !lastCallAt;
+      } catch (err) {
+        logger.error(
+          `Could not read call cooldown for user ${userId}. Allowing the call.`,
+        );
+        logger.error(err);
+        return true;
+      }
+    },
+
+    markCallMade: async (): Promise<void> => {
+      hasCalledInThisRun = true;
+
+      if (CALL_COOLDOWN_IN_SECONDS === 0) {
+        return;
+      }
+
+      try {
+        await GlobalCache.setString(
+          CALL_COOLDOWN_CACHE_NAMESPACE,
+          userId,
+          OneUptimeDate.getCurrentDate().toISOString(),
+          {
+            expiresInSeconds: CALL_COOLDOWN_IN_SECONDS,
+          },
+        );
+      } catch (err) {
+        logger.error(`Could not write call cooldown for user ${userId}.`);
+        logger.error(err);
+      }
+    },
+  };
+};
 
 RunCron(
   "UserOnCallLog:ExecutePendingExecutions",
@@ -54,22 +160,95 @@ RunCron(
         },
       });
 
-    const promises: Array<Promise<void>> = [];
+    /*
+     * Group by user so everything queued for one person is worked through one at
+     * a time, oldest first, instead of all at once.
+     */
+    const logsByUser: Dictionary<Array<UserOnCallLog>> = {};
 
     for (const pendingNotificationLog of pendingNotificationLogs) {
-      promises.push(executePendingNotificationLog(pendingNotificationLog));
+      const userKey: string =
+        pendingNotificationLog.userId?.toString() ||
+        pendingNotificationLog.id?.toString() ||
+        "";
+
+      if (!logsByUser[userKey]) {
+        logsByUser[userKey] = [];
+      }
+
+      logsByUser[userKey]!.push(pendingNotificationLog);
     }
 
-    await Promise.allSettled(promises);
+    const userLogGroups: Array<Array<UserOnCallLog>> = Object.keys(
+      logsByUser,
+    ).map((userKey: string) => {
+      return logsByUser[userKey]!.sort(
+        (a: UserOnCallLog, b: UserOnCallLog): number => {
+          return (a.createdAt?.getTime() || 0) - (b.createdAt?.getTime() || 0);
+        },
+      );
+    });
+
+    for (
+      let index: number = 0;
+      index < userLogGroups.length;
+      index += MAX_CONCURRENT_USERS
+    ) {
+      const batch: Array<Array<UserOnCallLog>> = userLogGroups.slice(
+        index,
+        index + MAX_CONCURRENT_USERS,
+      );
+
+      await Promise.allSettled(
+        batch.map((logsForUser: Array<UserOnCallLog>) => {
+          return executePendingNotificationLogsForUser(logsForUser);
+        }),
+      );
+    }
   },
 );
 
+type ExecutePendingNotificationLogsForUserFunction = (
+  logsForUser: Array<UserOnCallLog>,
+) => Promise<void>;
+
+const executePendingNotificationLogsForUser: ExecutePendingNotificationLogsForUserFunction =
+  async (logsForUser: Array<UserOnCallLog>): Promise<void> => {
+    const userId: string =
+      logsForUser[0]?.userId?.toString() ||
+      logsForUser[0]?.id?.toString() ||
+      "";
+
+    const callThrottle: CallThrottle = getCallThrottleForUser(userId);
+
+    for (const pendingNotificationLog of logsForUser) {
+      await executePendingNotificationLog(pendingNotificationLog, callThrottle);
+    }
+  };
+
 type ExecutePendingNotificationLogFunction = (
   pendingNotificationLog: UserOnCallLog,
+  callThrottle?: CallThrottle | undefined,
 ) => Promise<void>;
 
 const executePendingNotificationLog: ExecutePendingNotificationLogFunction =
-  async (pendingNotificationLog: UserOnCallLog): Promise<void> => {
+  async (
+    pendingNotificationLog: UserOnCallLog,
+    callThrottleForUser?: CallThrottle | undefined,
+  ): Promise<void> => {
+    /*
+     * Called with a shared throttle when the run groups logs by user. Standalone
+     * callers get a throttle of their own, which still honours the Redis-backed
+     * cooldown left behind by earlier runs.
+     */
+    const callThrottle: CallThrottle =
+      callThrottleForUser ||
+      getCallThrottleForUser(
+        pendingNotificationLog.userId?.toString() ||
+          pendingNotificationLog.id?.toString() ||
+          "",
+      );
+
     try {
       const ruleType: NotificationRuleType =
         UserOnCallLogService.getNotificationRuleType(
@@ -247,6 +426,7 @@ const executePendingNotificationLog: ExecutePendingNotificationLogFunction =
           select: {
             _id: true,
             notifyAfterMinutes: true,
+            userCallId: true,
           },
           props: {
             isRoot: true,
@@ -281,6 +461,20 @@ const executePendingNotificationLog: ExecutePendingNotificationLogFunction =
           continue;
         }
 
+        const isCallRule: boolean = Boolean(notificationRule.userCallId);
+
+        /*
+         * The user was called recently for some other execution. Leave this one
+         * pending - the log stays in Executing and the next run picks it up once
+         * the cooldown expires, so the call is queued and never dropped.
+         */
+        if (isCallRule && !(await callThrottle.canMakeCall())) {
+          logger.debug(
+            `Call for user ${pendingNotificationLog.userId} on notification log ${pendingNotificationLog._id} is throttled. It will be retried on the next run.`,
+          );
+          continue;
+        }
+
         // execute this rule.
 
         await UserNotificationRuleService.executeNotificationRuleItem(
@@ -307,6 +501,10 @@ const executePendingNotificationLog: ExecutePendingNotificationLogFunction =
             onCallScheduleId: pendingNotificationLog.onCallDutyScheduleId,
           },
         );
+
+        if (isCallRule) {
+          await callThrottle.markCallMade();
+        }
       }
 
       if (isAllExecuted) {
