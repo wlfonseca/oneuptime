@@ -245,6 +245,7 @@ export class LogAggregationService {
       getQuerySettings({
         maxExecutionTimeInSeconds: 45,
         timeoutOverflowMode: "break",
+        boundScanMemory: true,
         additionalSettings: { optimize_use_projections: 1 },
       }),
     );
@@ -355,6 +356,7 @@ export class LogAggregationService {
       getQuerySettings({
         maxExecutionTimeInSeconds: 45,
         timeoutOverflowMode: "break",
+        boundScanMemory: true,
       }),
     );
 
@@ -597,6 +599,7 @@ export class LogAggregationService {
       getQuerySettings({
         maxExecutionTimeInSeconds: 45,
         timeoutOverflowMode: "break",
+        boundScanMemory: true,
       }),
     );
 
@@ -677,6 +680,7 @@ export class LogAggregationService {
       getQuerySettings({
         maxExecutionTimeInSeconds: 45,
         timeoutOverflowMode: "break",
+        boundScanMemory: true,
       }),
     );
 
@@ -746,6 +750,7 @@ export class LogAggregationService {
       getQuerySettings({
         maxExecutionTimeInSeconds: 45,
         timeoutOverflowMode: "break",
+        boundScanMemory: true,
       }),
     );
 
