@@ -142,8 +142,17 @@ async function handleExport(
   } catch (err) {
     logger.error(`gRPC ${productType} export error:`, { service: "telemetry" });
     logger.error(err, { service: "telemetry" });
-    // Return success to avoid OTel SDK retries
-    callback(null, {});
+    /*
+     * Queue admission failed. Let the exporter retry without exposing the
+     * backend error, request payload or authentication metadata.
+     */
+    const message: string = "Telemetry queue unavailable. Please retry.";
+    const error: grpc.ServiceError = Object.assign(new Error(message), {
+      code: grpc.status.UNAVAILABLE,
+      details: message,
+      metadata: new grpc.Metadata(),
+    });
+    callback(error);
   }
 }
 
