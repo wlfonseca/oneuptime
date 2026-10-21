@@ -180,11 +180,11 @@ export default class OtelLogsIngestService extends OtelIngestBaseService {
       const resourceLogs: JSONArray = req.body["resourceLogs"] as JSONArray;
 
       if (!resourceLogs || !Array.isArray(resourceLogs)) {
-        logger.error(
-          "Invalid resourceLogs format in request body",
+        logger.warn(
+          "No resourceLogs to ingest (empty, malformed or lost body); skipping batch.",
           getLogAttributesFromRequest(req as RequestLike),
         );
-        throw new BadRequestException("Invalid resourceLogs format");
+        return;
       }
 
       /*
@@ -207,6 +207,7 @@ export default class OtelLogsIngestService extends OtelIngestBaseService {
       const pendingExceptionUpserts: Array<TelemetryExceptionPayload> = [];
       const serviceDictionary: Dictionary<TelemetryServiceMetadata> = {};
       let totalLogsProcessed: number = 0;
+      let totalInventorySnapshotsSkipped: number = 0;
 
       /*
        * Buffer for k8s object snapshots flushed to the KubernetesResource
@@ -626,6 +627,7 @@ export default class OtelLogsIngestService extends OtelIngestBaseService {
                    * resource envelope), so we read it from the record's
                    * attributes dictionary built a few lines above.
                    */
+                  let isK8sInventorySnapshot: boolean = false;
                   if (isK8sInventoryEligible && kubernetesClusterId && body) {
                     const recordK8sResourceType: unknown =
                       attributesObject["k8s.resource.name"];
@@ -643,6 +645,7 @@ export default class OtelLogsIngestService extends OtelIngestBaseService {
                             lastSeenAt: timeDate,
                           });
                         if (parsed) {
+                          isK8sInventorySnapshot = true;
                           const key: string = kubernetesClusterId.toString();
                           let bucket:
                             | Array<ParsedKubernetesResource>
@@ -796,6 +799,11 @@ export default class OtelLogsIngestService extends OtelIngestBaseService {
                         );
                       }
                     }
+                  }
+
+                  if (isK8sInventorySnapshot) {
+                    totalInventorySnapshotsSkipped++;
+                    continue;
                   }
 
                   /*
@@ -1172,7 +1180,7 @@ export default class OtelLogsIngestService extends OtelIngestBaseService {
         }
       }
 
-      if (totalLogsProcessed === 0) {
+      if (totalLogsProcessed === 0 && totalInventorySnapshotsSkipped === 0) {
         logger.warn("No valid logs were processed from the request");
         return;
       }
