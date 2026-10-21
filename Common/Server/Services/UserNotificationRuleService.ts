@@ -371,15 +371,21 @@ export class Service extends DatabaseService<Model> {
     notificationRuleItem: Model,
     options: ExecuteNotificationRuleOptions,
   ): Promise<boolean> {
-    const user: User | null = await UserService.findOneById({
-      id: notificationRuleItem.userId!,
-      select: {
-        preferredCallLanguage: true,
-      },
-      props: { isRoot: true },
-    });
+    let callLanguage: string = "en";
 
-    const callLanguage: string = user?.preferredCallLanguage || "en";
+    try {
+      const user: User | null = await UserService.findOneById({
+        id: notificationRuleItem.userId!,
+        select: {
+          preferredCallLanguage: true,
+        },
+        props: { isRoot: true },
+      });
+
+      callLanguage = user?.preferredCallLanguage || "en";
+    } catch (err) {
+      logger.error(err);
+    }
 
     /*
      * If the project has a default Twilio config set, use it for all

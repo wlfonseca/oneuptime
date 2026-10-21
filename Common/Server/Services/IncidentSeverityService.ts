@@ -10,6 +10,7 @@ import BadDataException from "../../Types/Exception/BadDataException";
 import ObjectID from "../../Types/ObjectID";
 import Model from "../../Models/DatabaseModels/IncidentSeverity";
 import Queue, { QueueName } from "../Infrastructure/Queue";
+import logger from "../Utils/Logger";
 import CaptureSpan from "../Utils/Telemetry/CaptureSpan";
 
 /*
@@ -92,17 +93,6 @@ export class Service extends DatabaseService<Model> {
            */
           projectId: createdItem.projectId?.toString() || "",
           incidentSeverityId: createdItem.id?.toString() || "",
-        },
-        {
-          /*
-           * Seeding a project with four severities in one go must not start four
-           * overlapping scans that all see the same uncovered responders and all
-           * write the same rules. One active, one queued, latest payload wins.
-           */
-          deduplication: {
-            id: BACKFILL_NOTIFICATION_RULES_JOB_NAME,
-            keepLastIfActive: true,
-          },
         },
       );
     } catch (err) {

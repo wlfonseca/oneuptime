@@ -951,51 +951,6 @@ export class Service extends DatabaseService<OnCallDutyPolicySchedule> {
     return resultReturn;
   }
 
-  /*
-   * Returns the on-call policy this schedule is attached to IFF it is attached
-   * to exactly one; otherwise undefined (audit F10). A lazy require avoids a
-   * circular import — OnCallDutyPolicyEscalationRuleScheduleService imports this
-   * service.
-   */
-  private async getSingleAttachedPolicyId(
-    scheduleId: ObjectID,
-  ): Promise<ObjectID | undefined> {
-    try {
-      const escalationRuleScheduleService: {
-        findBy: (
-          args: unknown,
-        ) => Promise<Array<{ onCallDutyPolicyId?: ObjectID | undefined }>>;
-        // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-var-requires
-      } = require("./OnCallDutyPolicyEscalationRuleScheduleService").default;
-
-      const links: Array<{ onCallDutyPolicyId?: ObjectID | undefined }> =
-        await escalationRuleScheduleService.findBy({
-          query: { onCallDutyPolicyScheduleId: scheduleId },
-          select: { onCallDutyPolicyId: true },
-          limit: LIMIT_PER_PROJECT,
-          skip: 0,
-          props: { isRoot: true },
-        });
-
-      const distinctPolicyIds: Set<string> = new Set<string>();
-      for (const link of links) {
-        const policyId: string | undefined =
-          link.onCallDutyPolicyId?.toString();
-        if (policyId) {
-          distinctPolicyIds.add(policyId);
-        }
-      }
-
-      if (distinctPolicyIds.size === 1) {
-        return new ObjectID(Array.from(distinctPolicyIds)[0]!);
-      }
-    } catch (err) {
-      logger.error(err);
-    }
-
-    return undefined;
-  }
-
   /**
    * Re-resolve and persist the roster for every schedule in the project whose
    * layers include `userId`. Called when a user override is created / updated /

@@ -2,6 +2,7 @@ import UserNotificationRuleService from "../../../Server/Services/UserNotificati
 import UserOnCallLogService from "../../../Server/Services/UserOnCallLogService";
 import UserOnCallLogTimelineService from "../../../Server/Services/UserOnCallLogTimelineService";
 import ProjectCallSMSConfigService from "../../../Server/Services/ProjectCallSMSConfigService";
+import UserService from "../../../Server/Services/UserService";
 import IncidentService from "../../../Server/Services/IncidentService";
 import AlertService from "../../../Server/Services/AlertService";
 import AlertEpisodeService from "../../../Server/Services/AlertEpisodeService";
@@ -757,6 +758,9 @@ describe("UserNotificationRuleService channel x event coverage", () => {
       twilio: jest
         .spyOn(ProjectCallSMSConfigService, "getProjectDefaultTwilioConfig")
         .mockResolvedValue(undefined as never),
+      userLookup: jest
+        .spyOn(UserService, "findOneById")
+        .mockResolvedValue(null as never),
       timelineCreate: timelineCreate,
       timelineUpdate: jest
         .spyOn(UserOnCallLogTimelineService, "updateOneById")
