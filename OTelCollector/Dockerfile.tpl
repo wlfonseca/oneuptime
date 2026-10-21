@@ -2,7 +2,7 @@ FROM otel/opentelemetry-collector-contrib:0.154.0
 
 
 
-FROM public.ecr.aws/ubuntu/ubuntu:26.04
+FROM ubuntu:26.04
 
 # Per-build args (GIT_SHA / APP_VERSION / IS_ENTERPRISE_EDITION) are declared at
 # the bottom so the apt-get / gomplate-download layers stay cacheable across the

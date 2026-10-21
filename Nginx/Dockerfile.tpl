@@ -4,7 +4,7 @@
 # of the nginx base image (nginx:1.30.2-alpine is Alpine 3.23.x) so the copied
 # node binary links against the same musl/libstdc++ ABI — when the nginx base
 # moves to a newer alpine, bump this tag in the same commit.
-FROM public.ecr.aws/docker/library/node:26-alpine3.23 AS node26
+FROM node:26-alpine3.23 AS node26
 
 FROM nginx:1.30.2-alpine
 

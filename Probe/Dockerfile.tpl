@@ -11,7 +11,7 @@
 # probe needs is installed explicitly below. The Debian release is pinned
 # (bookworm) because the apt package list below is release-specific (e.g.
 # libgdk-pixbuf2.0-0 has no install candidate on trixie).
-FROM public.ecr.aws/docker/library/node:26-bookworm-slim
+FROM node:26-bookworm-slim
 RUN mkdir /tmp/npm &&  chmod 2777 /tmp/npm && chown 1000:1000 /tmp/npm && npm config set cache /tmp/npm --global
 
 RUN npm config set fetch-retries 5
