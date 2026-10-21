@@ -29,6 +29,7 @@ import UpdateBy from "../Types/AnalyticsDatabase/UpdateBy";
 import { SQL, Statement } from "../Utils/AnalyticsDatabase/Statement";
 import StatementGenerator from "../Utils/AnalyticsDatabase/StatementGenerator";
 import { getQuerySettings } from "../Utils/AnalyticsDatabase/QuerySettingsHelper";
+import ClickhouseReadResult from "../Utils/AnalyticsDatabase/ClickhouseReadResult";
 import logger, { LogAttributes } from "../Utils/Logger";
 import Realtime from "../Utils/Realtime";
 import StreamUtil from "../Utils/Stream";
@@ -1468,15 +1469,53 @@ export default class AnalyticsDatabaseService<
     const queryParams: Record<string, unknown> | undefined =
       statement instanceof Statement ? statement.query_params : undefined;
 
-    return await client.query({
-      query: query,
-      format: "JSON",
-      query_params: queryParams || (undefined as any), // undefined is not specified in the type for query_params, but its ok to pass undefined.
-      ...(options?.clickhouseSettings
-        ? { clickhouse_settings: options.clickhouseSettings }
-        : {}),
-      ...(options?.queryId ? { query_id: options.queryId } : {}),
+    const timeLimitInSeconds: number | undefined =
+      ClickhouseReadResult.getTimeLimitInSeconds(
+        query,
+        options?.clickhouseSettings,
+      );
+
+    const clickhouseSettings: ClickHouseSettings | undefined =
+      AnalyticsDatabaseService.getReadSettings({
+        clickhouseSettings: options?.clickhouseSettings,
+        hasTimeLimit: timeLimitInSeconds !== undefined,
+      });
+
+    let resultSet: ResultSet<"JSON">;
+
+    try {
+      resultSet = await client.query({
+        query: query,
+        format: "JSON",
+        query_params: queryParams || (undefined as any), // undefined is not specified in the type for query_params, but its ok to pass undefined.
+        ...(clickhouseSettings
+          ? { clickhouse_settings: clickhouseSettings }
+          : {}),
+        ...(options?.queryId ? { query_id: options.queryId } : {}),
+      });
+    } catch (error) {
+      throw ClickhouseReadResult.toReadError(error, {
+        timeLimitInSeconds: timeLimitInSeconds,
+      });
+    }
+
+    return ClickhouseReadResult.guard(resultSet, {
+      timeLimitInSeconds: timeLimitInSeconds,
     });
+  }
+
+  public static getReadSettings(data: {
+    clickhouseSettings?: ClickHouseSettings | undefined;
+    hasTimeLimit: boolean;
+  }): ClickHouseSettings | undefined {
+    if (!data.hasTimeLimit) {
+      return data.clickhouseSettings;
+    }
+
+    return {
+      http_wait_end_of_query: 1,
+      ...(data.clickhouseSettings || {}),
+    };
   }
 
   private getDatabaseClient(): ClickhouseClient {

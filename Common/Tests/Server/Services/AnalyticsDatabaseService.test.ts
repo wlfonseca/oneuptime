@@ -427,7 +427,36 @@ describe("AnalyticsDatabaseService", () => {
         query: "SELECT 1",
         format: "JSON",
         query_params: undefined,
-        clickhouse_settings: { max_execution_time: 1800 },
+        clickhouse_settings: {
+          http_wait_end_of_query: 1,
+          max_execution_time: 1800,
+        },
+      });
+    });
+
+    test("executeQuery without a time limit sends the settings as given", async () => {
+      await service.executeQuery("SELECT 1", {
+        clickhouseSettings: { send_progress_in_http_headers: 1 },
+      });
+
+      expect(query).toHaveBeenCalledWith({
+        query: "SELECT 1",
+        format: "JSON",
+        query_params: undefined,
+        clickhouse_settings: { send_progress_in_http_headers: 1 },
+      });
+    });
+
+    test("executeQuery asks ClickHouse to hold the answer of a time-limited statement", async () => {
+      await service.executeQuery(
+        "SELECT 1 SETTINGS max_execution_time = 45, timeout_overflow_mode = 'break'",
+      );
+
+      expect(query).toHaveBeenCalledWith({
+        query: "SELECT 1 SETTINGS max_execution_time = 45, timeout_overflow_mode = 'break'",
+        format: "JSON",
+        query_params: undefined,
+        clickhouse_settings: { http_wait_end_of_query: 1 },
       });
     });
 
