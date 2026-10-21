@@ -9,6 +9,7 @@ import TelemetryBodyStore from "../../FeatureSet/Telemetry/Utils/TelemetryBodySt
 import TelemetryQueueService, {
   TelemetryType,
   TelemetryIngestJobData,
+  pickWorkerConsumedRequestHeaders,
 } from "../../FeatureSet/Telemetry/Services/Queue/TelemetryQueueService";
 import { OtelPayloadFormat } from "../../FeatureSet/Telemetry/Utils/OtelPayloadDecoder";
 
@@ -274,5 +275,69 @@ describe("TelemetryQueueService.addTelemetryIngestJob", () => {
 
     // Identical clock reading, identical project — ids must still differ.
     expect(firstJobId).not.toBe(secondJobId);
+  });
+
+  test.each([
+    TelemetryType.Logs,
+    TelemetryType.Traces,
+    TelemetryType.Metrics,
+    TelemetryType.Syslog,
+  ])(
+    "%s job keeps x-oneuptime-service-name and drops the ingestion token and other headers",
+    async (type: TelemetryType) => {
+      const req: TelemetryRequest = {
+        projectId: ObjectID.generate(),
+        headers: {
+          "x-oneuptime-token": "secret-ingestion-token",
+          "x-oneuptime-service-token": "secret-service-token",
+          "x-oneuptime-ingestion-key": "secret-ingestion-key",
+          authorization: "Bearer secret",
+          cookie: "session=secret",
+          "content-type": "application/json",
+          "user-agent": "otel-collector",
+          "x-oneuptime-service-name": "checkout",
+        },
+        body: { resourceLogs: [] },
+      } as unknown as TelemetryRequest;
+
+      await TelemetryQueueService.addTelemetryIngestJob(req, type);
+
+      const jobData: TelemetryIngestJobData = getEnqueuedJobData();
+
+      expect(jobData.requestHeaders).toEqual({
+        "x-oneuptime-service-name": "checkout",
+      });
+      expect(JSON.stringify(jobData)).not.toContain("secret");
+    },
+  );
+});
+
+describe("pickWorkerConsumedRequestHeaders", () => {
+  test("matches header names case-insensitively and emits them lowercased", () => {
+    expect(
+      pickWorkerConsumedRequestHeaders({
+        "X-OneUptime-Service-Name": "billing",
+        "X-OneUptime-Token": "secret",
+      }),
+    ).toEqual({ "x-oneuptime-service-name": "billing" });
+  });
+
+  test("passes array values through and skips undefined values", () => {
+    expect(
+      pickWorkerConsumedRequestHeaders({
+        "x-oneuptime-service-name": ["a", "b"],
+      }),
+    ).toEqual({ "x-oneuptime-service-name": ["a", "b"] });
+
+    expect(
+      pickWorkerConsumedRequestHeaders({
+        "x-oneuptime-service-name": undefined,
+      }),
+    ).toEqual({});
+  });
+
+  test("returns an empty object for missing headers", () => {
+    expect(pickWorkerConsumedRequestHeaders(undefined)).toEqual({});
+    expect(pickWorkerConsumedRequestHeaders({})).toEqual({});
   });
 });

@@ -160,6 +160,35 @@ const PRODUCT_TYPE_BY_TELEMETRY_TYPE: Partial<
   [TelemetryType.Profiles]: ProductType.Profiles,
 };
 
+export const WORKER_CONSUMED_REQUEST_HEADERS: ReadonlyArray<string> = [
+  "x-oneuptime-service-name",
+];
+
+export function pickWorkerConsumedRequestHeaders(
+  headers: Record<string, string | Array<string> | undefined> | undefined,
+): Record<string, string> {
+  const projectedHeaders: Record<string, string> = {};
+
+  for (const headerName in headers || {}) {
+    const lowercasedHeaderName: string = headerName.toLowerCase();
+
+    if (!WORKER_CONSUMED_REQUEST_HEADERS.includes(lowercasedHeaderName)) {
+      continue;
+    }
+
+    const headerValue: string | Array<string> | undefined =
+      headers![headerName];
+
+    if (headerValue === undefined) {
+      continue;
+    }
+
+    projectedHeaders[lowercasedHeaderName] = headerValue as string;
+  }
+
+  return projectedHeaders;
+}
+
 /*
  * JSON.stringify replacer that rewrites binary values to base64
  * strings. The gRPC entry point hands us proto-loader output where
@@ -203,7 +232,9 @@ export default class TelemetryQueueService {
       const jobData: TelemetryIngestJobData = {
         type,
         projectId: req.projectId.toString(),
-        requestHeaders: req.headers as Record<string, string>,
+        requestHeaders: pickWorkerConsumedRequestHeaders(
+          req.headers as Record<string, string | Array<string> | undefined>,
+        ),
         ingestionTimestamp: OneUptimeDate.getCurrentDate(),
       };
 
